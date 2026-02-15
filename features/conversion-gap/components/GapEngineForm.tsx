@@ -68,7 +68,9 @@ export function GapEngineForm({
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
+  const [submittedReportId, setSubmittedReportId] = useState<string | null>(
+    null,
+  );
 
   const formDefaults = useMemo<GapEngineFormValues>(() => {
     const competitorUrls = defaultValues.competitorUrls.length
@@ -115,7 +117,8 @@ export function GapEngineForm({
           bindRunningReport(payload.reportId);
           toast({
             title: "Analysis queued",
-            description: "Analysis is running. You will be redirected on completion.",
+            description:
+              "Analysis is running. You will be redirected on completion.",
           });
           return;
         }
