@@ -1,6 +1,6 @@
 import { logger } from "@/lib/logger";
-import { fetchSingleBy, upsertRow } from "@/lib/db/dbHelpers";
 import { createSupabaseAdminClient } from "@/services/supabase/admin";
+import { createSupabaseServerClient } from "@/services/supabase/server";
 import type { UsageRecord, UsageMutationResult } from "./../types/usage.types";
 
 type InitializeResult = UsageRecord | null;
@@ -22,14 +22,37 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export async function getUsage(userId: string): Promise<UsageRecord | null> {
-  const result = await fetchSingleBy<UsageRecord>(
-    "usage_tracking",
-    "user_id",
-    userId,
-  );
+async function getUserScopedSupabase(userId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user || authData.user.id !== userId) {
+    logger.error("Usage scope validation failed.", authError, {
+      user_id: userId,
+      session_user_id: authData.user?.id ?? null,
+    });
+    return null;
+  }
+  return supabase;
+}
 
-  return result.data ?? null;
+export async function getUsage(userId: string): Promise<UsageRecord | null> {
+  const supabase = await getUserScopedSupabase(userId);
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("usage_tracking")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("Failed to fetch usage.", error, { user_id: userId });
+    return null;
+  }
+
+  return (data as UsageRecord | null) ?? null;
 }
 
 export async function initializeUsageIfMissing(
@@ -53,72 +76,25 @@ export async function initializeUsageIfMissing(
     updated_at: now,
   };
 
-  const result = await upsertRow("usage_tracking", record, "user_id");
-  if (!result.ok) {
-    logger.error("Failed to initialize usage record.", {
+  const supabase = await getUserScopedSupabase(userId);
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("usage_tracking")
+    .upsert(record, { onConflict: "user_id" })
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    logger.error("Failed to initialize usage record.", error, {
       user_id: userId,
-      error: result.error,
     });
     return null;
   }
 
-  return result.data ?? null;
-}
-
-export async function incrementTokens(
-  userId: string,
-  tokens: number,
-  costCents: number,
-): Promise<UsageMutationResult> {
-  const tokensToAdd = toPositiveInt(tokens);
-  const costToAdd = toPositiveInt(costCents);
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase.rpc("record_generate_usage", {
-    p_user_id: userId,
-    p_tokens: tokensToAdd,
-    p_cost_cents: costToAdd,
-  });
-
-  if (error) {
-    logger.error("Usage token increment failed.", error, { user_id: userId });
-    return { ok: false, error: error.message };
-  }
-
-  const record = Array.isArray(data) ? data[0] : data;
-  if (!record) {
-    return { ok: false, error: "Usage record missing" };
-  }
-
-  return { ok: true, record: record as UsageRecord };
-}
-
-export async function incrementGapReports(
-  userId: string,
-  reportId?: string,
-): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = reportId
-    ? await supabase.rpc("record_gap_report_usage", {
-        p_user_id: userId,
-        p_report_id: reportId,
-        p_tokens: 0,
-        p_cost_cents: 0,
-      })
-    : await supabase.rpc("increment_competitor_gaps", {
-        p_user_id: userId,
-      });
-
-  if (error) {
-    logger.error("Gap report increment failed.", error, { user_id: userId });
-    return { ok: false, error: error.message };
-  }
-
-  const record = Array.isArray(data) ? data[0] : data;
-  if (!record) {
-    return { ok: false, error: "Usage record missing" };
-  }
-
-  return { ok: true, record: record as UsageRecord };
+  return (data as UsageRecord | null) ?? null;
 }
 
 export async function reserveGenerateUsage(params: {
@@ -127,7 +103,7 @@ export async function reserveGenerateUsage(params: {
   reservedTokens: number;
   reservedCostCents: number;
 }): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("usage_rpc");
   const { data, error } = await supabase.rpc("reserve_generate_usage", {
     p_user_id: params.userId,
     p_reservation_key: params.reservationKey,
@@ -157,7 +133,7 @@ export async function finalizeGenerateUsage(params: {
   actualTokens: number;
   actualCostCents: number;
 }): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("usage_rpc");
   const { data, error } = await supabase.rpc("finalize_generate_usage", {
     p_user_id: params.userId,
     p_reservation_key: params.reservationKey,
@@ -185,7 +161,7 @@ export async function rollbackGenerateUsage(params: {
   userId: string;
   reservationKey: string;
 }): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("usage_rpc");
   const { data, error } = await supabase.rpc("rollback_generate_usage", {
     p_user_id: params.userId,
     p_reservation_key: params.reservationKey,
@@ -207,42 +183,10 @@ export async function rollbackGenerateUsage(params: {
   return { ok: true, record: record as UsageRecord };
 }
 
-export async function recordGapReportUsage(
-  userId: string,
-  reportId: string,
-  tokens: number,
-  costCents: number,
-): Promise<UsageMutationResult> {
-  const tokensToAdd = toPositiveInt(tokens);
-  const costToAdd = toPositiveInt(costCents);
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase.rpc("record_gap_report_usage", {
-    p_user_id: userId,
-    p_report_id: reportId,
-    p_tokens: tokensToAdd,
-    p_cost_cents: costToAdd,
-  });
-
-  if (error) {
-    logger.error("Gap report usage recording failed.", error, {
-      user_id: userId,
-      report_id: reportId,
-    });
-    return { ok: false, error: error.message };
-  }
-
-  const record = Array.isArray(data) ? data[0] : data;
-  if (!record) {
-    return { ok: false, error: "Usage record missing" };
-  }
-
-  return { ok: true, record: record as UsageRecord };
-}
-
 export async function completeGapReportAndCharge(params: {
   userId: string;
   reportId: string;
-  reservationKey?: string;
+  reservationKey: string;
   reportData: Record<string, unknown>;
   competitorData?: Record<string, unknown> | null;
   gapAnalysis?: Record<string, unknown> | null;
@@ -250,28 +194,21 @@ export async function completeGapReportAndCharge(params: {
   tokens: number;
   costCents: number;
 }): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = params.reservationKey
-    ? await supabase.rpc("complete_gap_report_with_reserved_usage", {
-        p_user_id: params.userId,
-        p_report_id: params.reportId,
-        p_reservation_key: params.reservationKey,
-        p_report_data: params.reportData,
-        p_competitor_data: params.competitorData ?? null,
-        p_gap_analysis: params.gapAnalysis ?? null,
-        p_rewrites: params.rewrites ?? null,
-        p_tokens: toPositiveInt(params.tokens),
-        p_cost_cents: toPositiveInt(params.costCents),
-      })
-    : await supabase.rpc("complete_gap_report_with_usage", {
-        p_user_id: params.userId,
-        p_report_id: params.reportId,
-        p_competitor_data: params.competitorData ?? null,
-        p_gap_analysis: params.gapAnalysis ?? null,
-        p_rewrites: params.rewrites ?? null,
-        p_tokens: toPositiveInt(params.tokens),
-        p_cost_cents: toPositiveInt(params.costCents),
-      });
+  const supabase = createSupabaseAdminClient("usage_rpc");
+  const { data, error } = await supabase.rpc(
+    "complete_gap_report_with_reserved_usage",
+    {
+      p_user_id: params.userId,
+      p_report_id: params.reportId,
+      p_reservation_key: params.reservationKey,
+      p_report_data: params.reportData,
+      p_competitor_data: params.competitorData ?? null,
+      p_gap_analysis: params.gapAnalysis ?? null,
+      p_rewrites: params.rewrites ?? null,
+      p_tokens: toPositiveInt(params.tokens),
+      p_cost_cents: toPositiveInt(params.costCents),
+    },
+  );
 
   if (error) {
     logger.error("Atomic gap report completion failed.", error, {
@@ -294,7 +231,7 @@ export async function reserveGapReportQuota(params: {
   reportId: string;
   reservationKey: string;
 }): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("usage_rpc");
   const { data, error } = await supabase.rpc("reserve_gap_report_quota", {
     p_user_id: params.userId,
     p_report_id: params.reportId,
@@ -322,7 +259,7 @@ export async function rollbackGapReportQuotaReservation(params: {
   userId: string;
   reservationKey: string;
 }): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("usage_rpc");
   const { data, error } = await supabase.rpc(
     "rollback_gap_report_quota_reservation",
     {
@@ -354,7 +291,7 @@ export async function completeSnapshotReportAndCharge(params: {
   tokens: number;
   costCents: number;
 }): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("usage_rpc");
   const { data, error } = await supabase.rpc(
     "complete_snapshot_report_with_usage",
     {
@@ -385,7 +322,7 @@ export async function completeSnapshotReportAndCharge(params: {
 export async function incrementRewrites(
   userId: string,
 ): Promise<UsageMutationResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("usage_rpc");
   const { data, error } = await supabase.rpc("increment_rewrites", {
     p_user_id: userId,
   });
@@ -408,24 +345,35 @@ export async function resetUsage(
   newBillingPeriodStart: string,
   newBillingPeriodEnd: string,
 ): Promise<UsageMutationResult> {
-  const result = await upsertRow(
-    "usage_tracking",
-    {
-      user_id: userId,
-      billing_period_start: newBillingPeriodStart,
-      billing_period_end: newBillingPeriodEnd,
-      tokens_used: 0,
-      competitor_gaps_used: 0,
-      rewrites_used: 0,
-      ai_cost_cents: 0,
-      updated_at: nowIso(),
-    },
-    "user_id",
-  );
-
-  if (!result.ok) {
-    return { ok: false, error: result.error };
+  const supabase = await getUserScopedSupabase(userId);
+  if (!supabase) {
+    return { ok: false, error: "Unauthorized" };
   }
 
-  return { ok: true, record: result.data ?? null };
+  const { data, error } = await supabase
+    .from("usage_tracking")
+    .upsert(
+      {
+        user_id: userId,
+        billing_period_start: newBillingPeriodStart,
+        billing_period_end: newBillingPeriodEnd,
+        tokens_used: 0,
+        competitor_gaps_used: 0,
+        rewrites_used: 0,
+        ai_cost_cents: 0,
+        updated_at: nowIso(),
+      },
+      { onConflict: "user_id" },
+    )
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    logger.error("Usage reset failed.", error, { user_id: userId });
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true, record: (data as UsageRecord | null) ?? null };
 }
+
+

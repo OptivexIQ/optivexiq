@@ -23,7 +23,7 @@ type RateLimitContext = {
 let startupCheckPromise: Promise<boolean> | null = null;
 
 async function verifyRateLimitFunctionSignature(): Promise<boolean> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("worker");
   const { data, error } = await supabase.rpc("verify_rate_limit_function_ready");
 
   if (error) {
@@ -82,7 +82,7 @@ export async function consumeRateLimit(
     return false;
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("worker");
   const rateKey = `ip:${ip || "unknown"}`;
   const { data, error } = await supabase.rpc("consume_request_rate_limit", {
     p_rate_key: rateKey,
@@ -115,3 +115,4 @@ export async function consumeRateLimit(
 
   return row.allowed;
 }
+

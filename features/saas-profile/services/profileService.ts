@@ -254,7 +254,7 @@ export async function markOnboardingComplete(userId: string) {
   // Security invariant:
   // This path is intentionally service-role because snapshot completion can run
   // in trusted background processing contexts without an end-user session.
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const { error } = await admin
     .from("saas_profiles")
     .update({
@@ -270,3 +270,4 @@ export async function markOnboardingComplete(userId: string) {
 
   return { ok: true };
 }
+

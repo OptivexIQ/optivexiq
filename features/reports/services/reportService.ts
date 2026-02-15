@@ -1,5 +1,4 @@
 import {
-  canonicalReportDataEnvelopeSchema,
   conversionGapReportSchema,
 } from "@/features/conversion-gap/validators/reportSchema";
 import type {
@@ -18,53 +17,10 @@ type GapReportRow = {
   report_data: unknown;
 };
 
-function fromEnvelope(
-  value: unknown,
-): ConversionGapReport | null {
-  const parsed = canonicalReportDataEnvelopeSchema.safeParse(value);
-  if (!parsed.success) {
-    return null;
-  }
-
-  const envelope = parsed.data;
-  const report: ConversionGapReport = {
-    id: envelope.metadata.report_id,
-    company: envelope.metadata.company,
-    segment: envelope.metadata.segment,
-    status: envelope.metadata.status,
-    createdAt: envelope.metadata.created_at,
-    conversionScore: envelope.scores.conversion_score,
-    funnelRisk: envelope.scores.funnel_risk,
-    winRateDelta: envelope.scores.win_rate_delta,
-    pipelineAtRisk: envelope.scores.pipeline_at_risk,
-    differentiationScore: envelope.scores.differentiation_score,
-    pricingScore: envelope.scores.pricing_score,
-    clarityScore: envelope.scores.clarity_score,
-    confidenceScore: envelope.scores.confidence_score,
-    threatLevel: envelope.scores.threat_level,
-    executiveNarrative: envelope.metadata.executive_narrative,
-    executiveSummary: envelope.metadata.executive_summary,
-    messagingOverlap: envelope.metadata.messaging_overlap,
-    objectionCoverage: envelope.metadata.objection_coverage,
-    competitiveMatrix: envelope.metadata.competitive_matrix,
-    positioningMap: envelope.metadata.positioning_map,
-    rewrites: envelope.rewrites,
-    rewriteRecommendations: envelope.metadata.rewrite_recommendations,
-    competitor_synthesis: envelope.competitor_synthesis ?? undefined,
-    revenueImpact: envelope.metadata.revenue_impact,
-    revenueProjection: envelope.metadata.revenue_projection,
-    priorityIssues: envelope.metadata.priority_issues,
-    priorityIndex: envelope.metadata.priority_index,
-  };
-
-  const normalized = conversionGapReportSchema.safeParse(report);
-  return normalized.success ? normalized.data : null;
-}
-
 export function parseStoredReportData(
   value: unknown,
 ): ConversionGapReport | null {
-  return validateGapReport(value) ?? fromEnvelope(value);
+  return validateGapReport(value);
 }
 
 function isReportExpired(createdAt: string | null, retentionDays: number) {

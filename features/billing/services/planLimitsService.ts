@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from "@/services/supabase/admin";
+import { createSupabaseServerClient } from "@/services/supabase/server";
 import { logger } from "@/lib/logger";
 import type { BillingPlan } from "@/features/billing/types/billing.types";
 
@@ -22,7 +22,13 @@ export async function getPlanLimits(
   plan: BillingPlan,
 ): Promise<PlanLimitsRecord | null> {
   try {
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      logger.error("Plan limits fetch unauthorized.", authError, { plan });
+      return null;
+    }
+
     const { data, error } = await supabase
       .from("plan_limits")
       .select(
@@ -42,3 +48,5 @@ export async function getPlanLimits(
     return null;
   }
 }
+
+

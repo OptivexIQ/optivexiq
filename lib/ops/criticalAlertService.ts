@@ -15,7 +15,7 @@ export async function emitOperationalAlert(input: {
   });
 
   try {
-    const admin = createSupabaseAdminClient();
+    const admin = createSupabaseAdminClient("worker");
     await admin.from("operational_alerts").insert({
       severity: input.severity,
       source: input.source,
@@ -29,4 +29,3 @@ export async function emitOperationalAlert(input: {
     });
   }
 }
-

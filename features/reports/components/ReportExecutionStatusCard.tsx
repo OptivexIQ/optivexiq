@@ -14,6 +14,7 @@ type ReportExecutionStatusCardProps = {
 };
 
 const POLL_INTERVAL_MS = 2500;
+const POLL_FAILURE_THRESHOLD = 3;
 
 const STAGE_LABELS: Record<string, string> = {
   queued: "Queued",
@@ -44,6 +45,7 @@ export function ReportExecutionStatusCard({
   const router = useRouter();
   const [execution, setExecution] = useState(initialExecution);
   const [pollError, setPollError] = useState<string | null>(null);
+  const [pollFailureCount, setPollFailureCount] = useState(0);
   const [showStageSpinner, setShowStageSpinner] = useState(false);
   const [showCompletionTransition, setShowCompletionTransition] =
     useState(false);
@@ -105,6 +107,7 @@ export function ReportExecutionStatusCard({
         }
         setExecution(body.report);
         setPollError(null);
+        setPollFailureCount(0);
         if (
           body.report.status === "completed" ||
           body.report.status === "failed"
@@ -122,9 +125,40 @@ export function ReportExecutionStatusCard({
           }
           router.refresh();
         }
-      } catch {
+      } catch (error) {
+        const errorType =
+          error instanceof Error && error.message
+            ? error.message
+            : "report_execution_poll_failed";
+        console.error("Report execution polling failed.", {
+          source: "report_execution_status_polling",
+          route: `/api/reports/${reportId}`,
+          report_id: reportId,
+          error_type: errorType,
+          timestamp: new Date().toISOString(),
+        });
         if (mounted) {
-          setPollError("Unable to refresh progress. Retrying.");
+          setPollFailureCount((prev) => {
+            const next = prev + 1;
+            if (next >= POLL_FAILURE_THRESHOLD) {
+              setExecution((current) => {
+                if (current.status === "queued" || current.status === "running") {
+                  return {
+                    ...current,
+                    status: "failed",
+                    executionStage: "failed",
+                    executionProgress: 100,
+                  };
+                }
+                return current;
+              });
+              setPollError("Unable to refresh progress. Marked as failed.");
+              return next;
+            }
+
+            setPollError("Unable to refresh progress. Retrying.");
+            return next;
+          });
         }
       } finally {
         pollingRef.current = false;

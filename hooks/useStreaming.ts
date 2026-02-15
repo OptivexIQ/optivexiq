@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OpenAIRequest } from "@/features/ai/client/openaiClient";
-import { RuntimeConfig } from "@/lib/config/runtime";
+import { RuntimeClientConfig } from "@/lib/config/runtime.client";
 import { isHttpError } from "@/lib/api/httpClient";
 import { streamClient } from "@/lib/api/streamClient";
 
@@ -64,7 +64,7 @@ export function useStreaming(): UseStreamingResult {
     }
 
     try {
-      if (RuntimeConfig.useMockData) {
+      if (RuntimeClientConfig.useMockData) {
         const mockText =
           "Mock streaming enabled. This is a simulated response for preview.";
         let index = 0;

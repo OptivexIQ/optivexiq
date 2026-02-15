@@ -1,7 +1,7 @@
 import { createSupabaseAdminClient } from "@/services/supabase/admin";
 import { logger } from "@/lib/logger";
 import { emitOperationalAlert } from "@/lib/ops/criticalAlertService";
-import { rollbackGapReportQuotaReservation, rollbackGenerateUsage } from "./usageTracker";
+import { rollbackGapReportQuotaReservation } from "./usageTracker";
 
 type ReservationRow = {
   reservation_key: string;
@@ -32,7 +32,7 @@ async function reconcileGapReservation(row: ReservationRow): Promise<"resolved" 
     return "resolved";
   }
 
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const { data } = await admin
     .from("conversion_gap_reports")
     .select("status, quota_charged")
@@ -89,42 +89,21 @@ async function reconcileGapReservation(row: ReservationRow): Promise<"resolved" 
 async function reconcileGenerateReservation(
   row: ReservationRow,
 ): Promise<"resolved" | "skipped"> {
-  const admin = createSupabaseAdminClient();
-  const { data: pending } = await admin
-    .from("usage_finalization_reconciliation")
-    .select("reservation_key")
-    .eq("reservation_key", row.reservation_key)
-    .is("resolved_at", null)
-    .maybeSingle();
-
-  if (pending?.reservation_key) {
-    return "skipped";
-  }
-
-  const rolledBack = await rollbackGenerateUsage({
-    userId: row.user_id,
-    reservationKey: row.reservation_key,
+  logger.error("Generate reservation remains unfinalized after stale window.", {
+    reservation_key: row.reservation_key,
+    user_id: row.user_id,
   });
-  if (!rolledBack.ok) {
-    logger.error("Failed to rollback stale generate reservation.", {
+  await emitOperationalAlert({
+    severity: "critical",
+    source: "usage_reservation_sweeper",
+    message: "Generate reservation stale and still reserved; manual intervention required.",
+    context: {
       reservation_key: row.reservation_key,
       user_id: row.user_id,
-      error: rolledBack.error,
-    });
-    await emitOperationalAlert({
-      severity: "high",
-      source: "usage_reservation_sweeper",
-      message: "Generate reservation rollback failed.",
-      context: {
-        reservation_key: row.reservation_key,
-        user_id: row.user_id,
-        error: rolledBack.error,
-      },
-    });
-    return "skipped";
-  }
-
-  return "resolved";
+      usage_kind: row.usage_kind,
+    },
+  });
+  return "skipped";
 }
 
 export async function sweepStaleUsageReservations(limit = 200): Promise<{
@@ -132,7 +111,7 @@ export async function sweepStaleUsageReservations(limit = 200): Promise<{
   resolved: number;
   skipped: number;
 }> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const { data, error } = await admin
     .from("usage_reservations")
     .select("reservation_key, user_id, usage_kind, report_id, created_at")

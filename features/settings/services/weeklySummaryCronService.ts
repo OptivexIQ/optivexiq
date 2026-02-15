@@ -34,7 +34,7 @@ async function fetchWeeklyCompletedCounts(params: {
     return new Map();
   }
 
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const { data, error } = await admin.rpc(
     "get_weekly_completed_report_counts",
     {
@@ -98,7 +98,7 @@ async function processBatch(params: {
 }
 
 export async function runWeeklySummaryCron(): Promise<WeeklySummaryRunResult> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const windowEnd = new Date();
   const windowStart = new Date(windowEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
   const windowStartIso = windowStart.toISOString();
@@ -144,3 +144,4 @@ export async function runWeeklySummaryCron(): Promise<WeeklySummaryRunResult> {
 
   return { ok: true, processed, sent, skipped };
 }
+

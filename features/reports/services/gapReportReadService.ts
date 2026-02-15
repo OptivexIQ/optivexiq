@@ -1,6 +1,19 @@
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import { parseStoredReportData } from "@/features/reports/services/reportService";
 import type { GapReportExecutionPayload } from "@/features/reports/types/reportExecution.types";
+import { logger } from "@/lib/logger";
+
+export class ReportDataIntegrityError extends Error {
+  readonly reportId: string;
+  readonly userId: string;
+
+  constructor(reportId: string, userId: string) {
+    super("report_data_integrity_fault");
+    this.name = "ReportDataIntegrityError";
+    this.reportId = reportId;
+    this.userId = userId;
+  }
+}
 
 const VALID_STATUS = new Set(["queued", "running", "completed", "failed"]);
 const VALID_STAGE = new Set([
@@ -54,7 +67,14 @@ export async function getGapReportForUser(
     return null;
   }
 
-  const canonical = parseStoredReportData(data.report_data) ?? null;
+  const canonical = parseStoredReportData(data.report_data);
+  if (!canonical) {
+    logger.error("Gap report read rejected invalid canonical report_data.", {
+      report_id: reportId,
+      user_id: userId,
+    });
+    throw new ReportDataIntegrityError(reportId, userId);
+  }
 
   return {
     id: data.id,

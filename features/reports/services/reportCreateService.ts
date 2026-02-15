@@ -112,6 +112,16 @@ function normalizeIdempotencyKey(value?: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+async function enqueueReportJobDurably(input: {
+  reportId: string;
+  userId: string;
+}) {
+  const { enqueueReportJob } = await import(
+    "@/features/reports/services/reportJobQueueService"
+  );
+  return enqueueReportJob(input);
+}
+
 async function findRecentReport(
   userId: string,
   payload: ReportCreatePayload,
@@ -254,7 +264,7 @@ async function findLatestSnapshot(userId: string): Promise<RecentReportResult> {
 }
 
 async function fetchReportStatus(reportId: string) {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const { data, error } = await admin
     .from("conversion_gap_reports")
     .select("status")
@@ -272,7 +282,7 @@ async function markReportFailedIfPending(
   reportId: string,
   message: string,
 ): Promise<void> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const failedReportData = buildFailedReportData(reportId, message);
   await admin
     .from("conversion_gap_reports")
@@ -375,60 +385,13 @@ function buildFailedReportData(
     priorityIndex: [],
   };
 
-  return buildReportDataEnvelope(
-    failedReport,
-    { error: safeMessage },
-    {},
-    null,
-  );
-}
-
-function buildReportDataEnvelope(
-  report: ConversionGapReport,
-  gapAnalysis: Record<string, unknown>,
-  rewrites: Record<string, unknown>,
-  competitorSynthesis: Record<string, unknown> | null,
-): Record<string, unknown> {
-  return {
-    gap_analysis: gapAnalysis,
-    rewrites,
-    competitor_synthesis: competitorSynthesis,
-    scores: {
-      conversion_score: report.conversionScore,
-      funnel_risk: report.funnelRisk,
-      win_rate_delta: report.winRateDelta,
-      pipeline_at_risk: report.pipelineAtRisk,
-      differentiation_score: report.differentiationScore,
-      pricing_score: report.pricingScore,
-      clarity_score: report.clarityScore,
-      confidence_score: report.confidenceScore,
-      threat_level: report.threatLevel,
-    },
-    metadata: {
-      report_id: report.id,
-      company: report.company,
-      segment: report.segment,
-      created_at: report.createdAt,
-      status: report.status,
-      executive_narrative: report.executiveNarrative,
-      executive_summary: report.executiveSummary,
-      messaging_overlap: report.messagingOverlap,
-      objection_coverage: report.objectionCoverage,
-      competitive_matrix: report.competitiveMatrix,
-      positioning_map: report.positioningMap,
-      rewrite_recommendations: report.rewriteRecommendations,
-      revenue_impact: report.revenueImpact,
-      revenue_projection: report.revenueProjection,
-      priority_issues: report.priorityIssues,
-      priority_index: report.priorityIndex,
-    },
-  };
+  return failedReport as unknown as Record<string, unknown>;
 }
 
 async function fetchProfileForUser(
   userId: string,
 ): Promise<SaasProfileFormValues | null> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const { data, error } = await admin
     .from("saas_profiles")
     .select(
@@ -476,7 +439,7 @@ async function updateReportStatus(
   status: GapReportStatus,
   payload?: Record<string, unknown>,
 ) {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const updatePayload = { status, ...(payload ?? {}) };
   const { data, error } = await admin
     .from("conversion_gap_reports")
@@ -497,7 +460,7 @@ async function updateExecutionState(
   progress: number,
   payload?: Record<string, unknown>,
 ) {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const normalizedProgress = Math.max(0, Math.min(100, Math.round(progress)));
   const { data, error } = await admin
     .from("conversion_gap_reports")
@@ -567,7 +530,7 @@ async function claimQueuedReport(
   reportId: string,
   userId: string,
 ): Promise<{ shouldProcess: boolean; status: GapReportStatus }> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const claimQueued = async () =>
     admin
       .from("conversion_gap_reports")
@@ -699,7 +662,7 @@ async function processSnapshotReport(
   let completionCommitted = false;
 
   try {
-    const admin = createSupabaseAdminClient();
+    const admin = createSupabaseAdminClient("worker");
     const { data: report, error } = await admin
       .from("conversion_gap_reports")
       .select("homepage_url")
@@ -737,6 +700,18 @@ async function processSnapshotReport(
     await updateExecutionState(reportId, "finalizing", 92);
 
     const snapshotResult = buildSnapshotResult(results.gapAnalysis, results.hero);
+    const finalizedReservation = await finalizeReservationWithFallback({
+      userId,
+      reservationKey,
+      actualTokens: usage.totalTokens,
+      actualCostCents: usage.costCents,
+      fallbackTokens: SNAPSHOT_TOKEN_RESERVE,
+      fallbackCostCents: reservedCostCents,
+    });
+    if (!finalizedReservation) {
+      throw new Error("Unable to finalize snapshot reservation.");
+    }
+
     const usageResult = await completeSnapshotReportAndCharge({
       userId,
       reportId,
@@ -753,18 +728,6 @@ async function processSnapshotReport(
     await updateExecutionState(reportId, "complete", 100, {
       completed_at: new Date().toISOString(),
     });
-
-    const finalizedReservation = await finalizeReservationWithFallback({
-      userId,
-      reservationKey,
-      actualTokens: usage.totalTokens,
-      actualCostCents: usage.costCents,
-      fallbackTokens: SNAPSHOT_TOKEN_RESERVE,
-      fallbackCostCents: reservedCostCents,
-    });
-    if (!finalizedReservation) {
-      throw new Error("Unable to finalize snapshot reservation.");
-    }
 
     await logUsageEvent({
       user_id: userId,
@@ -826,7 +789,7 @@ async function processGapReport(
   let completionCommitted = false;
 
   try {
-    const admin = createSupabaseAdminClient();
+    const admin = createSupabaseAdminClient("worker");
     const { data: report, error } = await admin
       .from("conversion_gap_reports")
       .select("homepage_url, pricing_url, competitor_data")
@@ -940,24 +903,23 @@ async function processGapReport(
     if (!validateGapReport(canonicalReport)) {
       throw new Error("invalid_report_data");
     }
-    const reportDataEnvelope = buildReportDataEnvelope(
-      canonicalReport,
-      results.gapAnalysis as unknown as Record<string, unknown>,
-      {
-        hero: results.hero,
-        pricing: results.pricing,
-        objections: results.objections,
-        differentiation: results.differentiation,
-        competitiveCounter: results.competitiveCounter,
-      } as unknown as Record<string, unknown>,
-      results.competitorSynthesis as unknown as Record<string, unknown>,
-    );
+    const finalizedTokens = await finalizeReservationWithFallback({
+      userId,
+      reservationKey: tokenReservationKey,
+      actualTokens: usage.totalTokens,
+      actualCostCents: usage.costCents,
+      fallbackTokens: GAP_TOKEN_RESERVE,
+      fallbackCostCents: gapReservedCostCents,
+    });
+    if (!finalizedTokens) {
+      throw new Error("Unable to finalize gap token reservation.");
+    }
 
     const usageResult = await completeGapReportAndCharge({
       userId,
       reportId,
       reservationKey,
-      reportData: reportDataEnvelope,
+      reportData: canonicalReport as unknown as Record<string, unknown>,
       competitorData: {
         homepage: companyContent,
         pricing: pricingContent,
@@ -973,18 +935,6 @@ async function processGapReport(
       );
     }
     completionCommitted = true;
-
-    const finalizedTokens = await finalizeReservationWithFallback({
-      userId,
-      reservationKey: tokenReservationKey,
-      actualTokens: usage.totalTokens,
-      actualCostCents: usage.costCents,
-      fallbackTokens: GAP_TOKEN_RESERVE,
-      fallbackCostCents: gapReservedCostCents,
-    });
-    if (!finalizedTokens) {
-      throw new Error("Unable to finalize gap token reservation.");
-    }
     await updateExecutionState(reportId, "complete", 100, {
       completed_at: new Date().toISOString(),
     });
@@ -1086,14 +1036,18 @@ export async function createReportAndProcess(
 
   const recentId = await findRecentReport(userId, payload, "full");
   if (recentId) {
-    if (recentId.status === "queued" || recentId.status === "running") {
-      void processQueuedReportIfNeeded("full", recentId.id, userId, recentId.status)
-        .catch((error) => {
-          logger.error("Background processing for reused gap report failed.", error, {
-            report_id: recentId.id,
-            user_id: userId,
-          });
-        });
+    if (recentId.status === "queued") {
+      const enqueued = await enqueueReportJobDurably({
+        reportId: recentId.id,
+        userId,
+      });
+      if (!enqueued.ok) {
+        return {
+          ok: false,
+          status: 500,
+          error: "Unable to enqueue report processing job.",
+        };
+      }
     }
     logger.info("Reusing recent gap report.", {
       report_id: recentId.id,
@@ -1127,32 +1081,71 @@ export async function createReportAndProcess(
 
   const reportId = inserted.reportId;
   if (!inserted.created) {
-    if (inserted.status === "queued" || inserted.status === "running") {
-      void processQueuedReportIfNeeded("full", reportId, userId, inserted.status)
-        .catch((error) => {
-          logger.error("Background processing for existing queued report failed.", error, {
-            report_id: reportId,
-            user_id: userId,
-          });
-        });
+    if (inserted.status === "queued") {
+      const enqueued = await enqueueReportJobDurably({
+        reportId,
+        userId,
+      });
+      if (!enqueued.ok) {
+        return {
+          ok: false,
+          status: 500,
+          error: "Unable to enqueue report processing job.",
+        };
+      }
     }
     return { ok: true, reportId, status: inserted.status };
   }
 
-  void (async () => {
-    try {
-      await processGapReport(reportId, userId);
-    } catch (err) {
-      logger.error("Failed to finalize gap report.", err, {
-        report_id: reportId,
-        user_id: userId,
-      });
-      const message = extractErrorMessage(err);
-      await markReportFailedIfPending(reportId, message);
-    }
-  })();
+  const enqueued = await enqueueReportJobDurably({
+    reportId,
+    userId,
+  });
+  if (!enqueued.ok) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Unable to enqueue report processing job.",
+    };
+  }
 
   return { ok: true, reportId, status: inserted.status };
+}
+
+export async function processQueuedFullReportJob(
+  reportId: string,
+  userId: string,
+): Promise<ReportStatus> {
+  return processQueuedReportIfNeeded("full", reportId, userId, "queued");
+}
+
+export async function processQueuedReportJob(
+  reportId: string,
+  userId: string,
+): Promise<ReportStatus> {
+  const admin = createSupabaseAdminClient("worker");
+  const { data, error } = await admin
+    .from("conversion_gap_reports")
+    .select("report_type, status")
+    .eq("id", reportId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    logger.error("Failed to resolve queued report type.", error, {
+      report_id: reportId,
+      user_id: userId,
+    });
+    return "failed";
+  }
+
+  const reportType = data.report_type === "snapshot" ? "snapshot" : "full";
+  return processQueuedReportIfNeeded(
+    reportType,
+    reportId,
+    userId,
+    normalizeReportStatus(data.status as string | null),
+  );
 }
 
 export async function createSnapshotAndProcess(
@@ -1172,13 +1165,20 @@ export async function createSnapshotAndProcess(
   if (subscription.plan === "starter") {
     const existing = await findLatestSnapshot(userId);
     if (existing && existing.status !== "failed") {
-      const status = await processQueuedReportIfNeeded(
-        "snapshot",
-        existing.id,
-        userId,
-        existing.status,
-      );
-      return { ok: true, reportId: existing.id, status };
+      if (existing.status === "queued") {
+        const enqueued = await enqueueReportJobDurably({
+          reportId: existing.id,
+          userId,
+        });
+        if (!enqueued.ok) {
+          return {
+            ok: false,
+            status: 500,
+            error: "Unable to enqueue snapshot processing job.",
+          };
+        }
+      }
+      return { ok: true, reportId: existing.id, status: existing.status };
     }
   }
 
@@ -1188,13 +1188,20 @@ export async function createSnapshotAndProcess(
     "snapshot",
   );
   if (recentId && recentId.status !== "failed") {
-    const status = await processQueuedReportIfNeeded(
-      "snapshot",
-      recentId.id,
-      userId,
-      recentId.status,
-    );
-    return { ok: true, reportId: recentId.id, status };
+    if (recentId.status === "queued") {
+      const enqueued = await enqueueReportJobDurably({
+        reportId: recentId.id,
+        userId,
+      });
+      if (!enqueued.ok) {
+        return {
+          ok: false,
+          status: 500,
+          error: "Unable to enqueue snapshot processing job.",
+        };
+      }
+    }
+    return { ok: true, reportId: recentId.id, status: recentId.status };
   }
 
   const competitorData: Record<string, unknown> = {
@@ -1224,26 +1231,33 @@ export async function createSnapshotAndProcess(
 
   const reportId = inserted.reportId;
   if (!inserted.created) {
-    const status = await processQueuedReportIfNeeded(
-      "snapshot",
-      reportId,
-      userId,
-      inserted.status,
-    );
-    return { ok: true, reportId, status };
+    if (inserted.status === "queued") {
+      const enqueued = await enqueueReportJobDurably({
+        reportId,
+        userId,
+      });
+      if (!enqueued.ok) {
+        return {
+          ok: false,
+          status: 500,
+          error: "Unable to enqueue snapshot processing job.",
+        };
+      }
+    }
+    return { ok: true, reportId, status: inserted.status };
   }
 
-  try {
-    await processSnapshotReport(reportId, userId);
-  } catch (err) {
-    logger.error("Failed to finalize snapshot report.", err, {
-      report_id: reportId,
-      user_id: userId,
-    });
-    const message = extractErrorMessage(err);
-    await markReportFailedIfPending(reportId, message);
+  const enqueued = await enqueueReportJobDurably({
+    reportId,
+    userId,
+  });
+  if (!enqueued.ok) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Unable to enqueue snapshot processing job.",
+    };
   }
-
-  const status = normalizeReportStatus(await fetchReportStatus(reportId));
-  return { ok: true, reportId, status };
+  return { ok: true, reportId, status: inserted.status };
 }
+

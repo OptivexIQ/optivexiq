@@ -8,10 +8,7 @@ import {
   reserveGenerateUsage,
   rollbackGenerateUsage,
 } from "@/features/usage/services/usageTracker";
-import {
-  enqueueUsageFinalizationReconciliation,
-  markUsageFinalizationReconciled,
-} from "@/features/usage/services/usageFinalizationReconciliationService";
+import { emitOperationalAlert } from "@/lib/ops/criticalAlertService";
 import { errorResponse } from "@/lib/api/errorResponse";
 import type { NextRequest } from "next/server";
 
@@ -304,29 +301,30 @@ export async function handleGenerateStream(params: {
                   actualCostCents: reservedCostCents,
                 });
                 if (!fallback.ok) {
-                  await enqueueUsageFinalizationReconciliation({
-                    reservationKey: requestId,
-                    userId,
-                    route: "/api/generate",
-                    exactTokens: actualTokens,
-                    exactCostCents: actualCostCents,
-                    fallbackTokens: reservedTokens,
-                    fallbackCostCents: reservedCostCents,
-                    errorMessage:
-                      fallback.error ??
-                      abortedFinalization.error ??
-                      "aborted_stream_finalization_failed",
-                  });
                   logger.error("Failed to finalize usage for aborted stream.", {
                     requestId,
                     error: fallback.error ?? abortedFinalization.error,
                     charge_state: "reservation_retained",
                   });
-                } else {
-                  await markUsageFinalizationReconciled(requestId);
+                  await emitOperationalAlert({
+                    severity: "critical",
+                    source: "generate_stream_finalization",
+                    message: "Aborted stream finalization failed; reservation retained.",
+                    context: {
+                      reservation_key: requestId,
+                      user_id: userId,
+                      route: "/api/generate",
+                      exact_tokens: actualTokens,
+                      exact_cost_cents: actualCostCents,
+                      fallback_tokens: reservedTokens,
+                      fallback_cost_cents: reservedCostCents,
+                      error:
+                        fallback.error ??
+                        abortedFinalization.error ??
+                        "aborted_stream_finalization_failed",
+                    },
+                  });
                 }
-              } else {
-                await markUsageFinalizationReconciled(requestId);
               }
               return;
             }
@@ -356,16 +354,6 @@ export async function handleGenerateStream(params: {
           });
 
           if (!finalization.ok) {
-            await enqueueUsageFinalizationReconciliation({
-              reservationKey: requestId,
-              userId,
-              route: "/api/generate",
-              exactTokens: finalizedTokens,
-              exactCostCents: finalizedCostCents,
-              fallbackTokens: reservedTokens,
-              fallbackCostCents: reservedCostCents,
-              errorMessage: "finalization_failed_after_retries",
-            });
             logger.error("AI usage finalization failed after retries.", {
               request_id: requestId,
               user_id: userId,
@@ -377,10 +365,23 @@ export async function handleGenerateStream(params: {
               finalized_tokens: finalizedTokens,
               finalized_cost_cents: finalizedCostCents,
             });
+            await emitOperationalAlert({
+              severity: "critical",
+              source: "generate_stream_finalization",
+              message: "Generate stream finalization failed after retries; reservation retained.",
+              context: {
+                reservation_key: requestId,
+                user_id: userId,
+                route: "/api/generate",
+                exact_tokens: finalizedTokens,
+                exact_cost_cents: finalizedCostCents,
+                fallback_tokens: reservedTokens,
+                fallback_cost_cents: reservedCostCents,
+                error: "finalization_failed_after_retries",
+              },
+            });
             return;
           }
-
-          await markUsageFinalizationReconciled(requestId);
 
           logger.info("AI stream finalized.", {
             requestId,

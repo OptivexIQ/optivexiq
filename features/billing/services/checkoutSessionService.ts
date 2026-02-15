@@ -42,7 +42,7 @@ export async function createPendingCheckoutSession(
   userId: string,
   requestedPlan: BillingPlan,
 ): Promise<CreateCheckoutSessionResult> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("webhook");
 
   for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt += 1) {
     const checkoutRef = randomUUID();
@@ -67,7 +67,7 @@ export async function createPendingCheckoutSession(
 async function getCheckoutSessionByRef(
   checkoutRef: string,
 ): Promise<CheckoutSessionRow | null> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("webhook");
   const { data, error } = await supabase
     .from("billing_checkout_sessions")
     .select(
@@ -105,7 +105,7 @@ export async function resolveCheckoutSessionForWebhook(
     return { ok: false, error: "Checkout reference already consumed." };
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("webhook");
   const { data, error } = await supabase
     .from("billing_checkout_sessions")
     .update({
@@ -153,7 +153,7 @@ export async function resolveCheckoutSessionBySubscriptionId(
     return { ok: false, error: "Subscription identifier missing." };
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAdminClient("webhook");
   const { data, error } = await supabase
     .from("billing_checkout_sessions")
     .select("user_id, requested_plan")
@@ -175,3 +175,5 @@ export async function resolveCheckoutSessionBySubscriptionId(
     requestedPlan: data.requested_plan as BillingPlan,
   };
 }
+
+

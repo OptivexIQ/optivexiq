@@ -2,7 +2,11 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth/requireApiUser";
 import { errorResponse } from "@/lib/api/errorResponse";
-import { getGapReportForUser } from "@/features/reports/services/gapReportReadService";
+import {
+  getGapReportForUser,
+  ReportDataIntegrityError,
+} from "@/features/reports/services/gapReportReadService";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   _request: Request,
@@ -16,7 +20,29 @@ export async function GET(
     return response;
   }
 
-  const report = await getGapReportForUser(resolvedParams.reportId, user.id);
+  let report;
+  try {
+    report = await getGapReportForUser(resolvedParams.reportId, user.id);
+  } catch (error) {
+    if (error instanceof ReportDataIntegrityError) {
+      logger.error("Report API rejected corrupt canonical report_data.", {
+        report_id: error.reportId,
+        user_id: error.userId,
+        request_id: requestId,
+      });
+      return errorResponse(
+        "internal_error",
+        "Report data integrity fault.",
+        500,
+        {
+          requestId,
+          headers: { "x-request-id": requestId },
+        },
+      );
+    }
+    throw error;
+  }
+
   if (!report) {
     return errorResponse("not_found", "Not found.", 404, {
       requestId,

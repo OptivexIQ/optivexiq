@@ -1,8 +1,8 @@
 const REVENUE_STAGE_LABELS: Record<string, string> = {
   pre: "Pre-revenue",
-  "<â‚¬10k": "<â‚¬10k MRR",
-  "â‚¬10k-50k": "â‚¬10kâ€“â‚¬50k MRR",
-  "â‚¬50k+": "â‚¬50k+ MRR",
+  "<€10k": "<€10k MRR",
+  "€10k-50k": "€10k-€50k MRR",
+  "€50k+": "€50k+ MRR",
 };
 
 export function formatRevenueStageLabel(

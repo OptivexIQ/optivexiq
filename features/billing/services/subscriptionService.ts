@@ -25,7 +25,7 @@ export async function upsertSubscription(
   record: SubscriptionRecord,
 ): Promise<UpsertResult> {
   try {
-    const supabase = createSupabaseAdminClient();
+    const supabase = createSupabaseAdminClient("webhook");
     const { error } = await supabase
       .from("subscriptions")
       .upsert(record, { onConflict: "user_id" });
@@ -58,7 +58,7 @@ export async function resolveSubscriptionByLemonIds(params: {
   }
 
   try {
-    const supabase = createSupabaseAdminClient();
+    const supabase = createSupabaseAdminClient("webhook");
     const filters: string[] = [];
     if (subscriptionId) {
       filters.push(`lemonsqueezy_subscription_id.eq.${subscriptionId}`);
@@ -93,3 +93,5 @@ export async function resolveSubscriptionByLemonIds(params: {
     return { ok: false, error: "Unexpected error" };
   }
 }
+
+

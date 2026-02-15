@@ -1,10 +1,11 @@
+import "server-only";
 /**
  * Environment variable validation and configuration
  * Ensures all required environment variables are present at runtime
  */
 
 import { z } from "zod";
-import { RuntimeConfig } from "@/lib/config/runtime";
+import { RuntimeServerConfig } from "@/lib/config/runtime.server";
 
 const envSchema = z.object({
   // Supabase
@@ -48,7 +49,7 @@ type Env = z.infer<typeof envSchema>;
 
 function getEnv(): Env {
   try {
-    return envSchema.parse(RuntimeConfig.env);
+    return envSchema.parse(RuntimeServerConfig.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const missingVars = error.errors

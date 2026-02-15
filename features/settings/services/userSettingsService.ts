@@ -1,4 +1,3 @@
-import { createSupabaseAdminClient } from "@/services/supabase/admin";
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import { logger } from "@/lib/logger";
 import { hasActiveSubscription } from "@/features/billing/services/planValidationService";
@@ -60,7 +59,7 @@ function buildDefaultSettings(userId: string): UserSettingsRecord {
 }
 
 async function subscriptionExists(userId: string): Promise<boolean> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("subscriptions")
     .select("user_id")
@@ -102,8 +101,11 @@ async function assertUserScopeOrSystem(
 
   const sessionUserId = data.user?.id;
   if (!sessionUserId) {
-    // No user session indicates a trusted server context (cron/worker).
-    return { ok: true };
+    logger.warn("Settings access denied without user session.", {
+      user_id: userId,
+      source,
+    });
+    return { ok: false, error: "Unauthorized." };
   }
 
   if (sessionUserId !== userId) {
@@ -125,7 +127,7 @@ async function fetchUserSettings(userId: string): Promise<UserSettingsResult> {
       return { ok: false, error: scope.error };
     }
 
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("user_settings")
       .select("*")
@@ -201,7 +203,7 @@ async function updateUserSettingsRecord(
       return { ok: false, error: "Subscription missing." };
     }
 
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("user_settings")
       .upsert(
@@ -239,3 +241,5 @@ export async function updateUserSettings(
 ): Promise<UserSettingsResult> {
   return updateUserSettingsRecord(userId, payload);
 }
+
+

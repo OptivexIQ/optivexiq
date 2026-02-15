@@ -1,4 +1,6 @@
-export const RuntimeConfig = {
+import "server-only";
+
+export const RuntimeServerConfig = {
   useMockData: process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "false",
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

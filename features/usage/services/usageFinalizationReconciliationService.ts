@@ -31,7 +31,7 @@ export async function enqueueUsageFinalizationReconciliation(input: {
   fallbackCostCents: number;
   errorMessage: string;
 }): Promise<void> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const payload = {
     reservation_key: input.reservationKey,
     user_id: input.userId,
@@ -93,7 +93,7 @@ export async function enqueueUsageFinalizationReconciliation(input: {
 export async function markUsageFinalizationReconciled(
   reservationKey: string,
 ): Promise<void> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   await admin
     .from("usage_finalization_reconciliation")
     .update({
@@ -110,7 +110,7 @@ export async function reconcilePendingUsageFinalizations(limit = 50): Promise<{
   resolved: number;
   failed: number;
 }> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const nowIso = new Date().toISOString();
   const { data, error } = await admin
     .from("usage_finalization_reconciliation")
@@ -188,4 +188,5 @@ export async function reconcilePendingUsageFinalizations(limit = 50): Promise<{
 
   return { processed: jobs.length, resolved, failed };
 }
+
 

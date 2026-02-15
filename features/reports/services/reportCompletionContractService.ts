@@ -9,7 +9,7 @@ type VerifyRow = {
 let startupCheckPromise: Promise<boolean> | null = null;
 
 async function verifyCanonicalCompletionRpcSignature(): Promise<boolean> {
-  const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient("worker");
   const { data, error } = await admin.rpc("verify_canonical_gap_completion_rpc_ready");
 
   if (error) {
@@ -47,4 +47,5 @@ export async function runReportCompletionStartupCheck(): Promise<boolean> {
   }
   return startupCheckPromise;
 }
+
 

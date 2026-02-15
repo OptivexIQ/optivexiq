@@ -1,0 +1,3 @@
+export const RuntimeClientConfig = {
+  useMockData: process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "false",
+};

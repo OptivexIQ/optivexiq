@@ -1,11 +1,11 @@
-import { RuntimeConfig } from "@/lib/config/runtime";
+import { RuntimeClientConfig } from "@/lib/config/runtime.client";
 
 export async function resolveData<T>(
   key: string,
   fetcher: () => Promise<T>,
   mockResolver: () => Promise<T> | T
 ): Promise<T> {
-  if (RuntimeConfig.useMockData) {
+  if (RuntimeClientConfig.useMockData) {
     return await mockResolver();
   }
 

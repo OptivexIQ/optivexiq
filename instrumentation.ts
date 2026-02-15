@@ -1,11 +1,13 @@
 import { logger } from "@/lib/logger";
 import { runRateLimitStartupCheck } from "@/features/usage/services/rateLimitService";
 import { runReportCompletionStartupCheck } from "@/features/reports/services/reportCompletionContractService";
+import { runDbContractStartupCheck } from "@/features/db/services/dbContractStartupService";
 
 export async function register() {
-  const [rateLimitOk, reportCompletionOk] = await Promise.all([
+  const [rateLimitOk, reportCompletionOk, dbContractOk] = await Promise.all([
     runRateLimitStartupCheck(),
     runReportCompletionStartupCheck(),
+    runDbContractStartupCheck(),
   ]);
   if (!rateLimitOk) {
     logger.error("FATAL: rate limit startup verification failed.", undefined, {
@@ -17,6 +19,12 @@ export async function register() {
     logger.error("FATAL: report completion RPC startup verification failed.", undefined, {
       component: "startup",
       error_type: "report_completion_rpc_startup_verification_failed",
+    });
+  }
+  if (!dbContractOk) {
+    logger.error("FATAL: DB contract startup verification failed.", undefined, {
+      component: "startup",
+      error_type: "db_contract_startup_verification_failed",
     });
   }
 }

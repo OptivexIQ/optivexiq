@@ -39,6 +39,7 @@ type GapEngineLiveStatusProviderProps = {
 };
 
 const POLL_INTERVAL_MS = 2500;
+const POLL_FAILURE_THRESHOLD = 3;
 
 const GapEngineLiveStatusContext =
   createContext<GapEngineLiveStatusContextValue | null>(null);
@@ -85,9 +86,11 @@ export function GapEngineLiveStatusProvider({
     stage: latestReport.executionStage ?? null,
     progress: latestReport.executionProgress ?? null,
   });
+  const [pollFailureCount, setPollFailureCount] = useState(0);
 
   useEffect(() => {
     setLive(getLatestSnapshot());
+    setPollFailureCount(0);
   }, [getLatestSnapshot]);
 
   const startNewAnalysis = useCallback(() => {
@@ -127,7 +130,7 @@ export function GapEngineLiveStatusProvider({
           cache: "no-store",
         });
         if (!response.ok) {
-          return;
+          throw new Error(`poll_http_error:${response.status}`);
         }
 
         const body = (await response.json()) as {
@@ -144,8 +147,38 @@ export function GapEngineLiveStatusProvider({
           stage: body.report.executionStage,
           progress: body.report.executionProgress,
         });
-      } catch {
-        // Keep previous state on polling failure.
+        setPollFailureCount(0);
+      } catch (error) {
+        const errorType =
+          error instanceof Error && error.message
+            ? error.message
+            : "poll_failure";
+        const context = {
+          source: "gap_engine_live_status_polling",
+          route: `/api/reports/${live.reportId}`,
+          report_id: live.reportId,
+          previous_status: live.status,
+          error_type: errorType,
+          timestamp: new Date().toISOString(),
+        };
+        console.error("Gap engine polling failed.", context);
+        setPollFailureCount((previous) => {
+          const next = previous + 1;
+          if (next >= POLL_FAILURE_THRESHOLD) {
+            setLive((current) => {
+              if (current.status === "queued" || current.status === "running") {
+                return {
+                  ...current,
+                  status: "failed",
+                  stage: "failed",
+                  progress: 100,
+                };
+              }
+              return current;
+            });
+          }
+          return next;
+        });
       }
     };
 
