@@ -78,6 +78,14 @@ begin
     case when found then 'exists' else 'missing table public.operational_alerts' end
   );
 
+  perform 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public' and c.relname = 'report_jobs' and c.relkind = 'r';
+  insert into db_readiness_audit_results values (
+    'table.report_jobs',
+    case when found then 'pass' else 'fail' end,
+    case when found then 'exists' else 'missing table public.report_jobs' end
+  );
+
   -- Required columns
   select exists (
     select 1
@@ -237,6 +245,18 @@ begin
     case when has_index then 'exists' else 'missing unique idempotency index' end
   );
 
+  select exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'public'
+      and indexname = 'report_jobs_report_id_unique_idx'
+  ) into has_index;
+  insert into db_readiness_audit_results values (
+    'index.report_jobs_report_id_unique_idx',
+    case when has_index then 'pass' else 'fail' end,
+    case when has_index then 'exists' else 'missing unique report job index' end
+  );
+
   -- RLS + checkout policies
   select c.relrowsecurity
     into rls_enabled
@@ -295,6 +315,67 @@ begin
   ) into has_policy;
   insert into db_readiness_audit_results values (
     'policy.billing_checkout_sessions_delete_own',
+    case when has_policy then 'pass' else 'fail' end,
+    case when has_policy then 'exists' else 'missing DELETE policy' end
+  );
+
+  select c.relrowsecurity
+    into rls_enabled
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relname = 'report_jobs';
+
+  insert into db_readiness_audit_results values (
+    'rls.report_jobs',
+    case when coalesce(rls_enabled, false) then 'pass' else 'fail' end,
+    case when coalesce(rls_enabled, false) then 'enabled' else 'RLS disabled' end
+  );
+
+  select exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'report_jobs'
+      and policyname = 'report_jobs_select_own'
+  ) into has_policy;
+  insert into db_readiness_audit_results values (
+    'policy.report_jobs_select_own',
+    case when has_policy then 'pass' else 'fail' end,
+    case when has_policy then 'exists' else 'missing SELECT policy' end
+  );
+
+  select exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'report_jobs'
+      and policyname = 'report_jobs_insert_own'
+  ) into has_policy;
+  insert into db_readiness_audit_results values (
+    'policy.report_jobs_insert_own',
+    case when has_policy then 'pass' else 'fail' end,
+    case when has_policy then 'exists' else 'missing INSERT policy' end
+  );
+
+  select exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'report_jobs'
+      and policyname = 'report_jobs_update_own'
+  ) into has_policy;
+  insert into db_readiness_audit_results values (
+    'policy.report_jobs_update_own',
+    case when has_policy then 'pass' else 'fail' end,
+    case when has_policy then 'exists' else 'missing UPDATE policy' end
+  );
+
+  select exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'report_jobs'
+      and policyname = 'report_jobs_delete_own'
+  ) into has_policy;
+  insert into db_readiness_audit_results values (
+    'policy.report_jobs_delete_own',
     case when has_policy then 'pass' else 'fail' end,
     case when has_policy then 'exists' else 'missing DELETE policy' end
   );

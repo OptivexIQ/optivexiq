@@ -17,7 +17,7 @@ const shouldVerify =
 
 if (shouldVerify) {
   run("npm", ["run", "verify:db-contract"]);
+  run("npm", ["run", "verify:admin-client-usage"]);
 }
 
 run("next", ["build"]);
-

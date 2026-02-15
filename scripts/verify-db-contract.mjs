@@ -34,6 +34,7 @@ async function verifyRpc(rpcName) {
 const checks = await Promise.all([
   verifyRpc("verify_rate_limit_function_ready"),
   verifyRpc("verify_canonical_gap_completion_rpc_ready"),
+  verifyRpc("verify_canonical_migration_snapshot_ready"),
 ]);
 
 const failed = checks.filter((check) => !check.ok);
@@ -45,4 +46,3 @@ if (failed.length > 0) {
 }
 
 console.info("DB contract verification passed.");
-

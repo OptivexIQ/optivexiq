@@ -1,0 +1,123 @@
+-- Canonical Migration Snapshot (Governance Artifact)
+-- Purpose:
+--   1) Declare the canonical DB contract expected by the app runtime.
+--   2) Provide a single reference for critical table shapes and RPC signatures.
+--   3) Mark superseded legacy migrations as deprecated without destructive edits.
+--
+-- Notes:
+-- - This file is an architecture/governance snapshot, not a replacement for
+--   chronological migrations.
+-- - Apply chronological migrations first, then validate this contract via
+--   verify_canonical_migration_snapshot_ready().
+
+-- ============================================================================
+-- Canonical Tables (critical shape)
+-- ============================================================================
+-- Table: public.conversion_gap_reports
+-- Required columns:
+--   id uuid
+--   user_id uuid
+--   report_type text
+--   status text
+--   idempotency_key text
+--   report_data jsonb
+--   execution_stage text
+--   execution_progress integer
+--   started_at timestamptz
+--   completed_at timestamptz
+--
+-- Table: public.usage_tracking
+-- Required columns:
+--   user_id uuid
+--   billing_period_start timestamptz
+--   billing_period_end timestamptz
+--   tokens_used bigint/int
+--   competitor_gaps_used int
+--   rewrites_used int
+--   ai_cost_cents int
+--
+-- Table: public.usage_reservations
+-- Required columns:
+--   reservation_key text (pk)
+--   user_id uuid
+--   usage_kind text
+--   report_id uuid
+--   reserved_tokens int
+--   reserved_cost_cents int
+--   reserved_gap_reports int
+--   status text
+--
+-- Table: public.report_jobs
+-- Required columns:
+--   id uuid
+--   report_id uuid
+--   user_id uuid
+--   status text
+--   attempts int
+--   last_error text
+--   locked_at timestamptz
+--   started_at timestamptz
+--   completed_at timestamptz
+--
+-- Table: public.subscriptions
+-- Required columns:
+--   user_id uuid
+--   plan text
+--   status text
+--   is_recurring boolean
+--   current_period_end timestamptz
+--
+-- Table: public.plan_limits
+-- Required columns:
+--   plan text
+--   token_limit bigint
+--   competitor_gap_limit int
+
+-- ============================================================================
+-- Canonical RPC Signatures (runtime-critical)
+-- ============================================================================
+-- Billing/entitlement:
+--   public.resolve_entitled_subscription(uuid)
+--
+-- Usage reservation/finalization:
+--   public.reserve_generate_usage(uuid,text,integer,integer)
+--   public.finalize_generate_usage(uuid,text,integer,integer)
+--   public.rollback_generate_usage(uuid,text)
+--   public.reserve_gap_report_quota(uuid,uuid,text)
+--   public.rollback_gap_report_quota_reservation(uuid,text)
+--
+-- Report persistence:
+--   public.complete_gap_report_with_reserved_usage(
+--     uuid,uuid,text,jsonb,jsonb,jsonb,integer,integer,jsonb
+--   )
+--   public.complete_snapshot_report_with_usage(uuid,uuid,jsonb,integer,integer)
+--
+-- Rate limiting:
+--   public.consume_request_rate_limit(text,integer,integer)
+--   public.verify_rate_limit_function_ready()
+--
+-- Contract verification:
+--   public.verify_canonical_gap_completion_rpc_ready()
+--   public.verify_canonical_migration_snapshot_ready()
+
+-- ============================================================================
+-- Deprecated (Superseded) Migrations
+-- ============================================================================
+-- These remain in history for replay integrity but are superseded by later hardening:
+--   004_functions_and_rls.sql
+--   010_usage_increment_functions.sql
+--   019_tier1_revenue_hardening.sql
+--   023_tier0_report_completion_atomic.sql
+--   024_tier1_generate_usage_atomic.sql
+--   026_tier1_entitlement_alignment.sql
+--   029_fix_rate_limit_ambiguity.sql
+--   031_canonical_report_data_persistence.sql
+--   032_report_data_first_gap_completion.sql
+--
+-- Current canonical hardening chain:
+--   033_tier1_canonical_completion_rpc_stabilization.sql
+--   034_tier_ops_reconciliation_and_contract_checks.sql
+--   036_execution_progress_tracking.sql
+--   037_tier0_report_job_queue.sql
+--   038_tier2_report_jobs_rls.sql
+--   039_tier0_backfill_canonical_report_data.sql
