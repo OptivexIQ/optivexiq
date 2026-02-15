@@ -1,0 +1,2 @@
+export const QUOTA_WARNING_THRESHOLD = 80;
+export const QUOTA_DANGER_THRESHOLD = 95;

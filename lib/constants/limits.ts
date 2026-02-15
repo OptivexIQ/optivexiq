@@ -1,0 +1,2 @@
+export const AI_INPUT_TOKEN_RATE_CENTS = 0.000015;
+export const AI_OUTPUT_TOKEN_RATE_CENTS = 0.00006;
