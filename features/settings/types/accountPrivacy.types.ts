@@ -7,10 +7,11 @@ export type SettingsItem = {
   label: string;
   value: string;
   helper?: string;
-  type: "text" | "email" | "number" | "boolean";
+  type: "text" | "email" | "number" | "boolean" | "select";
   rawValue: string | number | boolean;
   description?: string;
   placeholder?: string;
+  options?: readonly string[];
 };
 
 export type SettingsSection = {

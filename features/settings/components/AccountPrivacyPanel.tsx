@@ -10,6 +10,7 @@ import {
   type SettingsSection,
 } from "@/features/settings/types/accountPrivacy.types";
 import { SettingsItem } from "@/features/settings/components/SettingsItem";
+import { MARKET_REGIONS } from "@/lib/constants/marketRegions";
 
 type SettingsAccountPrivacyPanelProps = {
   initialSettings: UserSettingsRecord;
@@ -73,12 +74,14 @@ export function AccountPrivacyPanel({
           },
           {
             key: "region",
-            label: "Region",
-            value: settings.region ?? "",
-            helper: "Used to align data residency preferences.",
-            type: "text",
+            label: "Primary market region",
+            value: settings.region ?? "Not set",
+            helper:
+              "Used for market messaging, compliance framing, and conversion modeling.",
+            type: "select",
             rawValue: toInputString(settings.region),
-            placeholder: "",
+            placeholder: "Select primary market region",
+            options: MARKET_REGIONS,
           },
         ],
       },

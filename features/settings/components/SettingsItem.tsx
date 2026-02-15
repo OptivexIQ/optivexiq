@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -28,6 +35,7 @@ type SettingsItemProps = {
 };
 
 export function SettingsItem({ item, onSave, saving }: SettingsItemProps) {
+  const EMPTY_SELECT_VALUE = "__none__";
   const [open, setOpen] = useState(false);
   const [draftValue, setDraftValue] = useState(item.rawValue);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -95,8 +103,35 @@ export function SettingsItem({ item, onSave, saving }: SettingsItemProps) {
                   <Switch
                     checked={Boolean(draftValue)}
                     onCheckedChange={(value) => setDraftValue(value)}
+                    disabled={saving}
                   />
                 </div>
+              ) : item.type === "select" ? (
+                <Select
+                  value={
+                    typeof draftValue === "string"
+                      ? draftValue || EMPTY_SELECT_VALUE
+                      : String(draftValue)
+                  }
+                  onValueChange={(value) =>
+                    setDraftValue(value === EMPTY_SELECT_VALUE ? "" : value)
+                  }
+                  disabled={saving}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={item.placeholder ?? "Select an option"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={EMPTY_SELECT_VALUE}>
+                      {item.placeholder ?? "Not set"}
+                    </SelectItem>
+                    {(item.options ?? []).map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <Input
                   type={item.type}
@@ -113,6 +148,7 @@ export function SettingsItem({ item, onSave, saving }: SettingsItemProps) {
                         : event.target.value;
                     setDraftValue(value);
                   }}
+                  disabled={saving}
                 />
               )}
               {localError ? (
