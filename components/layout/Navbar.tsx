@@ -83,7 +83,6 @@ export function Navbar() {
             { label: "Features", href: "#features" },
             { label: "How It Works", href: "#solution" },
             { label: "Pricing", href: "#pricing" },
-            { label: "Testimonials", href: "#testimonials" },
           ].map((link) => (
             <Link
               key={link.label}
@@ -181,7 +180,6 @@ export function Navbar() {
               { label: "Features", href: "#features" },
               { label: "How It Works", href: "#solution" },
               { label: "Pricing", href: "#pricing" },
-              { label: "Testimonials", href: "#testimonials" },
             ].map((link) => (
               <Link
                 key={link.label}
