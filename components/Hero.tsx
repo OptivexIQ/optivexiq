@@ -31,7 +31,7 @@ export function Hero() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-3" />
             </span>
             <span className="text-xs font-medium text-secondary-foreground">
-              Trusted by 500+ B2B SaaS teams • SOC 2 Type II
+              Strategic Conversion Intelligence for B2B SaaS
             </span>
           </div>
 
@@ -77,39 +77,6 @@ export function Hero() {
             >
               See How It Works
             </a>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-[11px] text-muted-foreground">
-            <div className="rounded-full border border-border/60 bg-card/60 px-3 py-1">
-              ISO 27001 ready
-            </div>
-            <div className="rounded-full border border-border/60 bg-card/60 px-3 py-1">
-              99.99% uptime SLA
-            </div>
-            <div className="rounded-full border border-border/60 bg-card/60 px-3 py-1">
-              G2 4.8 average
-            </div>
-            <div className="rounded-full border border-border/60 bg-card/60 px-3 py-1">
-              Security review in 48 hours
-            </div>
-          </div>
-
-          {/* Trust metrics strip */}
-          <div className="mx-auto mt-12 flex max-w-lg flex-wrap items-center justify-center gap-x-8 gap-y-3">
-            {[
-              { value: "+31%", label: "pipeline lift" },
-              { value: "$50k+", label: "median ACV" },
-              { value: "2,100+", label: "audits run" },
-            ].map((stat) => (
-              <div key={stat.label} className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">
-                  {stat.value}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {stat.label}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
 

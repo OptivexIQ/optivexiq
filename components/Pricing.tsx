@@ -1,5 +1,23 @@
+﻿import Link from "next/link";
+import { startCheckoutAction } from "@/app/actions/billing/startCheckout";
+
+type Plan = {
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  features: string[];
+  highlighted: boolean;
+  cta: string;
+  badge?: string;
+  highlightNote?: string;
+} & (
+  | { action: "checkout"; planKey: "starter" | "pro" | "growth" }
+  | { action: "contact"; planKey?: never }
+);
+
 export function Pricing() {
-  const plans = [
+  const plans: Plan[] = [
     {
       name: "Conversion Starter",
       price: "49",
@@ -13,7 +31,9 @@ export function Pricing() {
         "Export as PDF",
       ],
       highlighted: false,
-      cta: "Get Started",
+      cta: "Get My Conversion Audit",
+      action: "checkout",
+      planKey: "starter",
     },
     {
       name: "SaaS Conversion Pro",
@@ -31,8 +51,10 @@ export function Pricing() {
         "Priority analysis queue",
       ],
       highlighted: true,
-      cta: "Start Free Trial",
+      cta: "Upgrade to Pro",
       badge: "Most Popular",
+      action: "checkout",
+      planKey: "pro",
     },
     {
       name: "Growth Intelligence",
@@ -48,7 +70,9 @@ export function Pricing() {
         "Dedicated account manager",
       ],
       highlighted: false,
-      cta: "Contact Sales",
+      cta: "Scale With Growth",
+      action: "checkout",
+      planKey: "growth",
     },
   ];
 
@@ -68,6 +92,15 @@ export function Pricing() {
             Every plan includes the core Conversion Gap Engine. Choose the depth
             that fits your stage.
           </p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Want a preview first?{" "}
+            <a
+              href="#free-audit"
+              className="font-medium text-primary hover:underline"
+            >
+              Try the free snapshot
+            </a>
+          </p>
         </div>
 
         <div className="grid items-center gap-5 lg:grid-cols-3">
@@ -80,28 +113,26 @@ export function Pricing() {
                   : "border border-border/60 bg-card p-8 hover:border-border"
               }`}
             >
-              {plan.badge && (
+              {plan.badge ? (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                   <span className="rounded-full bg-primary px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground shadow-sm shadow-black/30">
                     {plan.badge}
                   </span>
                 </div>
-              )}
+              ) : null}
 
               <div className="mb-6">
-                <h3
-                  className={`mb-2 text-base font-semibold tracking-tight ${plan.highlighted ? "text-foreground" : "text-foreground"}`}
-                >
+                <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">
                   {plan.name}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {plan.description}
                 </p>
-                {plan.highlightNote && (
+                {plan.highlightNote ? (
                   <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                     {plan.highlightNote}
                   </p>
-                )}
+                ) : null}
               </div>
 
               <div className="mb-8 flex items-baseline gap-1">
@@ -114,20 +145,36 @@ export function Pricing() {
                 </span>
               </div>
 
-              <a
-                href="#cta"
-                className={`mb-8 block rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 ${
-                  plan.highlighted
-                    ? "bg-primary text-primary-foreground shadow-md shadow-black/30 hover:bg-primary/90"
-                    : "border border-border bg-secondary text-foreground hover:bg-muted"
-                }`}
-              >
-                {plan.cta}
-              </a>
+              {plan.action === "checkout" ? (
+                <form action={startCheckoutAction} className="mb-8">
+                  <input type="hidden" name="plan" value={plan.planKey} />
+                  <button
+                    type="submit"
+                    className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 ${
+                      plan.highlighted
+                        ? "bg-primary text-primary-foreground shadow-md shadow-black/30 hover:bg-primary/90"
+                        : "border border-border bg-secondary text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {plan.cta}
+                  </button>
+                </form>
+              ) : (
+                <a
+                  href="mailto:sales@optivexiq.com?subject=OptivexIQ%20Growth%20Plan"
+                  className={`mb-8 block rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 ${
+                    plan.highlighted
+                      ? "bg-primary text-primary-foreground shadow-md shadow-black/30 hover:bg-primary/90"
+                      : "border border-border bg-secondary text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {plan.cta}
+                </a>
+              )}
 
               <div className="border-t border-border/60 pt-6">
                 <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  What{"'"}s included
+                  What&apos;s included
                 </p>
                 <ul className="space-y-3">
                   {plan.features.map((feature) => (
@@ -137,7 +184,11 @@ export function Pricing() {
                         height="15"
                         viewBox="0 0 16 16"
                         fill="none"
-                        className={`mt-0.5 shrink-0 ${plan.highlighted ? "text-primary" : "text-muted-foreground"}`}
+                        className={`mt-0.5 shrink-0 ${
+                          plan.highlighted
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
                       >
                         <path
                           d="M3.5 8L6.5 11L12.5 5"
@@ -158,30 +209,14 @@ export function Pricing() {
           ))}
         </div>
 
-        {/* Enterprise trust line */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          {[
-            "SOC 2 compliant",
-            "GDPR ready",
-            "256-bit encryption",
-            "99.9% uptime SLA",
-          ].map((item) => (
-            <div key={item} className="flex items-center gap-2">
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="text-chart-3"
-              >
-                <path
-                  d="M8 1.5L9.85 5.25L14 5.9L11 8.85L11.7 13L8 11.05L4.3 13L5 8.85L2 5.9L6.15 5.25L8 1.5Z"
-                  fill="currentColor"
-                />
-              </svg>
-              <span className="text-xs text-muted-foreground">{item}</span>
-            </div>
-          ))}
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
+          <span>Need custom enterprise terms or volume pricing?</span>
+          <Link
+            href="/contact"
+            className="inline-flex font-medium text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+          >
+            Contact Sales
+          </Link>
         </div>
       </div>
     </section>

@@ -36,7 +36,6 @@ export default function Page() {
       <SectionDivider />
       <Pricing />
       <SectionDivider />
-      <Testimonials />
       <FinalCTA />
       <Footer />
     </>

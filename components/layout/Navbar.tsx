@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/services/supabase/browser";
 import { useMemo, useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -54,7 +55,7 @@ export function Navbar() {
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <svg
               width="16"
@@ -75,7 +76,7 @@ export function Navbar() {
           <span className="text-base font-semibold tracking-tight text-foreground">
             OptivexIQ
           </span>
-        </a>
+        </Link>
 
         <div className="hidden items-center gap-1 md:flex">
           {[
@@ -84,13 +85,13 @@ export function Navbar() {
             { label: "Pricing", href: "#pricing" },
             { label: "Testimonials", href: "#testimonials" },
           ].map((link) => (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               className="rounded-lg px-3.5 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -112,10 +113,10 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem asChild>
-                  <a href="/dashboard">Dashboard</a>
+                  <Link href="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <a href="/dashboard/settings">Account</a>
+                  <Link href="/dashboard/settings">Account</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -125,18 +126,18 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <>
-              <a
+              <Link
                 href="/login"
                 className="rounded-lg px-4 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Log in
-              </a>
-              <a
+              </Link>
+              <Link
                 href="#free-audit"
                 className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
               >
                 Get Started
-              </a>
+              </Link>
             </>
           )}
         </div>
@@ -182,14 +183,14 @@ export function Navbar() {
               { label: "Pricing", href: "#pricing" },
               { label: "Testimonials", href: "#testimonials" },
             ].map((link) => (
-              <a
+              <Link
                 key={link.label}
                 href={link.href}
                 className="rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
             <div className="mt-4 flex flex-col gap-2 border-t border-border/40 pt-4">
               {loading ? null : user ? (
@@ -209,10 +210,10 @@ export function Navbar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem asChild>
-                      <a href="/dashboard">Dashboard</a>
+                      <Link href="/dashboard">Dashboard</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <a href="/dashboard/settings">Account</a>
+                      <Link href="/dashboard/settings">Account</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -227,19 +228,19 @@ export function Navbar() {
                 </DropdownMenu>
               ) : (
                 <>
-                  <a
+                  <Link
                     href="/login"
                     className="rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                   >
                     Log in
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="#free-audit"
                     className="rounded-lg bg-foreground px-4 py-2.5 text-center text-sm font-medium text-background"
                     onClick={() => setMobileOpen(false)}
                   >
                     Get Started
-                  </a>
+                  </Link>
                 </>
               )}
             </div>

@@ -1,3 +1,5 @@
+﻿import Link from "next/link";
+
 export function Footer() {
   const linkGroups = [
     {
@@ -6,25 +8,29 @@ export function Footer() {
         { label: "Features", href: "#features" },
         { label: "How It Works", href: "#solution" },
         { label: "Pricing", href: "#pricing" },
-        { label: "Changelog", href: "#" },
+        { label: "Free Conversion Audit", href: "#free-audit" },
       ],
     },
     {
       title: "Resources",
       links: [
-        { label: "Documentation", href: "#" },
-        { label: "API Reference", href: "#" },
-        { label: "Blog", href: "#" },
-        { label: "Guides", href: "#" },
+        { label: "Dashboard", href: "/dashboard" },
+        { label: "Sign in", href: "/login" },
+        { label: "Help Center", href: "/docs" },
+        { label: "What's New", href: "/whats-new" },
       ],
     },
     {
       title: "Company",
       links: [
-        { label: "About", href: "#" },
-        { label: "Privacy", href: "#" },
-        { label: "Terms", href: "#" },
-        { label: "Security", href: "#" },
+        { label: "About Us", href: "/about" },
+        {
+          label: "Contact",
+          href: "/contact",
+        },
+        { label: "Privacy", href: "/privacy" },
+        { label: "Terms", href: "/terms" },
+        { label: "Status", href: "/status" },
       ],
     },
   ];
@@ -35,7 +41,7 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-4">
           {/* Brand */}
           <div>
-            <a href="#" className="flex items-center gap-2.5">
+            <Link href="/" className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
                 <svg
                   width="12"
@@ -57,11 +63,11 @@ export function Footer() {
                   <path d="M8 6V12L14 10V4L8 6Z" fill="currentColor" />
                 </svg>
               </div>
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-base font-semibold text-foreground">
                 OptivexIQ
               </span>
-            </a>
-            <p className="mt-4 max-w-xs text-xs leading-relaxed text-muted-foreground">
+            </Link>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               SaaS Conversion Intelligence. Analyze positioning, uncover gaps,
               and deploy messaging that converts.
             </p>
@@ -70,18 +76,18 @@ export function Footer() {
           {/* Link groups */}
           {linkGroups.map((group) => (
             <div key={group.title}>
-              <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {group.title}
               </p>
               <ul className="space-y-2.5">
                 {group.links.map((link) => (
                   <li key={link.label}>
-                    <a
+                    <Link
                       href={link.href}
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      className="text-[15px] text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -91,33 +97,34 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-border/40 pt-8 md:flex-row">
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-sm text-muted-foreground/70">
             {"\u00A9"} 2026 OptivexIQ. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <a
-              href="#"
-              className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+            <Link
+              href="/privacy"
+              className="text-sm text-muted-foreground/70 transition-colors hover:text-foreground"
             >
               Privacy Policy
-            </a>
+            </Link>
             <span className="text-muted-foreground/20">|</span>
-            <a
-              href="#"
-              className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+            <Link
+              href="/terms"
+              className="text-sm text-muted-foreground/70 transition-colors hover:text-foreground"
             >
               Terms of Service
-            </a>
+            </Link>
             <span className="text-muted-foreground/20">|</span>
-            <a
-              href="#"
-              className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+            <Link
+              href="/status"
+              className="text-sm text-muted-foreground/70 transition-colors hover:text-foreground"
             >
               Status
-            </a>
+            </Link>
           </div>
         </div>
       </div>
     </footer>
   );
 }
+
