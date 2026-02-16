@@ -1,9 +1,9 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { freeAuditRequestSchema } from "@/features/free-audit/validators/freeAuditSchema";
-import { consumeFreeSnapshotRateLimit } from "@/features/free-snapshot/services/freeSnapshotRateLimitService";
-import { createFreeSnapshotRequest } from "@/features/free-snapshot/services/freeSnapshotCreateService";
 import { errorResponse } from "@/lib/api/errorResponse";
+import { consumeFreeSnapshotRateLimit } from "@/features/free-snapshot/services/freeSnapshotRateLimitService";
+import { freeSnapshotCreateRequestSchema } from "@/features/free-snapshot/validators/freeSnapshotSchema";
+import { createFreeSnapshotRequest } from "@/features/free-snapshot/services/freeSnapshotCreateService";
 import { logger } from "@/lib/logger";
 
 function getClientIp(request: Request) {
@@ -17,19 +17,29 @@ function getClientIp(request: Request) {
 export async function POST(request: Request) {
   const requestId = randomUUID();
   const payload = await request.json().catch(() => null);
-  const parsed = freeAuditRequestSchema.safeParse(payload);
+  const parsed = freeSnapshotCreateRequestSchema.safeParse(payload);
 
   if (!parsed.success) {
     return errorResponse("invalid_payload", "Invalid payload.", 400, {
       requestId,
       headers: { "x-request-id": requestId },
-      });
+    });
+  }
+
+  if ((parsed.data.honeypot ?? "").trim().length > 0) {
+    logger.warn("free_snapshot.bot_submission_rejected", {
+      request_id: requestId,
+    });
+    return errorResponse("forbidden", "Bot submission rejected.", 403, {
+      requestId,
+      headers: { "x-request-id": requestId },
+    });
   }
 
   const ipAddress = getClientIp(request);
   const limit = await consumeFreeSnapshotRateLimit(ipAddress);
   if (!limit.allowed) {
-    logger.warn("free_audit_alias.rate_limited", {
+    logger.warn("free_snapshot.rate_limited", {
       request_id: requestId,
       ip_address: ipAddress,
     });
@@ -40,8 +50,10 @@ export async function POST(request: Request) {
   }
 
   const result = await createFreeSnapshotRequest({
-    websiteUrl: parsed.data.homepage_url,
-    competitorUrls: (parsed.data.competitor_urls ?? []).slice(0, 2),
+    websiteUrl: parsed.data.websiteUrl,
+    competitorUrls: parsed.data.competitorUrls ?? [],
+    email: parsed.data.email,
+    context: parsed.data.context,
     ipAddress,
     userAgent: request.headers.get("user-agent"),
   });
@@ -53,8 +65,8 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json(result, {
-    status: 202,
-    headers: { "x-request-id": requestId },
-  });
+  return NextResponse.json(
+    { snapshotId: result.snapshotId, status: result.status },
+    { status: 202, headers: { "x-request-id": requestId } },
+  );
 }

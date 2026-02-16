@@ -1,15 +1,15 @@
-import { resolveData } from "@/lib/data/dataSource";
 import { httpClient } from "@/lib/api/httpClient";
-import { runFreeAudit } from "@/features/free-audit/services/freeAuditService";
-import type {
-  FreeAuditRequest,
-  FreeAuditResult,
-} from "@/features/free-audit/types/freeAudit.types";
+import type { FreeAuditRequest } from "@/features/free-audit/types/freeAudit.types";
+
+export type FreeAuditStartResponse = {
+  snapshotId: string;
+  status: "queued";
+};
 
 async function submitFreeAudit(
   request: FreeAuditRequest,
-): Promise<FreeAuditResult> {
-  return httpClient<FreeAuditResult>("/api/free-audit", {
+): Promise<FreeAuditStartResponse> {
+  return httpClient<FreeAuditStartResponse>("/api/free-audit", {
     method: "POST",
     body: JSON.stringify(request),
   });
@@ -17,10 +17,6 @@ async function submitFreeAudit(
 
 export async function runFreeAuditClient(
   request: FreeAuditRequest,
-): Promise<FreeAuditResult> {
-  return resolveData(
-    "free-audit",
-    () => submitFreeAudit(request),
-    () => runFreeAudit(request),
-  );
+): Promise<FreeAuditStartResponse> {
+  return submitFreeAudit(request);
 }

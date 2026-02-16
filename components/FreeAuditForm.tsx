@@ -1,19 +1,24 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { FreeAuditResult } from "@/features/free-audit/types/freeAudit.types";
-import { runFreeAuditClient } from "@/features/free-audit/services/freeAuditClient";
+import { CompletionState } from "@/features/free-snapshot/components/CompletionState";
+import { FailureState } from "@/features/free-snapshot/components/FailureState";
+import { RunningState } from "@/features/free-snapshot/components/RunningState";
+import {
+  getFreeSnapshotStatus,
+  startFreeSnapshot,
+  unlockFreeSnapshot,
+  type FreeSnapshotStatusResponse,
+} from "@/features/free-snapshot/services/freeSnapshotClient";
+import type { FreeSnapshotStatus } from "@/features/free-snapshot/types/freeSnapshot.types";
 
-const riskTone = {
-  High: "border-destructive/40 bg-destructive/10 text-destructive",
-  Medium: "border-chart-4/40 bg-chart-4/10 text-chart-4",
-  Low: "border-chart-3/40 bg-chart-3/10 text-chart-3",
-} as const;
+const MAX_COMPETITORS = 2;
+const STORAGE_KEY = "free_snapshot_active";
 
-const MAX_COMPETITORS = 5;
+type ViewState = "form" | "running" | "completed" | "failed";
 
 function normalizeUrlInput(value: string) {
   const trimmed = value.trim();
@@ -37,132 +42,252 @@ function isValidUrl(value: string) {
   }
 }
 
+function parseCompetitorUrls(raw: string) {
+  return raw
+    .split(/[\n,;]+/)
+    .map((url) => normalizeUrlInput(url))
+    .filter((url) => url.length > 0)
+    .slice(0, MAX_COMPETITORS);
+}
+
+function getDomain(value: string): string {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return value;
+  }
+}
+
+function getViewState(status: FreeSnapshotStatus | null): ViewState {
+  if (status === "completed") {
+    return "completed";
+  }
+  if (status === "failed") {
+    return "failed";
+  }
+  if (status) {
+    return "running";
+  }
+  return "form";
+}
+
+function isTerminalStatus(status: FreeSnapshotStatus | null) {
+  return status === "completed" || status === "failed";
+}
+
 export function FreeAuditForm() {
-  const [homepageUrl, setHomepageUrl] = useState("");
-  const [pricingUrl, setPricingUrl] = useState("");
-  const [competitorUrls, setCompetitorUrls] = useState("");
-  const [result, setResult] = useState<FreeAuditResult | null>(null);
-  const [homepageError, setHomepageError] = useState<string | null>(null);
-  const [pricingError, setPricingError] = useState<string | null>(null);
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [competitorUrlsInput, setCompetitorUrlsInput] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [contextInput, setContextInput] = useState("");
+
+  const [websiteError, setWebsiteError] = useState<string | null>(null);
   const [competitorError, setCompetitorError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [homepageTouched, setHomepageTouched] = useState(false);
-  const [pricingTouched, setPricingTouched] = useState(false);
-  const [competitorsTouched, setCompetitorsTouched] = useState(false);
 
-  const homepageCandidate = normalizeUrlInput(homepageUrl);
-  const isHomepageValid =
-    homepageCandidate.length > 0 && isValidUrl(homepageCandidate);
+  const [snapshotId, setSnapshotId] = useState<string | null>(null);
+  const [statusPayload, setStatusPayload] =
+    useState<FreeSnapshotStatusResponse | null>(null);
 
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      }),
-    [],
+  const websiteCandidate = normalizeUrlInput(websiteUrl);
+  const isWebsiteValid =
+    websiteCandidate.length > 0 && isValidUrl(websiteCandidate);
+
+  const competitorUrls = useMemo(
+    () => parseCompetitorUrls(competitorUrlsInput),
+    [competitorUrlsInput],
   );
 
-  const validateHomepage = (value: string) => {
-    const normalized = normalizeUrlInput(value);
-    if (!normalized) {
-      return "Homepage URL is required.";
+  const viewState = getViewState(statusPayload?.status ?? null);
+
+  const domain = getDomain(
+    statusPayload?.websiteUrl || websiteCandidate || websiteUrl || "your site",
+  );
+
+  const competitorCount =
+    statusPayload?.competitorCount ?? competitorUrls.length;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
     }
 
-    if (!isValidUrl(normalized)) {
-      return "Homepage URL must be a valid URL.";
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return;
     }
 
-    return null;
-  };
+    try {
+      const parsed = JSON.parse(raw) as { snapshotId?: string };
+      if (parsed?.snapshotId) {
+        setSnapshotId(parsed.snapshotId);
+      }
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
 
-  const validatePricing = (value: string) => {
-    const normalized = normalizeUrlInput(value);
-    if (!normalized) {
-      return null;
+  useEffect(() => {
+    if (!snapshotId) {
+      return;
     }
 
-    if (!isValidUrl(normalized)) {
-      return "Pricing URL must be a valid URL.";
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const data = await getFreeSnapshotStatus(snapshotId);
+        if (cancelled) {
+          return;
+        }
+        setStatusPayload(data);
+
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ snapshotId: data.snapshotId }),
+          );
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to refresh snapshot status.";
+        setStatusPayload((prev) => {
+          if (!prev) {
+            return null;
+          }
+          return {
+            ...prev,
+            status: "failed",
+            error: message,
+          };
+        });
+      }
+    };
+
+    void poll();
+
+    if (isTerminalStatus(statusPayload?.status ?? null)) {
+      return () => {
+        cancelled = true;
+      };
     }
 
-    return null;
-  };
+    const timer = window.setInterval(() => {
+      void poll();
+    }, 3000);
 
-  const validateCompetitors = (value: string) => {
-    const normalizedCompetitors = value
-      .split("\n")
-      .map((url) => url.trim())
-      .filter(Boolean)
-      .map((url) => normalizeUrlInput(url))
-      .filter(Boolean)
-      .slice(0, MAX_COMPETITORS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [snapshotId, statusPayload?.status]);
 
-    const invalidCompetitor = normalizedCompetitors.find(
-      (url) => !isValidUrl(url),
-    );
+  const resetFlow = () => {
+    setSubmitError(null);
+    setWebsiteError(null);
+    setCompetitorError(null);
+    setSnapshotId(null);
+    setStatusPayload(null);
+    setContextInput("");
 
-    return invalidCompetitor
-      ? "One or more competitor URLs are invalid."
-      : null;
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError(null);
-    setIsSubmitting(true);
-    setResult(null);
 
-    const nextHomepageError = validateHomepage(homepageUrl);
-    const nextPricingError = validatePricing(pricingUrl);
-    const nextCompetitorError = validateCompetitors(competitorUrls);
+    const normalizedWebsite = normalizeUrlInput(websiteUrl);
+    const websiteValidationError = !normalizedWebsite
+      ? "Website URL is required."
+      : !isValidUrl(normalizedWebsite)
+        ? "Website URL must be a valid URL."
+        : null;
 
-    setHomepageError(nextHomepageError);
-    setPricingError(nextPricingError);
-    setCompetitorError(nextCompetitorError);
-    setHomepageTouched(true);
-    setPricingTouched(true);
-    setCompetitorsTouched(true);
+    const invalidCompetitor = competitorUrls.find((url) => !isValidUrl(url));
+    const competitorsValidationError = invalidCompetitor
+      ? "One or more competitor URLs are invalid."
+      : null;
 
-    if (nextHomepageError || nextPricingError || nextCompetitorError) {
-      setIsSubmitting(false);
+    setWebsiteError(websiteValidationError);
+    setCompetitorError(competitorsValidationError);
+
+    if (websiteValidationError || competitorsValidationError) {
       return;
     }
 
-    const normalizedHomepage = normalizeUrlInput(homepageUrl);
-    const normalizedPricing = pricingUrl ? normalizeUrlInput(pricingUrl) : "";
-    const normalizedCompetitors = competitorUrls
-      .split("\n")
-      .map((url) => url.trim())
-      .filter(Boolean)
-      .map((url) => normalizeUrlInput(url))
-      .filter(Boolean)
-      .slice(0, MAX_COMPETITORS);
-
-    setHomepageUrl(normalizedHomepage);
-    setPricingUrl(normalizedPricing);
-    setCompetitorUrls(normalizedCompetitors.join("\n"));
-
+    setIsSubmitting(true);
     try {
-      const data = await runFreeAuditClient({
-        homepage_url: normalizedHomepage,
-        pricing_url: normalizedPricing || null,
-        competitor_urls: normalizedCompetitors.length
-          ? normalizedCompetitors
-          : null,
+      const created = await startFreeSnapshot({
+        websiteUrl: normalizedWebsite,
+        competitorUrls,
+        email: leadEmail.trim().length > 0 ? leadEmail.trim() : undefined,
+        context:
+          contextInput.trim().length > 0 ? contextInput.trim() : undefined,
+        honeypot: "",
       });
-      setResult(data);
-    } catch (submitError) {
+
+      setWebsiteUrl(normalizedWebsite);
+      setSnapshotId(created.snapshotId);
+      setStatusPayload({
+        snapshotId: created.snapshotId,
+        status: created.status,
+        executionStage: null,
+        snapshot: null,
+        error: null,
+        websiteUrl: normalizedWebsite,
+        competitorCount: competitorUrls.length,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ snapshotId: created.snapshotId }),
+        );
+      }
+    } catch (error) {
       const message =
-        submitError instanceof Error
-          ? submitError.message
+        error instanceof Error
+          ? error.message
           : "Unable to run the audit. Please try again.";
       setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDownload = async (input: { email: string; consent: boolean }) => {
+    if (!snapshotId) {
+      throw new Error("Snapshot ID is missing.");
+    }
+
+    const pdf = await unlockFreeSnapshot({
+      snapshotId,
+      email: input.email,
+      consent: input.consent,
+      honeypot: "",
+    });
+
+    const url = URL.createObjectURL(pdf);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `optivexiq-free-snapshot-${snapshotId}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+
+    setLeadEmail(input.email);
   };
 
   return (
@@ -189,249 +314,141 @@ export function FreeAuditForm() {
           </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        {viewState === "form" ? (
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-border/60 bg-card/70 p-8 shadow-xl shadow-black/20"
+            className="mx-auto max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-8 shadow-xl shadow-black/20"
           >
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground">
-                Run your preview audit
+                Run your free snapshot
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Add your homepage and optional pricing plus competitor URLs.
+                Enter your website and optional competitors to run live AI
+                analysis.
               </p>
             </div>
 
             <div className="grid gap-5">
               <label className="grid gap-2 text-sm font-medium text-foreground">
-                Homepage URL
+                Website URL
                 <Input
-                  value={homepageUrl}
+                  value={websiteUrl}
                   onChange={(event) => {
-                    setHomepageUrl(event.target.value);
-                    if (homepageTouched) {
-                      setHomepageError(validateHomepage(event.target.value));
-                    }
+                    setWebsiteUrl(event.target.value);
+                    setWebsiteError(null);
                   }}
-                  onBlur={() => {
-                    setHomepageTouched(true);
-                    const normalized = normalizeUrlInput(homepageUrl);
-                    setHomepageUrl(normalized);
-                    setHomepageError(validateHomepage(normalized));
-                  }}
+                  onBlur={() => setWebsiteUrl(normalizeUrlInput(websiteUrl))}
                   placeholder="https://yourcompany.com"
                   required
                 />
-                {homepageTouched && !isHomepageValid && !homepageError && (
-                  <span className="text-xs text-muted-foreground">
-                    Add a full URL like https://yourcompany.com.
-                  </span>
-                )}
-                {homepageTouched && homepageError && (
+                {websiteError ? (
                   <span className="text-xs text-destructive">
-                    {homepageError}
+                    {websiteError}
                   </span>
-                )}
-              </label>
-
-              <label className="grid gap-2 text-sm font-medium text-foreground">
-                Pricing page URL (optional)
-                <Input
-                  value={pricingUrl}
-                  onChange={(event) => {
-                    setPricingUrl(event.target.value);
-                    if (pricingTouched) {
-                      setPricingError(validatePricing(event.target.value));
-                    }
-                  }}
-                  onBlur={() => {
-                    setPricingTouched(true);
-                    const normalized = normalizeUrlInput(pricingUrl);
-                    setPricingUrl(normalized);
-                    setPricingError(validatePricing(normalized));
-                  }}
-                  placeholder="https://yourcompany.com/pricing"
-                />
-                {pricingTouched && pricingError && (
-                  <span className="text-xs text-destructive">
-                    {pricingError}
-                  </span>
-                )}
+                ) : null}
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-foreground">
                 Competitor URLs (optional)
                 <Textarea
-                  value={competitorUrls}
+                  value={competitorUrlsInput}
                   onChange={(event) => {
-                    setCompetitorUrls(event.target.value);
-                    if (competitorsTouched) {
-                      setCompetitorError(
-                        validateCompetitors(event.target.value),
-                      );
-                    }
-                  }}
-                  onBlur={() => {
-                    setCompetitorsTouched(true);
-                    const normalizedList = competitorUrls
-                      .split("\n")
-                      .map((url) => normalizeUrlInput(url))
-                      .filter(Boolean)
-                      .slice(0, MAX_COMPETITORS);
-                    setCompetitorUrls(normalizedList.join("\n"));
-                    setCompetitorError(
-                      validateCompetitors(normalizedList.join("\n")),
-                    );
+                    setCompetitorUrlsInput(event.target.value);
+                    setCompetitorError(null);
                   }}
                   placeholder="https://competitor-one.com\nhttps://competitor-two.com"
-                  rows={4}
+                  rows={3}
                 />
                 <span className="text-xs text-muted-foreground">
-                  Up to 5 competitors, one per line.
+                  Up to 2 competitors, one per line.
                 </span>
-                {competitorsTouched && competitorError && (
+                {competitorError ? (
                   <span className="text-xs text-destructive">
                     {competitorError}
                   </span>
-                )}
+                ) : null}
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-foreground">
+                Email (optional)
+                <Input
+                  type="email"
+                  value={leadEmail}
+                  onChange={(event) => setLeadEmail(event.target.value)}
+                  placeholder="you@company.com"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-foreground">
+                Context (optional)
+                <Textarea
+                  value={contextInput}
+                  onChange={(event) => setContextInput(event.target.value)}
+                  placeholder="What conversion problem are you trying to solve?"
+                  rows={2}
+                />
               </label>
             </div>
 
-            {submitError && (
+            {submitError ? (
               <div className="mt-5 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {submitError}
               </div>
-            )}
+            ) : null}
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 type="submit"
                 size="lg"
-                disabled={isSubmitting || !isHomepageValid}
+                disabled={isSubmitting || !isWebsiteValid}
               >
-                {isSubmitting ? "Running audit..." : "Run Free Audit"}
+                {isSubmitting
+                  ? "Starting snapshot..."
+                  : "Run Free Conversion Audit"}
               </Button>
               <span className="text-xs text-muted-foreground">
-                Takes about 90 seconds. We do not store this preview.
+                This snapshot was generated using live AI analysis of your
+                website.
               </span>
             </div>
           </form>
+        ) : null}
 
-          <div className="rounded-2xl border border-border/60 bg-secondary/40 p-8">
-            <div className="mb-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Preview output
-              </p>
-              <h3 className="mt-3 text-lg font-semibold text-foreground">
-                Conversion risk snapshot
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Submit the form to reveal your initial risk rating and top
-                insights.
-              </p>
-            </div>
-
-            {result ? (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/80 px-5 py-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Risk level
-                    </p>
-                    <p className="mt-1 text-2xl font-bold text-foreground">
-                      {result.risk_level}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full border px-4 py-2 text-xs font-semibold ${riskTone[result.risk_level]}`}
-                  >
-                    {result.risk_level} risk
-                  </span>
-                </div>
-
-                <div className="rounded-xl border border-border/60 bg-card/80 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Revenue exposure
-                  </p>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-lg border border-border/60 bg-secondary/50 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        Pipeline at risk
-                      </p>
-                      <p className="mt-2 text-xl font-semibold text-foreground">
-                        {currencyFormatter.format(
-                          result.revenue_impact.pipeline_at_risk,
-                        )}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-border/60 bg-secondary/50 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        Estimated recovery
-                      </p>
-                      <p className="mt-2 text-xl font-semibold text-foreground">
-                        {currencyFormatter.format(
-                          result.revenue_impact.estimated_recovery,
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {result.revenue_impact.note}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-border/60 bg-card/80 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Top insights
-                  </p>
-                  <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                    {result.insights.map((insight, index) => (
-                      <li
-                        key={`${insight}-${index}`}
-                        className="rounded-lg border border-border/60 bg-secondary/50 px-4 py-3"
-                      >
-                        {insight}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border border-border/60 bg-card/80 p-5">
-                  <p className="text-sm font-semibold text-foreground">
-                    {result.upgrade_cta}
-                  </p>
-                  <div className="mt-4">
-                    <Button asChild size="lg" variant="secondary">
-                      <a href="#pricing">Compare plans</a>
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-border/60 bg-card/80 p-5">
-                  <p className="text-sm font-semibold text-foreground">
-                    Next actions
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Move from preview to a full conversion plan in minutes.
-                  </p>
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                    <Button asChild size="lg">
-                      <a href="#pricing">Run the full audit</a>
-                    </Button>
-                    <Button asChild size="lg" variant="outline">
-                      <a href="#features">See sample outputs</a>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-6 text-sm text-muted-foreground">
-                Your preview appears here after you submit the form.
-              </div>
-            )}
+        {viewState === "running" && statusPayload ? (
+          <div className="mx-auto max-w-3xl">
+            <RunningState
+              domain={domain}
+              competitorCount={competitorCount}
+              startedAtIso={statusPayload.createdAt}
+              status={statusPayload.status}
+              executionStage={statusPayload.executionStage}
+            />
           </div>
-        </div>
+        ) : null}
+
+        {viewState === "completed" && statusPayload?.snapshot ? (
+          <div className="mx-auto max-w-3xl">
+            <CompletionState
+              domain={domain}
+              snapshot={statusPayload.snapshot}
+              initialEmail={leadEmail}
+              onDownload={handleDownload}
+            />
+          </div>
+        ) : null}
+
+        {(viewState === "failed" ||
+          (viewState === "completed" && !statusPayload?.snapshot)) && (
+          <div className="mx-auto max-w-3xl space-y-4">
+            <FailureState onRetry={resetFlow} />
+            {statusPayload?.error ? (
+              <p className="text-center text-xs text-muted-foreground">
+                {statusPayload.error}
+              </p>
+            ) : null}
+          </div>
+        )}
       </div>
     </section>
   );
