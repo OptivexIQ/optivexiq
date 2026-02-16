@@ -49,11 +49,11 @@ export function Hero() {
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
-              href="#free-audit"
+              href="#free-snapshot"
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-8 py-3.5 text-sm font-semibold text-primary-foreground shadow-md shadow-black/30 transition-all hover:bg-primary/90"
             >
               <span className="relative z-10 flex items-center gap-2">
-                Run Free Conversion Audit
+                Run Free Conversion Snapshot
                 <svg
                   width="15"
                   height="15"

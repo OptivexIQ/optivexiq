@@ -75,7 +75,7 @@ function isTerminalStatus(status: FreeSnapshotStatus | null) {
   return status === "completed" || status === "failed";
 }
 
-export function FreeAuditForm() {
+export function FreeSnapshotForm() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [competitorUrlsInput, setCompetitorUrlsInput] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
@@ -291,7 +291,7 @@ export function FreeAuditForm() {
   };
 
   return (
-    <section id="free-audit" className="relative py-24 md:py-32">
+    <section id="free-snapshot" className="relative py-24 md:py-32">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -303,7 +303,7 @@ export function FreeAuditForm() {
       <div className="relative mx-auto max-w-7xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Free Conversion Audit
+            Free Conversion Snapshot
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
             See your biggest conversion leaks in under 3 minutes.
@@ -405,7 +405,7 @@ export function FreeAuditForm() {
               >
                 {isSubmitting
                   ? "Starting snapshot..."
-                  : "Run Free Conversion Audit"}
+                  : "Run Free Conversion Snapshot"}
               </Button>
               <span className="text-xs text-muted-foreground">
                 This snapshot was generated using live AI analysis of your

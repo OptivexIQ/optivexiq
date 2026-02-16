@@ -95,7 +95,7 @@ export function Pricing() {
           <p className="mt-4 text-sm text-muted-foreground">
             Want a preview first?{" "}
             <a
-              href="#free-audit"
+              href="#free-snapshot"
               className="font-medium text-primary hover:underline"
             >
               Try the free snapshot

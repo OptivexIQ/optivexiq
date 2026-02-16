@@ -133,7 +133,7 @@ export function Navbar() {
                 Log in
               </Link>
               <Link
-                href="#free-audit"
+                href="#free-snapshot"
                 className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
               >
                 Get Started
@@ -235,7 +235,7 @@ export function Navbar() {
                     Log in
                   </Link>
                   <Link
-                    href="#free-audit"
+                    href="#free-snapshot"
                     className="rounded-lg bg-foreground px-4 py-2.5 text-center text-sm font-medium text-background"
                     onClick={() => setMobileOpen(false)}
                   >

@@ -2,7 +2,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/Hero";
 import { Problem } from "@/components/Problem";
 import { Solution } from "@/components/Solution";
-import { FreeAuditForm } from "@/components/FreeAuditForm";
+import { FreeSnapshotForm } from "@/features/free-snapshot/components/FreeSnapshotForm";
 import { ConversionEngine } from "@/components/ConversionEngine";
 import { BeforeAfter } from "@/components/BeforeAfter";
 import { Pricing } from "@/components/Pricing";
@@ -28,7 +28,7 @@ export default function Page() {
       <SectionDivider />
       <Solution />
       <SectionDivider />
-      <FreeAuditForm />
+      <FreeSnapshotForm />
       <SectionDivider />
       <ConversionEngine />
       <SectionDivider />

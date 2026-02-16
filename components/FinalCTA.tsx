@@ -38,10 +38,10 @@ export function FinalCTA() {
 
               <div className="mt-10">
                 <a
-                  href="#free-audit"
+                  href="#free-snapshot"
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-10 py-4 text-sm font-semibold text-primary-foreground shadow-md shadow-black/30 transition-all hover:bg-primary/90"
                 >
-                  Run Free Conversion Audit
+                  Run Free Conversion Snapshot
                   <svg
                     width="16"
                     height="16"
