@@ -80,9 +80,9 @@ export function Navbar() {
 
         <div className="hidden items-center gap-1 md:flex">
           {[
-            { label: "Features", href: "#features" },
-            { label: "How It Works", href: "#solution" },
-            { label: "Pricing", href: "#pricing" },
+            { label: "Features", href: "/#features" },
+            { label: "How It Works", href: "/#solution" },
+            { label: "Pricing", href: "/#pricing" },
           ].map((link) => (
             <Link
               key={link.label}
@@ -132,7 +132,7 @@ export function Navbar() {
                 Log in
               </Link>
               <Link
-                href="#free-snapshot"
+                href="/#free-snapshot"
                 className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
               >
                 Get Started
@@ -177,9 +177,9 @@ export function Navbar() {
         <div className="border-t border-border/40 bg-background/95 px-6 pb-6 pt-4 backdrop-blur-2xl md:hidden">
           <div className="flex flex-col gap-1">
             {[
-              { label: "Features", href: "#features" },
-              { label: "How It Works", href: "#solution" },
-              { label: "Pricing", href: "#pricing" },
+              { label: "Features", href: "/#features" },
+              { label: "How It Works", href: "/#solution" },
+              { label: "Pricing", href: "/#pricing" },
             ].map((link) => (
               <Link
                 key={link.label}
@@ -233,7 +233,7 @@ export function Navbar() {
                     Log in
                   </Link>
                   <Link
-                    href="#free-snapshot"
+                    href="/#free-snapshot"
                     className="rounded-lg bg-foreground px-4 py-2.5 text-center text-sm font-medium text-background"
                     onClick={() => setMobileOpen(false)}
                   >

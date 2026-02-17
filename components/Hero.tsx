@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Hero() {
   return (
     <section className="relative overflow-hidden pt-28 pb-20 md:pt-36 md:pb-28">
@@ -48,8 +50,8 @@ export function Hero() {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a
-              href="#free-snapshot"
+            <Link
+              href="/#free-snapshot"
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-8 py-3.5 text-sm font-semibold text-primary-foreground shadow-md shadow-black/30 transition-all hover:bg-primary/90"
             >
               <span className="relative z-10 flex items-center gap-2">
@@ -70,13 +72,13 @@ export function Hero() {
                   />
                 </svg>
               </span>
-            </a>
-            <a
-              href="#solution"
+            </Link>
+            <Link
+              href="/#solution"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-card/50 px-8 py-3.5 text-sm font-medium text-foreground backdrop-blur-sm transition-all hover:border-border hover:bg-secondary"
             >
               See How It Works
-            </a>
+            </Link>
           </div>
         </div>
 

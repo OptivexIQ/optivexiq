@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function FinalCTA() {
   return (
     <section id="cta" className="relative py-24 md:py-32">
@@ -37,8 +39,8 @@ export function FinalCTA() {
               </p>
 
               <div className="mt-10">
-                <a
-                  href="#free-snapshot"
+                <Link
+                  href="/#free-snapshot"
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-10 py-4 text-sm font-semibold text-primary-foreground shadow-md shadow-black/30 transition-all hover:bg-primary/90"
                 >
                   Run Free Conversion Snapshot
@@ -57,7 +59,7 @@ export function FinalCTA() {
                       strokeLinejoin="round"
                     />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <p className="mt-5 text-xs text-muted-foreground">

@@ -94,12 +94,12 @@ export function Pricing() {
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
             Want a preview first?{" "}
-            <a
-              href="#free-snapshot"
+            <Link
+              href="/#free-snapshot"
               className="font-medium text-primary hover:underline"
             >
               Try the free snapshot
-            </a>
+            </Link>
           </p>
         </div>
 

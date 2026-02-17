@@ -40,7 +40,7 @@ export function Problem() {
       description:
         "Your pricing page creates friction instead of clarity. Prospects don't understand what they're paying for or why your tiers exist.",
       stat: "42%",
-      statLabel: "of trials lost due to pricing confusion",
+      statLabel: "of high-intent leads lost due to pricing confusion",
     },
     {
       icon: (

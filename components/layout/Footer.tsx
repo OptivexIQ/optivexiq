@@ -14,23 +14,18 @@ export function Footer() {
     {
       title: "Resources",
       links: [
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Sign in", href: "/login" },
         { label: "Help Center", href: "/docs" },
         { label: "What's New", href: "/whats-new" },
+        { label: "Privacy Policy", href: "/privacy" },
+        { label: "Terms of Service", href: "/terms" },
       ],
     },
     {
       title: "Company",
       links: [
-        { label: "About Us", href: "/about" },
-        {
-          label: "Contact",
-          href: "/contact",
-        },
-        { label: "Privacy", href: "/privacy" },
-        { label: "Terms", href: "/terms" },
-        { label: "Status", href: "/status" },
+        { label: "About", href: "/about" },
+        { label: "Contact", href: "/contact" },
+        { label: "System Status", href: "/status" },
       ],
     },
   ];
