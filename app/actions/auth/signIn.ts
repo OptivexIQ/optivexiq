@@ -6,6 +6,16 @@ import { createSupabaseServerClient } from "@/services/supabase/server";
 import type { AuthActionState } from "@/features/auth/types";
 import { logSignInEvent } from "@/lib/auth/audit";
 
+function sanitizeRedirectPath(value: FormDataEntryValue | null): string {
+  if (typeof value !== "string" || !value.startsWith("/")) {
+    return "/dashboard";
+  }
+  if (value.startsWith("//")) {
+    return "/dashboard";
+  }
+  return value;
+}
+
 function getLoginValues(formData: FormData) {
   return {
     email: String(formData.get("email") || ""),
@@ -17,6 +27,7 @@ export async function signInAction(
   _prevState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  const redirectTo = sanitizeRedirectPath(formData.get("redirect"));
   const values = getLoginValues(formData);
   const parsed = loginSchema.safeParse(values);
 
@@ -38,5 +49,5 @@ export async function signInAction(
     logSignInEvent(result.data.user.id, result.data.user.email);
   }
 
-  redirect("/dashboard");
+  redirect(redirectTo);
 }

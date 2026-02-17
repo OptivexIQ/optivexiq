@@ -22,7 +22,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { toFormData } from "@/lib/forms/toFormData";
 
-export function SignUpForm() {
+type Props = {
+  redirectTo?: string | null;
+};
+
+export function SignUpForm({ redirectTo }: Props) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
@@ -54,6 +58,9 @@ export function SignUpForm() {
         email: values.email,
         password: values.password,
       });
+      if (redirectTo) {
+        formData.set("redirect", redirectTo);
+      }
 
       const result = await signUpAction({ error: null }, formData);
 

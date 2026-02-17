@@ -6,7 +6,7 @@ export const metadata = {
 const updates = [
   {
     date: "February 16, 2026",
-    title: "Free Snapshot pipeline hardening",
+    title: "Free Conversion Audit pipeline hardening",
     details:
       "Added durable execution stages, strict schema validation, and email-gated PDF delivery for snapshot flows.",
   },

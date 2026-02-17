@@ -303,7 +303,7 @@ export function FreeSnapshotForm() {
       <div className="relative mx-auto max-w-7xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Free Conversion Snapshot
+            Free Conversion Audit
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
             See your biggest conversion leaks in under 3 minutes.
@@ -321,7 +321,7 @@ export function FreeSnapshotForm() {
           >
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground">
-                Run your free snapshot
+                Run your Free Conversion Audit
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 Enter your website and optional competitors to run live AI
@@ -405,7 +405,7 @@ export function FreeSnapshotForm() {
               >
                 {isSubmitting
                   ? "Starting snapshot..."
-                  : "Run Free Conversion Snapshot"}
+                  : "Run Free Conversion Audit"}
               </Button>
               <span className="text-xs text-muted-foreground">
                 This snapshot was generated using live AI analysis of your

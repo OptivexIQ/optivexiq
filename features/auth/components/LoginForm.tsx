@@ -20,7 +20,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { toFormData } from "@/lib/forms/toFormData";
 
-export function LoginForm() {
+type Props = {
+  redirectTo?: string | null;
+};
+
+export function LoginForm({ redirectTo }: Props) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -38,6 +42,9 @@ export function LoginForm() {
 
     startTransition(async () => {
       const formData = toFormData(values);
+      if (redirectTo) {
+        formData.set("redirect", redirectTo);
+      }
 
       const result = await signInAction({ error: null }, formData);
 

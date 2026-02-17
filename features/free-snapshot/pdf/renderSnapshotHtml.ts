@@ -15,7 +15,7 @@ export function renderSnapshotHtml(props: SnapshotPdfProps): string {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OptivexIQ Free Conversion Snapshot</title>
+    <title>OptivexIQ Free Conversion Audit</title>
     <style>
       @page { margin: 20mm; size: A4; }
 

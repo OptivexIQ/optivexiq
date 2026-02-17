@@ -38,10 +38,11 @@ const envSchema = z.object({
 
   // Optional: LemonSqueezy
   LEMONSQUEEZY_API_KEY: z.string().optional(),
+  LEMONSQUEEZY_STORE_ID: z.string().optional(),
   LEMONSQUEEZY_WEBHOOK_SECRET: z.string().min(1).optional(),
-  LEMONSQUEEZY_STARTER_CHECKOUT_URL: z.string().url().optional(),
-  LEMONSQUEEZY_PRO_CHECKOUT_URL: z.string().url().optional(),
-  LEMONSQUEEZY_GROWTH_CHECKOUT_URL: z.string().url().optional(),
+  LEMONSQUEEZY_STARTER_VARIANT_ID: z.string().optional(),
+  LEMONSQUEEZY_PRO_VARIANT_ID: z.string().optional(),
+  LEMONSQUEEZY_GROWTH_VARIANT_ID: z.string().optional(),
   LEMONSQUEEZY_PORTAL_URL: z.string().url().optional(),
 });
 
@@ -78,12 +79,13 @@ export const NODE_ENV = env.NODE_ENV || "development";
 export const NEXT_PUBLIC_SITE_URL = env.NEXT_PUBLIC_SITE_URL;
 export const CRON_SECRET = env.CRON_SECRET;
 export const LEMONSQUEEZY_API_KEY = env.LEMONSQUEEZY_API_KEY;
+export const LEMONSQUEEZY_STORE_ID = env.LEMONSQUEEZY_STORE_ID;
 export const LEMONSQUEEZY_WEBHOOK_SECRET = env.LEMONSQUEEZY_WEBHOOK_SECRET;
-export const LEMONSQUEEZY_STARTER_CHECKOUT_URL =
-  env.LEMONSQUEEZY_STARTER_CHECKOUT_URL;
-export const LEMONSQUEEZY_PRO_CHECKOUT_URL = env.LEMONSQUEEZY_PRO_CHECKOUT_URL;
-export const LEMONSQUEEZY_GROWTH_CHECKOUT_URL =
-  env.LEMONSQUEEZY_GROWTH_CHECKOUT_URL;
+export const LEMONSQUEEZY_STARTER_VARIANT_ID =
+  env.LEMONSQUEEZY_STARTER_VARIANT_ID;
+export const LEMONSQUEEZY_PRO_VARIANT_ID = env.LEMONSQUEEZY_PRO_VARIANT_ID;
+export const LEMONSQUEEZY_GROWTH_VARIANT_ID =
+  env.LEMONSQUEEZY_GROWTH_VARIANT_ID;
 export const LEMONSQUEEZY_PORTAL_URL = env.LEMONSQUEEZY_PORTAL_URL;
 
 // Helper to check if we're in production

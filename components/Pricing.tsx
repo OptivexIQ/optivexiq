@@ -1,5 +1,5 @@
-﻿import Link from "next/link";
-import { startCheckoutAction } from "@/app/actions/billing/startCheckout";
+import Link from "next/link";
+import { PricingPlanAction } from "@/components/landing/PricingPlanAction";
 
 type Plan = {
   name: string;
@@ -15,6 +15,14 @@ type Plan = {
   | { action: "checkout"; planKey: "starter" | "pro" | "growth" }
   | { action: "contact"; planKey?: never }
 );
+
+function getButtonClass(highlighted: boolean) {
+  return `mb-8 block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 ${
+    highlighted
+      ? "bg-primary text-primary-foreground shadow-md shadow-black/30 hover:bg-primary/90"
+      : "border border-border bg-secondary text-foreground hover:bg-muted"
+  }`;
+}
 
 export function Pricing() {
   const plans: Plan[] = [
@@ -98,7 +106,7 @@ export function Pricing() {
               href="/#free-snapshot"
               className="font-medium text-primary hover:underline"
             >
-              Try the free snapshot
+              Run the Free Conversion Audit
             </Link>
           </p>
         </div>
@@ -146,27 +154,17 @@ export function Pricing() {
               </div>
 
               {plan.action === "checkout" ? (
-                <form action={startCheckoutAction} className="mb-8">
-                  <input type="hidden" name="plan" value={plan.planKey} />
-                  <button
-                    type="submit"
-                    className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 ${
-                      plan.highlighted
-                        ? "bg-primary text-primary-foreground shadow-md shadow-black/30 hover:bg-primary/90"
-                        : "border border-border bg-secondary text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {plan.cta}
-                  </button>
-                </form>
+                <PricingPlanAction
+                  plan={plan.planKey}
+                  planName={plan.name}
+                  defaultLabel={plan.cta}
+                  highlighted={plan.highlighted}
+                  returnTo="/#pricing"
+                />
               ) : (
                 <a
                   href="mailto:sales@optivexiq.com?subject=OptivexIQ%20Growth%20Plan"
-                  className={`mb-8 block rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 ${
-                    plan.highlighted
-                      ? "bg-primary text-primary-foreground shadow-md shadow-black/30 hover:bg-primary/90"
-                      : "border border-border bg-secondary text-foreground hover:bg-muted"
-                  }`}
+                  className={getButtonClass(plan.highlighted)}
                 >
                   {plan.cta}
                 </a>
@@ -222,3 +220,4 @@ export function Pricing() {
     </section>
   );
 }
+

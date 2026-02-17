@@ -13,6 +13,7 @@ type CheckoutSessionRow = {
   requested_plan: BillingPlan;
   lemonsqueezy_subscription_id: string | null;
   processed_at: string | null;
+  created_at: string;
 };
 
 type CreateCheckoutSessionResult =
@@ -71,7 +72,7 @@ async function getCheckoutSessionByRef(
   const { data, error } = await supabase
     .from("billing_checkout_sessions")
     .select(
-      "checkout_ref, user_id, requested_plan, lemonsqueezy_subscription_id, processed_at",
+      "checkout_ref, user_id, requested_plan, lemonsqueezy_subscription_id, processed_at, created_at",
     )
     .eq("checkout_ref", checkoutRef)
     .maybeSingle();
@@ -115,7 +116,7 @@ export async function resolveCheckoutSessionForWebhook(
     .eq("checkout_ref", checkoutRef)
     .is("processed_at", null)
     .select(
-      "checkout_ref, user_id, requested_plan, lemonsqueezy_subscription_id, processed_at",
+      "checkout_ref, user_id, requested_plan, lemonsqueezy_subscription_id, processed_at, created_at",
     )
     .maybeSingle();
 
@@ -143,6 +144,34 @@ export async function resolveCheckoutSessionForWebhook(
   }
 
   return { ok: false, error: "Unable to resolve checkout reference." };
+}
+
+export async function findRecentPendingCheckoutSession(params: {
+  userId: string;
+  requestedPlan: BillingPlan;
+  withinMinutes: number;
+}): Promise<string | null> {
+  const cutoff = new Date(
+    Date.now() - Math.max(1, params.withinMinutes) * 60_000,
+  ).toISOString();
+
+  const supabase = createSupabaseAdminClient("webhook");
+  const { data, error } = await supabase
+    .from("billing_checkout_sessions")
+    .select("checkout_ref")
+    .eq("user_id", params.userId)
+    .eq("requested_plan", params.requestedPlan)
+    .is("processed_at", null)
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.checkout_ref) {
+    return null;
+  }
+
+  return String(data.checkout_ref);
 }
 
 export async function resolveCheckoutSessionBySubscriptionId(

@@ -44,7 +44,7 @@ export function RunningState(props: {
   return (
     <div className="rounded-2xl border border-border/60 bg-card/80 p-8 shadow-xl shadow-black/10">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-        Free Conversion Snapshot
+        Free Conversion Audit
       </p>
       <h3 className="mt-3 text-2xl font-semibold text-foreground">
         Analyzing {props.domain}...

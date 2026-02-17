@@ -15,7 +15,7 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-10">
+    <div className="flex min-h-screen flex-col px-6 py-10">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Complete onboarding</h1>
         <p className="text-sm text-muted-foreground">

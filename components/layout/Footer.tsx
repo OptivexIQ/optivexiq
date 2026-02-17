@@ -8,7 +8,7 @@ export function Footer() {
         { label: "Features", href: "#features" },
         { label: "How It Works", href: "#solution" },
         { label: "Pricing", href: "#pricing" },
-        { label: "Free Conversion Snapshot", href: "#free-snapshot" },
+        { label: "Free Conversion Audit", href: "#free-snapshot" },
       ],
     },
     {

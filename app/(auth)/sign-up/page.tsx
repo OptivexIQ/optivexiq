@@ -1,6 +1,30 @@
 import { SignUpForm } from "@/features/auth/components/SignUpForm";
 
-export default function SignUpPage() {
+type SignUpPageProps = {
+  searchParams?:
+    | {
+        redirect?: string;
+      }
+    | Promise<{
+        redirect?: string;
+      }>;
+};
+
+type SignUpSearchParams = {
+  redirect?: string;
+};
+
+function sanitizeRedirect(value?: string): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+  return value;
+}
+
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  const resolvedParams = (await Promise.resolve(searchParams)) ?? {};
+  const redirectTo = sanitizeRedirect(resolvedParams?.redirect);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -10,7 +34,7 @@ export default function SignUpPage() {
         </p>
       </div>
       <div className="mt-6 rounded-lg border bg-background p-6 shadow-sm">
-        <SignUpForm />
+        <SignUpForm redirectTo={redirectTo} />
       </div>
     </div>
   );

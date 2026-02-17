@@ -7,7 +7,6 @@ import { hasPaidAccess } from "@/features/billing/services/subscriptionLifecycle
 export type CheckoutPlan = BillingPlan;
 
 type CheckoutPolicyDeniedCode =
-  | "SUBSCRIPTION_MISSING"
   | "SAME_PLAN_ACTIVE"
   | "DOWNGRADE_OR_LATERAL";
 
@@ -37,20 +36,12 @@ export async function assertCheckoutPolicy(params: {
 }): Promise<CheckoutPolicyResult> {
   const subscription = await getSubscription(params.userId);
   if (!subscription) {
-    return {
-      ok: false,
-      code: "SUBSCRIPTION_MISSING",
-      message: "Subscription missing.",
-    };
+    return { ok: true, plan: params.requestedPlan };
   }
 
   const limits = await getPlanLimits(subscription.plan);
   if (!limits) {
-    return {
-      ok: false,
-      code: "SUBSCRIPTION_MISSING",
-      message: "Subscription state unavailable.",
-    };
+    return { ok: true, plan: params.requestedPlan };
   }
 
   const hasPaidAccessNow = hasPaidAccess(subscription, limits.billing, {

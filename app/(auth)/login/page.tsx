@@ -1,7 +1,31 @@
 import Link from "next/link";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?:
+    | {
+        redirect?: string;
+      }
+    | Promise<{
+        redirect?: string;
+      }>;
+};
+
+function sanitizeRedirect(value?: string): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+  return value;
+}
+
+type LoginSearchParams = {
+  redirect?: string;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const resolvedParams = (await Promise.resolve(searchParams)) ?? {};
+  const redirectTo = sanitizeRedirect(resolvedParams?.redirect);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -11,12 +35,12 @@ export default function LoginPage() {
         </p>
       </div>
       <div className="mt-6 rounded-lg border bg-background p-6 shadow-sm">
-        <LoginForm />
+        <LoginForm redirectTo={redirectTo} />
         <p className="mt-4 text-sm text-muted-foreground">
           New here?{" "}
           <Link
             className="font-medium text-foreground underline"
-            href="/sign-up"
+            href={redirectTo ? `/sign-up?redirect=${encodeURIComponent(redirectTo)}` : "/sign-up"}
           >
             Create an account
           </Link>

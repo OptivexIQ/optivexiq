@@ -51,7 +51,7 @@ export async function enqueueFreeSnapshotJob(snapshotId: string) {
   );
 
   if (error) {
-    logger.error("Failed to enqueue free snapshot job.", error, {
+    logger.error("Failed to enqueue free conversion audit job.", error, {
       snapshot_id: snapshotId,
     });
     return { ok: false as const, error: "free_snapshot_job_enqueue_failed" };
@@ -204,7 +204,7 @@ export async function runFreeSnapshotJobWorker(limit = 10) {
     .limit(Math.max(1, limit) * 3);
 
   if (error || !Array.isArray(data)) {
-    logger.error("Failed to load free snapshot jobs.", error);
+    logger.error("Failed to load free conversion audit jobs.", error);
     return { scanned: 0, claimed: 0, completed: 0, failed: 0 };
   }
 

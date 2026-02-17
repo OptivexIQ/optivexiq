@@ -16,9 +16,9 @@ export async function sendFreeSnapshotEmail(params: SendSnapshotEmailParams) {
   }
 
   const resend = new Resend(RESEND_API_KEY);
-  const subject = `Your Free Conversion Snapshot for ${params.websiteUrl}`;
+  const subject = `Your Free Conversion Audit for ${params.websiteUrl}`;
   const html = [
-    "<p>Your free conversion snapshot is attached as a PDF.</p>",
+    "<p>Your Free Conversion Audit is attached as a PDF.</p>",
     "<p>This snapshot was generated using live AI analysis of your website.</p>",
     "<p><strong>Next step:</strong> Upgrade to unlock the full Conversion Gap Report.</p>",
   ].join("");

@@ -45,7 +45,7 @@ function toCanonicalReport(
     rewriteRecommendations: snapshot.quickWins.map((win, index) => ({
       title: `Quick Win ${index + 1}`,
       slug: `quick-win-${index + 1}`,
-      category: "Free Snapshot",
+      category: "Free Conversion Audit",
       metric: "Estimated conversion lift",
       copy: win,
       iconName: "default",

@@ -3,6 +3,7 @@ import { exchangeAuthCodeForSession } from "@/features/auth/services/authCallbac
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+  const redirectTo = searchParams.get("redirect");
   const result = await exchangeAuthCodeForSession(searchParams.get("code"));
   if (!result.ok) {
     const redirectUrl = new URL("/login", request.url);
@@ -10,6 +11,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const redirectUrl = new URL("/dashboard", request.url);
+  const redirectPath =
+    typeof redirectTo === "string" &&
+    redirectTo.startsWith("/") &&
+    !redirectTo.startsWith("//")
+      ? redirectTo
+      : "/dashboard";
+  const redirectUrl = new URL(redirectPath, request.url);
   return NextResponse.redirect(redirectUrl);
 }
