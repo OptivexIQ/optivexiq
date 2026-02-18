@@ -21,8 +21,8 @@ export default async function BillingReturnPage({
   const checkoutRef = resolvedParams?.checkout_ref ?? null;
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-20">
+    <section className="mx-auto max-w-7xl px-6 py-42">
       <BillingReturnStatus checkoutRef={checkoutRef} />
-    </main>
+    </section>
   );
 }

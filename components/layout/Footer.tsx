@@ -24,7 +24,7 @@ export function Footer() {
       title: "Company",
       links: [
         { label: "About", href: "/about" },
-        { label: "Contact", href: "/contact" },
+        { label: "Contact Sales", href: "/contact" },
         { label: "System Status", href: "/status" },
       ],
     },

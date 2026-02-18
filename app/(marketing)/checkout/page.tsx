@@ -78,7 +78,7 @@ export default async function CheckoutPage({
     });
 
     return (
-      <main className="mx-auto max-w-2xl px-6 py-20">
+      <section className="mx-auto max-w-2xl px-6 py-42">
         <div className="rounded-xl border border-border/60 bg-card p-6">
           <h1 className="text-xl font-semibold text-foreground">
             Unable to start checkout
@@ -115,7 +115,7 @@ export default async function CheckoutPage({
             ) : null}
           </div>
         </div>
-      </main>
+      </section>
     );
   }
 

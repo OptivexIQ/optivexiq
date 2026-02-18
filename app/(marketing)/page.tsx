@@ -1,4 +1,3 @@
-import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/Hero";
 import { Problem } from "@/components/Problem";
 import { Solution } from "@/components/Solution";
@@ -6,9 +5,7 @@ import { FreeSnapshotForm } from "@/features/free-snapshot/components/FreeSnapsh
 import { ConversionEngine } from "@/components/ConversionEngine";
 import { BeforeAfter } from "@/components/BeforeAfter";
 import { Pricing } from "@/components/Pricing";
-import { Testimonials } from "@/components/Testimonials";
 import { FinalCTA } from "@/components/FinalCTA";
-import { Footer } from "@/components/layout/Footer";
 
 function SectionDivider() {
   return (
@@ -21,7 +18,6 @@ function SectionDivider() {
 export default function Page() {
   return (
     <>
-      <Navbar />
       <Hero />
       <SectionDivider />
       <Problem />
@@ -37,7 +33,6 @@ export default function Page() {
       <Pricing />
       <SectionDivider />
       <FinalCTA />
-      <Footer />
     </>
   );
 }

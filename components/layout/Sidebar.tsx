@@ -19,6 +19,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/Sidebar";
+import { FeedbackQuickModal } from "@/features/feedback/components/FeedbackQuickModal";
 
 const navigation = [
   { label: "Overview", href: "/dashboard", icon: Gauge },
@@ -88,9 +89,16 @@ export default function AppSidebar({ quotaResetLabel }: AppSidebarProps) {
 
       {/* ---------------- FOOTER ---------------- */}
       <SidebarFooter>
-        {!collapsed && (
-          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-[11px] text-sidebar-foreground/70">
-            {quotaResetLabel}
+        {!collapsed ? (
+          <div className="space-y-2">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-[11px] text-sidebar-foreground/70">
+              {quotaResetLabel}
+            </div>
+            <FeedbackQuickModal />
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <FeedbackQuickModal compact />
           </div>
         )}
       </SidebarFooter>
