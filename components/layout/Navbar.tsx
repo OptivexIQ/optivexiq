@@ -80,6 +80,7 @@ export function Navbar() {
 
         <div className="hidden items-center gap-1 md:flex">
           {[
+            { label: "About", href: "/about" },
             { label: "Features", href: "/#features" },
             { label: "How It Works", href: "/#solution" },
             { label: "Pricing", href: "/#pricing" },
@@ -177,6 +178,7 @@ export function Navbar() {
         <div className="border-t border-border/40 bg-background/95 px-6 pb-6 pt-4 backdrop-blur-2xl md:hidden">
           <div className="flex flex-col gap-1">
             {[
+              { label: "About", href: "/about" },
               { label: "Features", href: "/#features" },
               { label: "How It Works", href: "/#solution" },
               { label: "Pricing", href: "/#pricing" },

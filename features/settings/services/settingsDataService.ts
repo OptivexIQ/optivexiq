@@ -5,19 +5,19 @@ import { getUserSettings } from "@/features/settings/services/userSettingsServic
 
 function formatSecurityNote(reviewDate: string | null) {
   if (!reviewDate) {
-    return "Security review completed.";
+    return "Baseline controls active.";
   }
 
   const parsed = new Date(reviewDate);
   if (Number.isNaN(parsed.getTime())) {
-    return "Security review completed.";
+    return "Baseline controls active.";
   }
 
-  return `Last review completed ${parsed.toLocaleDateString("en-US", {
+  return `Security posture refreshed ${parsed.toLocaleDateString("en-US", {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  })}. SOC 2 evidence ready.`;
+  })}.`;
 }
 
 async function fetchSettingsData(): Promise<SettingsData> {
@@ -86,17 +86,17 @@ async function fetchSettingsData(): Promise<SettingsData> {
       sections,
       security: userSettings.security_review_completed
         ? {
-            status: "Security review completed",
+            status: "Baseline controls active",
             note: formatSecurityNote(userSettings.security_review_date),
           }
         : {
-            status: "Security review pending",
-            note: "Security review is pending.",
+            status: "Security posture in progress",
+            note: "Security controls are being improved continuously.",
           },
       notifications: {
         title: "Notifications",
         description:
-          "Keep revenue stakeholders aligned with your audit cadence.",
+          "Keep revenue stakeholders aligned with your reporting cadence.",
         items: notificationItems,
       },
     };

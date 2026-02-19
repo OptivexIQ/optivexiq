@@ -5,10 +5,10 @@ export function Footer() {
     {
       title: "Product",
       links: [
-        { label: "Features", href: "#features" },
-        { label: "How It Works", href: "#solution" },
-        { label: "Pricing", href: "#pricing" },
-        { label: "Free Conversion Audit", href: "#free-snapshot" },
+        { label: "Features", href: "/#features" },
+        { label: "How It Works", href: "/#solution" },
+        { label: "Pricing", href: "/#pricing" },
+        { label: "Free Conversion Audit", href: "/#free-snapshot" },
       ],
     },
     {

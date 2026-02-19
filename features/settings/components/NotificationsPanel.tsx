@@ -58,7 +58,7 @@ export function NotificationsPanel({
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {hasSubscription
-              ? "Keep revenue stakeholders aligned with your audit cadence."
+              ? "Keep revenue stakeholders aligned with your reporting cadence."
               : "Subscription required to enable notifications."}
           </p>
         </div>

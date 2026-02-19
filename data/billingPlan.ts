@@ -96,9 +96,9 @@ export const billingCatalogData: Omit<
     },
   ],
   trust: [
-    "SOC 2 aligned",
-    "GDPR ready",
-    "256-bit encryption",
-    "99.9% uptime SLA",
+    "Secure cloud hosting",
+    "Encrypted connections (HTTPS/TLS)",
+    "Access-controlled environments",
+    "Continuous infrastructure monitoring",
   ],
 };

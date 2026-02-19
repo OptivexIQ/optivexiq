@@ -162,16 +162,16 @@ export default async function BillingPage() {
         <div className="rounded-xl border border-border/60 bg-card p-6">
           <div className="flex items-start gap-3">
             <Shield className="mt-0.5 h-5 w-5 text-muted-foreground" />
-            <div>
-              <h3 className="text-base font-semibold text-foreground">
-                Trust & compliance
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                OptivexIQ is built for revenue teams that require auditability
-                and data protection.
-              </p>
+              <div>
+                <h3 className="text-base font-semibold text-foreground">
+                  Trust & data protection
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  We prioritize secure infrastructure and responsible data
+                  handling.
+                </p>
+              </div>
             </div>
-          </div>
           <div className="mt-4 space-y-2">
             {billing.trust.map((item) => (
               <div key={item} className="flex items-center gap-2 text-sm">

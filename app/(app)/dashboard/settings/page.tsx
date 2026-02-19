@@ -64,26 +64,24 @@ export default async function SettingsPage() {
               <Lock className="mt-0.5 h-5 w-5 text-muted-foreground" />
               <div>
                 <h3 className="text-base font-semibold text-foreground">
-                  Security
+                  Security posture
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {settings.security_review_completed
-                    ? "Last review completed. SOC 2 evidence ready."
-                    : "Security review is pending."}
+                  Security controls are implemented at the infrastructure and
+                  application level.
                 </p>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-2 rounded-md border border-border/60 bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-chart-3" />
-              <span>
-                {settings.security_review_completed
-                  ? "Security review completed"
-                  : "Security review pending"}
-              </span>
+              <span>Baseline controls active</span>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Security controls are reviewed through your compliance workflow.
-            </p>
+            <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              <li>Role-based access control</li>
+              <li>Authenticated API access</li>
+              <li>Operational monitoring</li>
+              <li>Ongoing security improvements</li>
+            </ul>
           </div>
 
           <NotificationsPanel

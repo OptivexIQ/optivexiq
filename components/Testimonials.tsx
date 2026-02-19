@@ -31,7 +31,7 @@ export function Testimonials() {
       companyDetail: "120 employees",
       metric: "3 days",
       metricLabel: "to positioning clarity",
-      verified: "Security reviewed",
+      verified: "Security-focused",
     },
   ];
 
