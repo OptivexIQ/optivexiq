@@ -71,7 +71,7 @@ export default function DocsPage() {
               Snapshot vs Full Report
             </h3>
             <div className="mt-3 overflow-x-auto rounded-lg border border-border/60">
-              <table className="w-full min-w-[680px] text-left text-sm">
+              <table className="w-full min-w-170 text-left text-sm">
                 <thead className="bg-secondary/50 text-foreground">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Capability</th>
@@ -93,7 +93,9 @@ export default function DocsPage() {
                   <tr className="border-t border-border/60">
                     <td className="px-4 py-3">Delivery</td>
                     <td className="px-4 py-3">Email-gated PDF unlock</td>
-                    <td className="px-4 py-3">Dashboard-first report delivery</td>
+                    <td className="px-4 py-3">
+                      Dashboard-first report delivery
+                    </td>
                   </tr>
                   <tr className="border-t border-border/60">
                     <td className="px-4 py-3">Operational intent</td>
@@ -176,7 +178,8 @@ export default function DocsPage() {
               </li>
               <li>
                 <span className="font-medium text-foreground">Running:</span>{" "}
-                content is being analyzed and report sections are being prepared.
+                content is being analyzed and report sections are being
+                prepared.
               </li>
               <li>
                 <span className="font-medium text-foreground">Completed:</span>{" "}
@@ -218,11 +221,12 @@ export default function DocsPage() {
                   Executive diagnosis
                 </h3>
                 <p className="mt-1">
-                  Summarizes primary conversion risks and directional priorities.
+                  Summarizes primary conversion risks and directional
+                  priorities.
                 </p>
                 <p className="mt-1">
-                  High-risk signals indicate messaging clarity or differentiation
-                  needs immediate attention.
+                  High-risk signals indicate messaging clarity or
+                  differentiation needs immediate attention.
                 </p>
               </div>
 
@@ -273,8 +277,8 @@ export default function DocsPage() {
                   context.
                 </p>
                 <p className="mt-1">
-                  Use this for strategic alignment discussions across product and
-                  marketing stakeholders.
+                  Use this for strategic alignment discussions across product
+                  and marketing stakeholders.
                 </p>
               </div>
 
@@ -333,10 +337,12 @@ export default function DocsPage() {
             </div>
 
             <div className="mt-4 rounded-md border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Interpretation guidance</p>
+              <p className="font-medium text-foreground">
+                Interpretation guidance
+              </p>
               <p className="mt-1">
-                Focus on trends and relative strengths/weaknesses across sections
-                rather than any single score in isolation.
+                Focus on trends and relative strengths/weaknesses across
+                sections rather than any single score in isolation.
               </p>
             </div>
           </section>
@@ -378,9 +384,9 @@ export default function DocsPage() {
             </h2>
             <div className="mt-3 space-y-3 text-sm text-muted-foreground">
               <p>
-                OptivexIQ processes account data, billing metadata, usage events,
-                submitted URLs, and analysis outputs required for service
-                operation.
+                OptivexIQ processes account data, billing metadata, usage
+                events, submitted URLs, and analysis outputs required for
+                service operation.
               </p>
               <p>
                 Public webpage analysis is limited to content that is publicly
@@ -485,8 +491,8 @@ export default function DocsPage() {
                 </h3>
                 <p className="mt-1">
                   The system processes publicly accessible content to generate
-                  analysis outputs. Data handling follows documented retention and
-                  policy boundaries.
+                  analysis outputs. Data handling follows documented retention
+                  and policy boundaries.
                 </p>
               </div>
 
@@ -505,9 +511,9 @@ export default function DocsPage() {
                   How is data protected?
                 </h3>
                 <p className="mt-1">
-                  OptivexIQ applies layered technical and organizational controls
-                  for access governance, secure transport, and operational
-                  monitoring.
+                  OptivexIQ applies layered technical and organizational
+                  controls for access governance, secure transport, and
+                  operational monitoring.
                 </p>
               </div>
 
@@ -534,7 +540,10 @@ export default function DocsPage() {
                 Start with Troubleshooting for common issues, then contact
                 support if you still need help.
               </p>
-              <Link href="#troubleshooting" className="mt-3 inline-block text-sm text-primary hover:underline">
+              <Link
+                href="#troubleshooting"
+                className="mt-3 inline-block text-sm text-primary hover:underline"
+              >
                 Go to Troubleshooting
               </Link>
             </div>
@@ -544,13 +553,19 @@ export default function DocsPage() {
                 Quick links
               </p>
               <div className="mt-2 flex flex-col gap-1 text-sm">
-                <Link href="/#free-snapshot" className="text-primary hover:underline">
+                <Link
+                  href="/#free-snapshot"
+                  className="text-primary hover:underline"
+                >
                   Free Conversion Snapshot
                 </Link>
                 <Link href="/#pricing" className="text-primary hover:underline">
                   Pricing
                 </Link>
-                <Link href="/whats-new" className="text-primary hover:underline">
+                <Link
+                  href="/whats-new"
+                  className="text-primary hover:underline"
+                >
                   What&apos;s New
                 </Link>
               </div>
