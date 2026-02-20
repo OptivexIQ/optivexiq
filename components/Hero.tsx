@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Circle } from "lucide-react";
 
 export function Hero() {
   return (
@@ -116,8 +117,12 @@ export function Hero() {
                       <p className="text-sm font-semibold text-foreground">
                         Enterprise Conversion Audit
                       </p>
-                      <p className="text-sm text-foreground/90">
-                        acme-saas.com | Segment: Enterprise | 5 competitors
+                      <p className="inline-flex items-center gap-1.5 text-sm text-foreground/90">
+                        <span>acme-saas.com</span>
+                        <Circle className="h-1.5 w-1.5 fill-current stroke-0 text-foreground/60" />
+                        <span>Segment: Enterprise</span>
+                        <Circle className="h-1.5 w-1.5 fill-current stroke-0 text-foreground/60" />
+                        <span>5 competitors</span>
                       </p>
                     </div>
                   </div>

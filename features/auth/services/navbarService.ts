@@ -50,27 +50,24 @@ function formatUsageSegment(metric: UsageMetric) {
   return `${formatCount(metric.used)} / ${formatCount(metric.limit)} ${metric.label}`;
 }
 
-function resolvePrimaryMetric(summary: UsageSummary): UsageMetric {
-  const reports = normalizeCount(summary.competitor_gaps_used);
-  const reportLimit = summary.limits.max_reports;
-  if (reportLimit !== null || reports > 0) {
-    return {
-      label: "reports",
-      used: reports,
-      limit: reportLimit,
-    };
-  }
-
-  return {
+function buildUsageText(summary: UsageSummary): string {
+  const reports: UsageMetric = {
+    label: "reports",
+    used: normalizeCount(summary.competitor_gaps_used),
+    limit: summary.limits.max_reports,
+  };
+  const tokens: UsageMetric = {
     label: "tokens",
     used: normalizeCount(summary.tokens_used),
     limit: summary.limits.max_tokens,
   };
-}
+  const rewrites: UsageMetric = {
+    label: "rewrites",
+    used: normalizeCount(summary.rewrites_used),
+    limit: summary.limits.max_rewrites,
+  };
 
-function buildUsageText(summary: UsageSummary): string {
-  const primary = resolvePrimaryMetric(summary);
-  return formatUsageSegment(primary);
+  return [formatUsageSegment(reports), formatUsageSegment(rewrites)].join(" | ");
 }
 
 function resolveUsagePercent(metric: UsageMetric | null) {
@@ -162,8 +159,12 @@ async function fetchNavbarData(): Promise<NavbarData> {
   }
   const usageSummary = usageSummaryResult.data;
 
-  const primaryMetric = resolvePrimaryMetric(usageSummary);
-  const usagePercent = resolveUsagePercent(primaryMetric);
+  const tokenMetric: UsageMetric = {
+    label: "tokens",
+    used: normalizeCount(usageSummary.tokens_used),
+    limit: usageSummary.limits.max_tokens,
+  };
+  const usagePercent = resolveUsagePercent(tokenMetric);
   const progressVariant = resolveProgressVariant(usagePercent);
   const usageText = buildUsageText(usageSummary);
   const status = resolveStatus(usageSummary);

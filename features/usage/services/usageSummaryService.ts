@@ -27,10 +27,12 @@ export type UsageSummary = {
   status: SubscriptionRecord["status"];
   tokens_used: number;
   competitor_gaps_used: number;
+  rewrites_used: number;
   ai_cost_cents: number;
   billing_period_end: string | null;
   limits: {
     max_reports: number | null;
+    max_rewrites: number | null;
     max_tokens: number | null;
   };
   lifecycle: {
@@ -84,10 +86,12 @@ export async function getUsageSummary(
       status: subscription.status,
       tokens_used: usage.tokens_used,
       competitor_gaps_used: usage.competitor_gaps_used,
+      rewrites_used: usage.rewrites_used,
       ai_cost_cents: usage.ai_cost_cents,
       billing_period_end: usage.billing_period_end ?? null,
       limits: {
         max_reports: limits.competitor_gap_limit,
+        max_rewrites: limits.rewrite_limit,
         max_tokens: limits.token_limit,
       },
       lifecycle: {

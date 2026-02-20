@@ -5,12 +5,20 @@ import { estimateTokens } from "@/features/ai/client/tokenEstimator";
 import { estimateCost } from "@/features/ai/cost/costTracker";
 import {
   finalizeGenerateUsage,
+  incrementRewrites,
   reserveGenerateUsage,
   rollbackGenerateUsage,
 } from "@/features/usage/services/usageTracker";
 import { emitOperationalAlert } from "@/lib/ops/criticalAlertService";
 import { errorResponse } from "@/lib/api/errorResponse";
 import type { NextRequest } from "next/server";
+import { rewriteGenerateRequestSchema } from "@/features/rewrites/validators/rewritesSchema";
+import { buildRewriteOpenAIRequest } from "@/features/rewrites/services/rewritesService";
+import {
+  generateRewriteRequestRef,
+  saveRewriteRecord,
+} from "@/features/rewrites/services/rewriteHistoryService";
+import type { RewriteGenerateRequestValues } from "@/features/rewrites/validators/rewritesSchema";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 const FINALIZATION_MAX_ATTEMPTS = 3;
@@ -62,6 +70,30 @@ function parseGeneratePayload(value: unknown): OpenAIRequest | null {
     temperature: payload.temperature,
     maxTokens: payload.maxTokens,
   };
+}
+
+async function parseGenerateRequest(
+  payload: unknown,
+): Promise<{
+  request: OpenAIRequest;
+  isRewriteRequest: boolean;
+  rewriteInput: RewriteGenerateRequestValues | null;
+} | null> {
+  const rewriteParsed = rewriteGenerateRequestSchema.safeParse(payload);
+  if (rewriteParsed.success) {
+    return {
+      request: await buildRewriteOpenAIRequest(rewriteParsed.data),
+      isRewriteRequest: true,
+      rewriteInput: rewriteParsed.data,
+    };
+  }
+
+  const generic = parseGeneratePayload(payload);
+  if (!generic) {
+    return null;
+  }
+
+  return { request: generic, isRewriteRequest: false, rewriteInput: null };
 }
 
 async function finalizeGenerateUsageWithRetry(params: {
@@ -122,14 +154,16 @@ export async function handleGenerateStream(params: {
   const { request, userId, requestId } = params;
   const startTime = Date.now();
   const body = await request.json().catch(() => null);
-  const generateRequest = parseGeneratePayload(body);
+  const parsedRequest = await parseGenerateRequest(body);
 
-  if (!generateRequest) {
+  if (!parsedRequest) {
     return errorResponse("invalid_payload", "Invalid payload.", 400, {
       requestId,
       headers: { "x-request-id": requestId },
     });
   }
+  const { request: generateRequest, isRewriteRequest, rewriteInput } = parsedRequest;
+  const rewriteRef = isRewriteRequest ? generateRewriteRequestRef() : null;
 
   logger.info("AI stream requested.", {
     requestId,
@@ -383,6 +417,39 @@ export async function handleGenerateStream(params: {
             return;
           }
 
+          if (isRewriteRequest) {
+            const rewriteUsage = await incrementRewrites(userId);
+            if (!rewriteUsage.ok) {
+              logger.error("Rewrite usage increment failed after stream finalization.", {
+                request_id: requestId,
+                user_id: userId,
+                error: rewriteUsage.error,
+              });
+            }
+
+            if (rewriteInput && rewriteRef) {
+              const persistResult = await saveRewriteRecord({
+                userId,
+                requestId,
+                requestRef: rewriteRef,
+                input: rewriteInput,
+                outputMarkdown: output,
+                model: generateRequest.model,
+                tokensInput: inputTokens,
+                tokensOutput: outputTokens,
+                costCents,
+              });
+              if (!persistResult.ok) {
+                logger.error("Rewrite generation persisted with usage but no history record.", {
+                  request_id: requestId,
+                  user_id: userId,
+                  request_ref: rewriteRef,
+                  error: persistResult.error,
+                });
+              }
+            }
+          }
+
           logger.info("AI stream finalized.", {
             requestId,
             durationMs: Date.now() - startTime,
@@ -401,6 +468,7 @@ export async function handleGenerateStream(params: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store",
       "x-request-id": requestId,
+      ...(rewriteRef ? { "x-rewrite-ref": rewriteRef } : {}),
     },
   });
 }

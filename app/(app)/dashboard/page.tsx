@@ -91,6 +91,7 @@ export default async function DashboardPage() {
     !overview.summary.hasSubscription ||
     (!overview.summary.usageUnlimited &&
       overview.summary.usageUsed >= overview.summary.usageLimit);
+  const rewriteBlocked = !overview.summary.hasSubscription;
 
   return (
     <div className="flex w-full flex-col gap-8">
@@ -271,15 +272,13 @@ export default async function DashboardPage() {
               value anchors before expanding acquisition spend.
             </p>
           </div>
-          {usageBlocked ? (
+          {rewriteBlocked ? (
             <div className="mt-6 space-y-2">
               <p className="text-sm font-medium text-muted-foreground">
                 Run pricing rewrite unavailable
               </p>
               <p className="text-xs text-muted-foreground">
-                {overview.summary.hasSubscription
-                  ? "Usage limit reached. Upgrade or wait for the next cycle."
-                  : "Subscription required to run analyses."}
+                Subscription required to run rewrites.
               </p>
             </div>
           ) : (

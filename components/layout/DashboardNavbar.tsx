@@ -3,6 +3,7 @@ import { Progress } from "@/components/ui/progress";
 import DashboardNavbarMenu from "@/components/layout/DashboardNavbarMenu";
 import { SidebarToggle } from "../Sidebar";
 import { getNavbarDataSafe } from "@/features/auth/services/navbarService";
+import { Circle } from "lucide-react";
 
 const progressVariantMap = {
   normal: "info",
@@ -19,6 +20,7 @@ export default async function DashboardNavbar() {
   const statusLabel = navbarData?.statusLabel ?? "Status unavailable";
   const statusVariant = navbarData?.statusVariant ?? "secondary";
   const usageText = navbarData?.usageText ?? "Usage unavailable";
+  const usageParts = usageText.split(" | ");
   const usagePercent = navbarData?.usagePercent ?? null;
   const userInitials = navbarData?.userInitials ?? "";
   const workspaceName = navbarData?.workspaceName ?? "";
@@ -43,7 +45,19 @@ export default async function DashboardNavbar() {
         <div className="hidden min-w-45 flex-col gap-1 text-sm text-muted-foreground sm:flex">
           <div className="flex items-center justify-between">
             <span>Usage</span>
-            <span>{usageText}</span>
+            <span className="inline-flex items-center gap-1.5 ml-4">
+              {usageParts.map((part, index) => (
+                <span
+                  key={`${part}:${index}`}
+                  className="inline-flex items-center gap-1.5"
+                >
+                  {index > 0 ? (
+                    <Circle className="h-1.5 w-1.5 fill-current stroke-0 text-muted-foreground/70" />
+                  ) : null}
+                  <span>{part}</span>
+                </span>
+              ))}
+            </span>
           </div>
           {usagePercent !== null && (
             <Progress

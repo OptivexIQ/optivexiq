@@ -5,7 +5,7 @@ import { isProfileComplete } from "@/features/saas-profile/validators/profileSch
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, CreditCard, Shield } from "lucide-react";
+import { CheckCircle2, Circle, CreditCard, Shield } from "lucide-react";
 import { getBillingData } from "@/features/billing/services/billingDataService";
 import { openBillingPortalAction } from "@/app/actions/billing/openBillingPortal";
 import { startCheckoutAction } from "@/app/actions/billing/startCheckout";
@@ -104,8 +104,10 @@ export default async function BillingPage() {
               <h2 className="mt-2 text-lg font-semibold text-foreground">
                 {billing.currentPlan.name}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {billing.currentPlan.seats} | {billing.currentPlan.renewalLabel}
+              <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span>{billing.currentPlan.seats}</span>
+                <Circle className="h-1.5 w-1.5 fill-current stroke-0 text-muted-foreground/70" />
+                <span>{billing.currentPlan.renewalLabel}</span>
               </p>
             </div>
             <Badge variant="secondary">{billing.currentPlan.status}</Badge>

@@ -9,6 +9,7 @@ import {
   Settings,
   Sliders,
   UserSquare2,
+  Wand2,
 } from "lucide-react";
 
 import {
@@ -29,6 +30,7 @@ const navigation = [
     icon: BarChart3,
   },
   { label: "Reports", href: "/dashboard/reports", icon: FileText },
+  { label: "Rewrite Studio", href: "/dashboard/rewrites", icon: Wand2 },
   { label: "SaaS Profile", href: "/dashboard/profile", icon: UserSquare2 },
   { label: "Billing", href: "/dashboard/billing", icon: Sliders },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
