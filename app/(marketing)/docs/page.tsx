@@ -17,6 +17,7 @@ const tocItems: DocsTocItem[] = [
   { id: "scoring-methodology", label: "Scoring & Methodology" },
   { id: "billing-entitlements", label: "Billing & Entitlements" },
   { id: "data-security", label: "Data & Security" },
+  { id: "operational-trust", label: "Operational Trust" },
   { id: "troubleshooting", label: "Troubleshooting" },
   { id: "faq", label: "FAQ" },
 ];
@@ -406,6 +407,93 @@ export default function DocsPage() {
                 authentication, billing, communications, and AI infrastructure.
               </p>
             </div>
+          </section>
+
+          <section id="operational-trust" className="mt-12 scroll-mt-28">
+            <h2 className="text-xl font-semibold text-foreground">
+              Operational Trust
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              This section focuses on service governance and communication
+              practices. Technical controls are documented in Data & Security.
+            </p>
+
+            <div className="mt-4 overflow-x-auto rounded-lg border border-border/60">
+              <table className="w-full min-w-170 text-left text-sm">
+                <thead className="bg-secondary/50 text-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Area</th>
+                    <th className="px-4 py-3 font-semibold">Current practice</th>
+                    <th className="px-4 py-3 font-semibold">Where to verify</th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  <tr className="border-t border-border/60">
+                    <td className="px-4 py-3">Status visibility</td>
+                    <td className="px-4 py-3">
+                      Public service status and incident summaries are published.
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href="/status" className="text-primary hover:underline">
+                        System Status
+                      </Link>
+                    </td>
+                  </tr>
+                  <tr className="border-t border-border/60">
+                    <td className="px-4 py-3">Incident communication</td>
+                    <td className="px-4 py-3">
+                      Customer-impacting incidents include updates and resolution
+                      state where applicable.
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href="/status" className="text-primary hover:underline">
+                        Status incident log
+                      </Link>
+                    </td>
+                  </tr>
+                  <tr className="border-t border-border/60">
+                    <td className="px-4 py-3">Support escalation</td>
+                    <td className="px-4 py-3">
+                      Published support, security, and legal channels with routed
+                      request handling.
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href="/contact" className="text-primary hover:underline">
+                        Contact hub
+                      </Link>
+                    </td>
+                  </tr>
+                  <tr className="border-t border-border/60">
+                    <td className="px-4 py-3">Policy transparency</td>
+                    <td className="px-4 py-3">
+                      Privacy and terms documents are versioned and updated with
+                      effective dates.
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href="/privacy" className="text-primary hover:underline">
+                        Privacy
+                      </Link>
+                      {" / "}
+                      <Link href="/terms" className="text-primary hover:underline">
+                        Terms
+                      </Link>
+                    </td>
+                  </tr>
+                  <tr className="border-t border-border/60">
+                    <td className="px-4 py-3">Change communication</td>
+                    <td className="px-4 py-3">
+                      Product-facing updates are published in release notes.
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href="/whats-new" className="text-primary hover:underline">
+                        What&apos;s New
+                      </Link>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
           </section>
 
           <section id="troubleshooting" className="mt-12 scroll-mt-28">
