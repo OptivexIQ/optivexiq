@@ -229,6 +229,7 @@ export default async function BillingPage() {
               ) : (
                 <form action={startCheckoutAction} className="mt-4">
                   <input type="hidden" name="plan" value={tier.planKey} />
+                  <input type="hidden" name="currency" value={tier.currency} />
                   <Button className="w-full" type="submit" variant="outline">
                     {actionLabel}
                   </Button>

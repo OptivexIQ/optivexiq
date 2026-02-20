@@ -8,6 +8,7 @@ import {
   type CheckoutPlan,
 } from "@/features/billing/services/checkoutPolicyService";
 import { NEXT_PUBLIC_SITE_URL } from "@/lib/env";
+import type { BillingCurrency } from "@/features/billing/types/billing.types";
 
 export type StartCheckoutResult =
   | { ok: true; url: URL; checkoutRef: string; reused: boolean }
@@ -41,6 +42,7 @@ function buildCheckoutRedirectUrls(checkoutRef: string, returnTo?: string) {
 export async function startCheckoutForPlan(params: {
   userId: string;
   plan: CheckoutPlan;
+  currency?: BillingCurrency;
   returnTo?: string;
 }): Promise<StartCheckoutResult> {
   const policy = await assertCheckoutPolicy({
@@ -84,6 +86,7 @@ export async function startCheckoutForPlan(params: {
   const redirectUrls = buildCheckoutRedirectUrls(checkoutRef, params.returnTo);
   const checkoutUrl = await createCheckoutUrl({
     plan: params.plan,
+    currency: params.currency ?? "USD",
     checkoutRef,
     successUrl: redirectUrls.successUrl,
   });
@@ -106,6 +109,7 @@ export async function startCheckoutForPlan(params: {
 export async function startCheckoutForUser(
   userId: string,
   requestedPlan: CheckoutPlan,
+  currency?: BillingCurrency,
 ): Promise<StartCheckoutResult> {
-  return startCheckoutForPlan({ userId, plan: requestedPlan });
+  return startCheckoutForPlan({ userId, plan: requestedPlan, currency });
 }

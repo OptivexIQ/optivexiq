@@ -1,12 +1,21 @@
 import {
   LEMONSQUEEZY_API_KEY,
+  LEMONSQUEEZY_GROWTH_GBP_VARIANT_ID,
+  LEMONSQUEEZY_GROWTH_USD_VARIANT_ID,
   LEMONSQUEEZY_GROWTH_VARIANT_ID,
+  LEMONSQUEEZY_PRO_GBP_VARIANT_ID,
+  LEMONSQUEEZY_PRO_USD_VARIANT_ID,
   LEMONSQUEEZY_PRO_VARIANT_ID,
+  LEMONSQUEEZY_STARTER_GBP_VARIANT_ID,
+  LEMONSQUEEZY_STARTER_USD_VARIANT_ID,
   LEMONSQUEEZY_STARTER_VARIANT_ID,
   LEMONSQUEEZY_STORE_ID,
 } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import type { BillingPlan } from "@/features/billing/types/billing.types";
+import type {
+  BillingCurrency,
+  BillingPlan,
+} from "@/features/billing/types/billing.types";
 
 type CheckoutUrlResult =
   | { ok: true; url: string }
@@ -14,22 +23,41 @@ type CheckoutUrlResult =
 
 type LemonCheckoutCreateParams = {
   plan: BillingPlan;
+  currency: BillingCurrency;
   checkoutRef: string;
   successUrl?: string;
 };
 
 const LEMONSQUEEZY_API_BASE = "https://api.lemonsqueezy.com/v1";
 
-function resolveVariantId(plan: BillingPlan): string | null {
+function resolveVariantId(plan: BillingPlan, currency: BillingCurrency): string | null {
   if (plan === "starter") {
+    if (currency === "USD") {
+      return LEMONSQUEEZY_STARTER_USD_VARIANT_ID ?? LEMONSQUEEZY_STARTER_VARIANT_ID ?? null;
+    }
+    if (currency === "GBP") {
+      return LEMONSQUEEZY_STARTER_GBP_VARIANT_ID ?? LEMONSQUEEZY_STARTER_VARIANT_ID ?? null;
+    }
     return LEMONSQUEEZY_STARTER_VARIANT_ID ?? null;
   }
 
   if (plan === "pro") {
+    if (currency === "USD") {
+      return LEMONSQUEEZY_PRO_USD_VARIANT_ID ?? LEMONSQUEEZY_PRO_VARIANT_ID ?? null;
+    }
+    if (currency === "GBP") {
+      return LEMONSQUEEZY_PRO_GBP_VARIANT_ID ?? LEMONSQUEEZY_PRO_VARIANT_ID ?? null;
+    }
     return LEMONSQUEEZY_PRO_VARIANT_ID ?? null;
   }
 
   if (plan === "growth") {
+    if (currency === "USD") {
+      return LEMONSQUEEZY_GROWTH_USD_VARIANT_ID ?? LEMONSQUEEZY_GROWTH_VARIANT_ID ?? null;
+    }
+    if (currency === "GBP") {
+      return LEMONSQUEEZY_GROWTH_GBP_VARIANT_ID ?? LEMONSQUEEZY_GROWTH_VARIANT_ID ?? null;
+    }
     return LEMONSQUEEZY_GROWTH_VARIANT_ID ?? null;
   }
 
@@ -49,7 +77,7 @@ export async function createCheckoutUrl(
 ): Promise<CheckoutUrlResult> {
   const apiKey = LEMONSQUEEZY_API_KEY;
   const storeId = normalizeNumericId(LEMONSQUEEZY_STORE_ID ?? null);
-  const variantId = normalizeNumericId(resolveVariantId(params.plan));
+  const variantId = normalizeNumericId(resolveVariantId(params.plan, params.currency));
 
   if (!apiKey) {
     logger.error("Missing LemonSqueezy API key.");
@@ -63,9 +91,10 @@ export async function createCheckoutUrl(
 
   if (!variantId) {
     logger.error("Missing LemonSqueezy variant id for plan.", undefined, {
-      plan: params.plan,
-    });
-    return { ok: false, error: "Checkout variant not configured" };
+        plan: params.plan,
+        currency: params.currency,
+      });
+      return { ok: false, error: "Checkout variant not configured" };
   }
 
   const payload = {
@@ -124,6 +153,7 @@ export async function createCheckoutUrl(
     if (!response.ok) {
       logger.error("LemonSqueezy checkout create failed.", undefined, {
         plan: params.plan,
+        currency: params.currency,
         status: response.status,
         detail: body?.errors?.[0]?.detail ?? "unknown",
       });
@@ -134,6 +164,7 @@ export async function createCheckoutUrl(
     if (!url) {
       logger.error("LemonSqueezy checkout response missing URL.", undefined, {
         plan: params.plan,
+        currency: params.currency,
       });
       return { ok: false, error: "Checkout URL missing from provider response" };
     }
@@ -142,6 +173,7 @@ export async function createCheckoutUrl(
   } catch (error) {
     logger.error("LemonSqueezy checkout request crashed.", error, {
       plan: params.plan,
+      currency: params.currency,
     });
     return { ok: false, error: "Unable to reach checkout provider" };
   }

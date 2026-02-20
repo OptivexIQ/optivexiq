@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/services/supabase/browser";
-import type { BillingPlan } from "@/features/billing/types/billing.types";
+import type {
+  BillingCurrency,
+  BillingPlan,
+} from "@/features/billing/types/billing.types";
 import {
   getCheckoutIntentUrl,
   getLoginRedirectUrl,
@@ -11,6 +14,7 @@ import {
 
 type Props = {
   plan: BillingPlan;
+  currency: BillingCurrency;
   label: string;
   highlighted: boolean;
   returnTo?: string;
@@ -18,6 +22,7 @@ type Props = {
 
 export function PricingCheckoutCta({
   plan,
+  currency,
   label,
   highlighted,
   returnTo,
@@ -35,7 +40,7 @@ export function PricingCheckoutCta({
       const { data } = await supabase.auth.getSession();
       setIsChecking(false);
       setIsRouting(true);
-      const intentUrl = getCheckoutIntentUrl(plan, returnTo);
+      const intentUrl = getCheckoutIntentUrl(plan, returnTo, currency);
       const target = data.session?.user ? intentUrl : getLoginRedirectUrl(intentUrl);
       router.push(target);
     } catch {

@@ -15,7 +15,19 @@ function SectionDivider() {
   );
 }
 
-export default function Page() {
+type MarketingPageProps = {
+  searchParams?:
+    | {
+        currency?: string;
+      }
+    | Promise<{
+        currency?: string;
+      }>;
+};
+
+export default async function Page({ searchParams }: MarketingPageProps) {
+  const resolvedParams = (await Promise.resolve(searchParams)) ?? {};
+
   return (
     <>
       <Hero />
@@ -30,7 +42,7 @@ export default function Page() {
       <SectionDivider />
       <BeforeAfter />
       <SectionDivider />
-      <Pricing />
+      <Pricing selectedCurrency={resolvedParams.currency} />
       <SectionDivider />
       <FinalCTA />
     </>

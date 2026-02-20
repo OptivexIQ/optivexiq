@@ -5,10 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/services/supabase/browser";
 import { PricingCheckoutCta } from "@/components/landing/PricingCheckoutCta";
 import { fetchBillingEntitlement } from "@/features/billing/services/billingReturnClient";
-import type { BillingPlan } from "@/features/billing/types/billing.types";
+import type {
+  BillingCurrency,
+  BillingPlan,
+} from "@/features/billing/types/billing.types";
 
 type Props = {
   plan: BillingPlan;
+  currency: BillingCurrency;
   planName: string;
   defaultLabel: string;
   highlighted: boolean;
@@ -50,6 +54,7 @@ function getDisabledButtonClass() {
 
 export function PricingPlanAction({
   plan,
+  currency,
   planName,
   defaultLabel,
   highlighted,
@@ -106,6 +111,7 @@ export function PricingPlanAction({
     return (
       <PricingCheckoutCta
         plan={plan}
+        currency={currency}
         label={defaultLabel}
         highlighted={highlighted}
         returnTo={returnTo}
@@ -134,10 +140,10 @@ export function PricingPlanAction({
   return (
     <PricingCheckoutCta
       plan={plan}
+      currency={currency}
       label={`Upgrade to ${planName}`}
       highlighted={highlighted}
       returnTo={returnTo}
     />
   );
 }
-

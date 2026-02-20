@@ -1,5 +1,8 @@
 import { getSubscription } from "@/features/billing/services/planValidationService";
-import type { BillingPlan } from "@/features/billing/types/billing.types";
+import type {
+  BillingCurrency,
+  BillingPlan,
+} from "@/features/billing/types/billing.types";
 import { BILLING_PLANS } from "@/lib/constants/plans";
 import { getPlanLimits } from "@/features/billing/services/planLimitsService";
 import { hasPaidAccess } from "@/features/billing/services/subscriptionLifecycleService";
@@ -27,6 +30,19 @@ export function parseCheckoutPlan(value: unknown): BillingPlan | null {
 
   return (BILLING_PLANS as readonly string[]).includes(value)
     ? (value as BillingPlan)
+    : null;
+}
+
+const BILLING_CURRENCIES: readonly BillingCurrency[] = ["USD", "EUR", "GBP"];
+
+export function parseCheckoutCurrency(value: unknown): BillingCurrency | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.toUpperCase();
+  return BILLING_CURRENCIES.includes(normalized as BillingCurrency)
+    ? (normalized as BillingCurrency)
     : null;
 }
 

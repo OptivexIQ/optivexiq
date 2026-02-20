@@ -4,16 +4,19 @@ import { getServerUser } from "@/lib/auth/server";
 import { planSchema } from "@/features/billing/validators/planSchema";
 import { startCheckoutForPlan } from "@/features/billing/services/checkoutStartService";
 import { getLoginRedirectUrl } from "@/features/billing/utils/checkoutNavigation";
+import { parseCheckoutCurrency } from "@/features/billing/services/checkoutPolicyService";
 import { logger } from "@/lib/logger";
 
 type CheckoutPageProps = {
   searchParams?:
     | {
         plan?: string;
+        currency?: string;
         returnTo?: string;
       }
     | Promise<{
         plan?: string;
+        currency?: string;
         returnTo?: string;
       }>;
 };
@@ -51,10 +54,13 @@ export default async function CheckoutPage({
   }
 
   const returnTo = sanitizeReturnTo(resolvedParams?.returnTo);
+  const currency = parseCheckoutCurrency(resolvedParams?.currency) ?? "USD";
   const user = await getServerUser();
 
   if (!user) {
-    const checkoutIntent = `/checkout?plan=${encodeURIComponent(parsedPlan.data)}${
+    const checkoutIntent = `/checkout?plan=${encodeURIComponent(
+      parsedPlan.data,
+    )}&currency=${encodeURIComponent(currency)}${
       returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""
     }`;
     redirect(getLoginRedirectUrl(checkoutIntent));
@@ -63,6 +69,7 @@ export default async function CheckoutPage({
   const checkout = await startCheckoutForPlan({
     userId: user.id,
     plan: parsedPlan.data,
+    currency,
     returnTo: returnTo ?? undefined,
   });
 
@@ -71,10 +78,11 @@ export default async function CheckoutPage({
     const message = getCheckoutErrorCopy(checkout.code);
     logger.warn("Marketing checkout initiation failed.", {
       user_id: user.id,
-      requested_plan: parsedPlan.data,
-      return_to: target,
-      reason_code: checkout.code,
-      reason_message: checkout.message,
+        requested_plan: parsedPlan.data,
+        requested_currency: currency,
+        return_to: target,
+        reason_code: checkout.code,
+        reason_message: checkout.message,
     });
 
     return (
@@ -86,7 +94,7 @@ export default async function CheckoutPage({
           <p className="mt-3 text-sm text-muted-foreground">{message}</p>
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <Link
-              href={`/checkout?plan=${encodeURIComponent(parsedPlan.data)}${
+              href={`/checkout?plan=${encodeURIComponent(parsedPlan.data)}&currency=${encodeURIComponent(currency)}${
                 returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""
               }`}
               className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"

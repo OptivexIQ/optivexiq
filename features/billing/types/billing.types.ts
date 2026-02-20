@@ -1,4 +1,5 @@
 export type BillingPlan = "starter" | "pro" | "growth";
+export type BillingCurrency = "USD" | "EUR" | "GBP";
 
 export type SubscriptionStatus =
   | "active"

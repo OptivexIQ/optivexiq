@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { PricingPlanAction } from "@/components/landing/PricingPlanAction";
+import type { BillingCurrency } from "@/features/billing/types/billing.types";
 
 type Plan = {
   name: string;
-  price: number;
+  prices: Record<BillingCurrency, number>;
   period: string;
   description: string;
   features: string[];
@@ -25,25 +26,37 @@ function getButtonClass(highlighted: boolean) {
   }`;
 }
 
-function resolvePricingLocaleAndCurrency(acceptLanguage: string | null) {
+function resolvePricingLocaleAndCurrency(acceptLanguage: string | null): {
+  locale: string;
+  currency: BillingCurrency;
+} {
   const locale = acceptLanguage?.split(",")[0]?.trim() || "en-US";
   const region = locale.split("-")[1]?.toUpperCase() || "US";
 
-  const currencyByRegion: Record<string, string> = {
+  const currencyByRegion: Record<string, BillingCurrency> = {
     US: "USD",
-    CA: "CAD",
     GB: "GBP",
-    AU: "AUD",
-    NZ: "NZD",
-    JP: "JPY",
-    SG: "SGD",
+    IE: "EUR",
+    FR: "EUR",
+    DE: "EUR",
+    ES: "EUR",
+    IT: "EUR",
+    NL: "EUR",
+    PT: "EUR",
+    BE: "EUR",
+    AT: "EUR",
+    FI: "EUR",
   };
 
-  const currency = currencyByRegion[region] ?? "EUR";
+  const currency = currencyByRegion[region] ?? "USD";
   return { locale, currency };
 }
 
-function formatPlanPrice(amount: number, locale: string, currency: string) {
+function formatPlanPrice(
+  amount: number,
+  locale: string,
+  currency: BillingCurrency,
+) {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
@@ -51,16 +64,32 @@ function formatPlanPrice(amount: number, locale: string, currency: string) {
   }).format(amount);
 }
 
-export async function Pricing() {
+function parseBillingCurrency(value?: string): BillingCurrency | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.toUpperCase();
+  return normalized === "USD" || normalized === "EUR" || normalized === "GBP"
+    ? normalized
+    : null;
+}
+
+type PricingProps = {
+  selectedCurrency?: string;
+};
+
+export async function Pricing({ selectedCurrency }: PricingProps) {
   const headerStore = await headers();
-  const { locale, currency } = resolvePricingLocaleAndCurrency(
+  const { locale, currency: localeCurrency } = resolvePricingLocaleAndCurrency(
     headerStore.get("accept-language"),
   );
+  const currency = parseBillingCurrency(selectedCurrency) ?? localeCurrency;
 
   const plans: Plan[] = [
     {
       name: "Conversion Starter",
-      price: 49,
+      prices: { USD: 59, EUR: 49, GBP: 45 },
       period: "one-time",
       description:
         "A quick positioning audit and strategic rewrite for your core pages.",
@@ -77,7 +106,7 @@ export async function Pricing() {
     },
     {
       name: "SaaS Conversion Pro",
-      price: 99,
+      prices: { USD: 119, EUR: 99, GBP: 89 },
       period: "/month",
       description:
         "Ongoing conversion intelligence and optimization for serious founders.",
@@ -98,7 +127,7 @@ export async function Pricing() {
     },
     {
       name: "Growth Intelligence",
-      price: 149,
+      prices: { USD: 179, EUR: 149, GBP: 135 },
       period: "/month",
       description: "Advanced competitive intelligence for scaling SaaS teams.",
       features: [
@@ -119,7 +148,7 @@ export async function Pricing() {
   return (
     <section id="pricing" className="py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto mb-16 max-w-2xl text-center">
+        <div className="mx-auto mb-20 max-w-2xl text-center">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
             Pricing
           </p>
@@ -141,6 +170,25 @@ export async function Pricing() {
               Run the Free Conversion Audit
             </Link>
           </p>
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card/60 p-1">
+            {(["USD", "EUR", "GBP"] as const).map((option) => {
+              const isActive = currency === option;
+              return (
+                <Link
+                  key={option}
+                  href={`/?currency=${option}#pricing`}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {option}
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         <div className="grid items-center gap-5 lg:grid-cols-3">
@@ -177,7 +225,7 @@ export async function Pricing() {
 
               <div className="mb-8 flex items-baseline gap-1">
                 <span className="text-4xl font-bold tracking-tight text-foreground">
-                  {formatPlanPrice(plan.price, locale, currency)}
+                  {formatPlanPrice(plan.prices[currency], locale, currency)}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {plan.period}
@@ -187,10 +235,11 @@ export async function Pricing() {
               {plan.action === "checkout" ? (
                 <PricingPlanAction
                   plan={plan.planKey}
+                  currency={currency}
                   planName={plan.name}
                   defaultLabel={plan.cta}
                   highlighted={plan.highlighted}
-                  returnTo="/#pricing"
+                  returnTo={`/?currency=${currency}#pricing`}
                 />
               ) : (
                 <a

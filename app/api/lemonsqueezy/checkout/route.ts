@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { planSchema } from "@/features/billing/validators/planSchema";
 import { errorResponse } from "@/lib/api/errorResponse";
 import { startCheckoutForUser } from "@/features/billing/services/checkoutStartService";
+import { parseCheckoutCurrency } from "@/features/billing/services/checkoutPolicyService";
 
 export async function POST(request: Request) {
   const requestId = randomUUID();
@@ -34,11 +35,19 @@ export async function POST(request: Request) {
     });
   }
 
-  const checkout = await startCheckoutForUser(user.id, parsed.data);
+  const currency =
+    parseCheckoutCurrency(
+      typeof payload === "object" && payload !== null
+        ? (payload as { currency?: unknown }).currency
+        : undefined,
+    ) ?? "USD";
+
+  const checkout = await startCheckoutForUser(user.id, parsed.data, currency);
   if (!checkout.ok) {
     logger.warn("Blocked checkout API by policy.", {
       user_id: user.id,
       requested_plan: parsed.data,
+      requested_currency: currency,
       reason: checkout.code,
     });
     return errorResponse("forbidden", checkout.message, 403, {
