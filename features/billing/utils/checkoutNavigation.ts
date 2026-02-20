@@ -17,6 +17,6 @@ export function getCheckoutIntentUrl(
   return `${base}&returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-export function getLoginRedirectUrl(intentUrl: string): string {
-  return `/login?redirect=${encodeURIComponent(intentUrl)}`;
+export function getSignUpRedirectUrl(intentUrl: string): string {
+  return `/sign-up?redirect=${encodeURIComponent(intentUrl)}`;
 }

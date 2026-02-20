@@ -284,7 +284,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <Button className="mt-6 w-full" asChild>
-              <Link href="/dashboard/gap-engine">Run pricing rewrite</Link>
+              <Link href="/dashboard/rewrites">Run pricing rewrite</Link>
             </Button>
           )}
         </div>

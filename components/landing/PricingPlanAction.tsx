@@ -1,14 +1,13 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowserClient } from "@/services/supabase/browser";
 import { PricingCheckoutCta } from "@/components/landing/PricingCheckoutCta";
-import { fetchBillingEntitlement } from "@/features/billing/services/billingReturnClient";
 import type {
   BillingCurrency,
   BillingPlan,
 } from "@/features/billing/types/billing.types";
+import {
+  getCheckoutIntentUrl,
+  getSignUpRedirectUrl,
+} from "@/features/billing/utils/checkoutNavigation";
 
 type Props = {
   plan: BillingPlan;
@@ -17,6 +16,8 @@ type Props = {
   defaultLabel: string;
   highlighted: boolean;
   returnTo?: string;
+  isAuthenticated: boolean;
+  activePlan: BillingPlan | null;
 };
 
 const PLAN_RANK: Record<BillingPlan, number> = {
@@ -25,18 +26,15 @@ const PLAN_RANK: Record<BillingPlan, number> = {
   growth: 3,
 };
 
-type Entitlement = {
-  isEntitled: boolean;
-  plan: BillingPlan | null;
-};
-
 function getRelation(activePlan: BillingPlan, targetPlan: BillingPlan) {
   if (activePlan === targetPlan) {
     return "current";
   }
+
   if (PLAN_RANK[targetPlan] > PLAN_RANK[activePlan]) {
     return "upgrade";
   }
+
   return "downgrade";
 }
 
@@ -59,52 +57,21 @@ export function PricingPlanAction({
   defaultLabel,
   highlighted,
   returnTo,
+  isAuthenticated,
+  activePlan,
 }: Props) {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [loading, setLoading] = useState(true);
-  const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const resolveState = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session?.user) {
-          if (!cancelled) {
-            setEntitlement(null);
-            setLoading(false);
-          }
-          return;
-        }
-
-        const result = await fetchBillingEntitlement();
-        if (!cancelled) {
-          setEntitlement({
-            isEntitled: result.isEntitled,
-            plan: result.plan,
-          });
-          setLoading(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setEntitlement(null);
-          setLoading(false);
-        }
-      }
-    };
-
-    void resolveState();
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
-
-  const activePlan =
-    entitlement?.isEntitled && entitlement.plan ? entitlement.plan : null;
-
-  if (loading) {
-    return <span className={getDisabledButtonClass()}>Checking...</span>;
+  if (!isAuthenticated) {
+    const checkoutIntent = getCheckoutIntentUrl(plan, returnTo, currency);
+    return (
+      <PricingCheckoutCta
+        plan={plan}
+        currency={currency}
+        label={defaultLabel}
+        highlighted={highlighted}
+        returnTo={returnTo}
+        hrefOverride={getSignUpRedirectUrl(checkoutIntent)}
+      />
+    );
   }
 
   if (!activePlan) {

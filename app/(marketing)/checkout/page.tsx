@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/auth/server";
 import { planSchema } from "@/features/billing/validators/planSchema";
 import { startCheckoutForPlan } from "@/features/billing/services/checkoutStartService";
-import { getLoginRedirectUrl } from "@/features/billing/utils/checkoutNavigation";
+import { getSignUpRedirectUrl } from "@/features/billing/utils/checkoutNavigation";
 import { parseCheckoutCurrency } from "@/features/billing/services/checkoutPolicyService";
 import { logger } from "@/lib/logger";
 
@@ -63,7 +63,7 @@ export default async function CheckoutPage({
     )}&currency=${encodeURIComponent(currency)}${
       returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""
     }`;
-    redirect(getLoginRedirectUrl(checkoutIntent));
+    redirect(getSignUpRedirectUrl(checkoutIntent));
   }
 
   const checkout = await startCheckoutForPlan({

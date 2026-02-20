@@ -2,6 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { PricingPlanAction } from "@/components/landing/PricingPlanAction";
 import type { BillingCurrency } from "@/features/billing/types/billing.types";
+import { getServerUser } from "@/lib/auth/server";
+import { getBillingEntitlementState } from "@/features/billing/services/billingEntitlementService";
 
 type Plan = {
   name: string;
@@ -85,6 +87,11 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
     headerStore.get("accept-language"),
   );
   const currency = parseBillingCurrency(selectedCurrency) ?? localeCurrency;
+  const user = await getServerUser();
+  const entitlement = user ? await getBillingEntitlementState(user.id) : null;
+  const isAuthenticated = Boolean(user);
+  const activePlan =
+    entitlement?.isEntitled && entitlement.plan ? entitlement.plan : null;
 
   const plans: Plan[] = [
     {
@@ -240,6 +247,8 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
                   defaultLabel={plan.cta}
                   highlighted={plan.highlighted}
                   returnTo={`/?currency=${currency}#pricing`}
+                  isAuthenticated={isAuthenticated}
+                  activePlan={activePlan}
                 />
               ) : (
                 <a
