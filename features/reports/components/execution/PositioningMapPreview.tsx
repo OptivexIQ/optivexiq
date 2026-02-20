@@ -31,7 +31,7 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground/85">
             Positioning map preview
           </p>
           <p className="mt-2 text-sm text-foreground">
@@ -46,8 +46,7 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
             xLabel={axes?.xLabel ?? "Messaging clarity"}
             yLabel={axes?.yLabel ?? "Differentiation strength"}
             showAxisLabels={false}
-            labelClassName="text-[9px]"
-            cornerLabelClassName="text-[8px]"
+            cornerLabelClassName="text-[12px]"
             cornerLabels={{
               topLeft: "Differentiated but unclear",
               topRight: "Clear and differentiated",
@@ -67,11 +66,11 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
             return (
               <div
                 key={`${point.label}-${point.x}-${point.y}`}
-                className="absolute text-xs text-muted-foreground"
+                className="absolute text-xs text-foreground/80"
                 style={{ left: `${left}%`, top: `${top}%` }}
               >
                 <div className="h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/60" />
-                <span className="mt-2 block -translate-x-1/2 text-xs">
+                <span className="mt-2 block -translate-x-1/2 text-[11px] font-medium leading-snug">
                   {point.label}
                 </span>
               </div>

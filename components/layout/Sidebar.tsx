@@ -53,8 +53,26 @@ export default function AppSidebar({ quotaResetLabel }: AppSidebarProps) {
       <SidebarHeader>
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="text-xs font-semibold">OIQ</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="text-primary-foreground"
+              >
+                <path
+                  d="M2 4L8 2L14 4L8 6L2 4Z"
+                  fill="currentColor"
+                  opacity="0.9"
+                />
+                <path
+                  d="M2 4V10L8 12V6L2 4Z"
+                  fill="currentColor"
+                  opacity="0.6"
+                />
+                <path d="M8 6V12L14 10V4L8 6Z" fill="currentColor" />
+              </svg>
             </div>
 
             {!collapsed && (

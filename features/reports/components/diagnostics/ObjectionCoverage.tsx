@@ -56,10 +56,10 @@ export function ObjectionCoverage({ report }: ObjectionCoverageProps) {
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-sm font-semibold text-foreground/85">
           Objection coverage
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Late-funnel risk exposure: {lateFunnelRisk ? "Elevated" : "Contained"}
         </p>
       </div>
@@ -67,7 +67,7 @@ export function ObjectionCoverage({ report }: ObjectionCoverageProps) {
         {hasCoverage ? (
           entries.map(([label, value], index) => (
             <div key={label} className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>{label}</span>
                 <CoverageValue value={value} variant={mapVariant(index)} />
               </div>

@@ -116,7 +116,7 @@ export default async function GapEnginePage() {
           <GapEngineStatusCard etaMinutes={engine.output.etaMinutes} />
 
           <div className="rounded-xl border border-border/60 bg-card p-6">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <p className="text-sm font-medium text-foreground/85">
               {engine.output.headline}
             </p>
             <ul className="mt-4 space-y-3 text-sm text-foreground">
@@ -139,9 +139,9 @@ export default async function GapEnginePage() {
         <div className="grid gap-4 md:grid-cols-3">
           {engine.explainer.map((item) => (
             <div key={item.title} className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                {item.title}
-              </p>
+                  <p className="text-sm font-semibold text-foreground/85">
+                    {item.title}
+                  </p>
               <p className="text-sm text-foreground">{item.description}</p>
             </div>
           ))}

@@ -13,15 +13,13 @@ export function ReportExportActions({
   exportRestricted = false,
 }: ReportExportActionsProps) {
   const exportDisabled =
-    exportRestricted ||
-    reportStatus === "queued" ||
-    reportStatus === "running";
+    exportRestricted || reportStatus === "queued" || reportStatus === "running";
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground/85">
             Export actions
           </p>
           <p className="mt-2 text-sm text-foreground">

@@ -44,7 +44,7 @@ export function GapReportView({
     return (
       <div className="flex w-full flex-col gap-6">
         <div className="rounded-xl border border-border/60 bg-card p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground/85">
             Analysis in progress
           </p>
           <p className="mt-2 text-sm text-foreground">

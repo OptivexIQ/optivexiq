@@ -43,13 +43,11 @@ export function ReportHeader({
     <div className="rounded-xl p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Report detail
-          </p>
+          <p className="text-sm font-semibold text-primary">Report detail</p>
           <h1 className="text-2xl font-semibold text-foreground">
             {report.company}
           </h1>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span>{report.segment}</span>
             <span className="h-1 w-1 rounded-full bg-muted-foreground" />
             <span>Last updated {formatDate(report.createdAt)}</span>
@@ -60,7 +58,7 @@ export function ReportHeader({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-2 rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 rounded-full border border-border/60 px-3 py-1 text-sm text-muted-foreground">
                   <Info className="h-3.5 w-3.5" />
                   Confidence {report.confidenceScore}%
                 </div>

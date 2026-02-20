@@ -23,7 +23,7 @@ export function PositioningMapChart({ data }: PositioningMapChartProps) {
   return (
     <div className="w-full">
       <div className="flex items-stretch gap-2">
-        <div className="flex w-5 items-center justify-center text-xs text-muted-foreground">
+        <div className="flex w-5 items-center justify-center text-sm text-foreground/80">
           <span className="-rotate-90 origin-center whitespace-nowrap">
             {`Y-axis: ${data.axes.yLabel} (Low to High)`}
           </span>
@@ -41,6 +41,7 @@ export function PositioningMapChart({ data }: PositioningMapChartProps) {
             }}
             showCrosshair
             crosshairClassName="bg-foreground/20"
+            labelClassName="text-sm"
             crosshairSize="lg"
           />
           <div className="pointer-events-none absolute inset-0">
@@ -57,7 +58,7 @@ export function PositioningMapChart({ data }: PositioningMapChartProps) {
                 >
                   {isPrimary ? (
                     <div className="flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
-                      <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
+                      <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-2.5 py-1 text-sm font-semibold text-foreground">
                         {point.label}
                       </div>
                       <div className="flex h-4 w-4 items-center justify-center rounded-full border border-primary/60 bg-primary/30 ring-4 ring-primary/20">
@@ -65,12 +66,12 @@ export function PositioningMapChart({ data }: PositioningMapChartProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="-translate-x-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    <div className="-translate-x-1/2 -translate-y-1/2 text-xs text-foreground/80">
                       <div
                         className="h-2.5 w-2.5 rounded-full bg-muted-foreground/60"
                         style={{ width: DOT_SIZE - 4, height: DOT_SIZE - 4 }}
                       />
-                      <span className="mt-2 block text-xs">
+                      <span className="mt-2 block text-[13px] font-medium">
                         {point.label}
                       </span>
                     </div>
@@ -84,7 +85,7 @@ export function PositioningMapChart({ data }: PositioningMapChartProps) {
           </div>
         </div>
       </div>
-      <div className="mt-3 text-right text-xs text-muted-foreground">
+      <div className="mt-3 text-right text-sm text-foreground/80">
         {`X-axis: ${data.axes.xLabel} (Low to High)`}
       </div>
     </div>

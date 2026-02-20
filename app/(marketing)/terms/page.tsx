@@ -12,7 +12,7 @@ export const metadata = {
 };
 
 const lastUpdated = "February 18, 2026";
-const termsStatus = "Pre-launch legal draft";
+const termsStatus = "Current legal version";
 
 const tocItems: LegalTocItem[] = [
   { id: "definitions", label: "1. Definitions" },
@@ -63,11 +63,11 @@ export default function TermsPage() {
             Last updated: {lastUpdated}
           </p>
           <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Pre-launch legal notice</p>
+            <p className="font-medium text-foreground">Legal notice</p>
             <p className="mt-1">
-              These terms apply to current beta/pre-launch use of OptivexIQ.
-              Final legal entity, governing law, and venue details will be
-              published before commercial launch.
+              These terms govern current use of OptivexIQ. Corporate
+              registration metadata, governing law, and venue details will be
+              published once final filings are complete.
             </p>
           </div>
           <div className="mt-6 lg:hidden">
@@ -82,8 +82,8 @@ export default function TermsPage() {
             <ul className="list-disc space-y-1 pl-5">
               <li>
                 <span className="font-medium text-foreground">Company:</span>{" "}
-                OptivexIQ. Final legal entity details will be published before
-                commercial launch.
+                OptivexIQ. Registration details will be published once final
+                filings are complete.
               </li>
               <li>
                 <span className="font-medium text-foreground">Customer:</span> a

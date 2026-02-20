@@ -142,7 +142,10 @@ export function ReportExecutionStatusCard({
             const next = prev + 1;
             if (next >= POLL_FAILURE_THRESHOLD) {
               setExecution((current) => {
-                if (current.status === "queued" || current.status === "running") {
+                if (
+                  current.status === "queued" ||
+                  current.status === "running"
+                ) {
                   return {
                     ...current,
                     status: "failed",
@@ -189,14 +192,14 @@ export function ReportExecutionStatusCard({
           ) : showStageSpinner ? (
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
           ) : null}
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground/85">
             {execution.status === "failed"
               ? "Analysis failed"
               : isCompleted
                 ? "Analysis complete"
-              : showCompletionTransition
-                ? "Analysis complete"
-                : "Analysis in progress"}
+                : showCompletionTransition
+                  ? "Analysis complete"
+                  : "Analysis in progress"}
           </p>
         </div>
         <p className="mt-2 text-sm text-foreground">
@@ -204,18 +207,18 @@ export function ReportExecutionStatusCard({
             ? "Report processing failed. Review inputs and run a new analysis."
             : isCompleted
               ? "Report completed successfully. Loading final output."
-            : showCompletionTransition
-              ? "Report completed successfully. Loading final output."
-              : "We are processing your conversion gap report. This page updates automatically."}
+              : showCompletionTransition
+                ? "Report completed successfully. Loading final output."
+                : "We are processing your conversion gap report. This page updates automatically."}
         </p>
         <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{getStageLabel(execution.executionStage)}</span>
             <span>{progressValue}%</span>
           </div>
           <Progress value={progressValue} />
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           Status: {execution.status}
         </p>
         {pollError ? (

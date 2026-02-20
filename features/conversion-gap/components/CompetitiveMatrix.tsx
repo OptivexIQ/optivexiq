@@ -14,7 +14,7 @@ export function CompetitiveMatrix({ report }: CompetitiveMatrixProps) {
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-sm font-semibold text-foreground/85">
           Competitive matrix
         </p>
         <p className="text-xs text-muted-foreground">Overlap risk indicator</p>

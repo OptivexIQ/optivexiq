@@ -66,7 +66,7 @@ export function MessagingOverlap({ report }: MessagingOverlapProps) {
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground/85">
             Messaging overlap vs competitors
           </p>
           <p className="mt-2 text-sm text-foreground">
@@ -75,14 +75,16 @@ export function MessagingOverlap({ report }: MessagingOverlapProps) {
         </div>
         {ctaLabel ? (
           <Button variant="secondary" asChild>
-            <Link href={`/dashboard/reports/${report.id}/rewrite-recommendations`}>
+            <Link
+              href={`/dashboard/reports/${report.id}/rewrite-recommendations`}
+            >
               {ctaLabel}
             </Link>
           </Button>
         ) : null}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+      <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/40 px-3 py-1">
           <span className="h-2 w-2 rounded-full bg-chart-1" />
           You
@@ -187,7 +189,7 @@ export function MessagingOverlap({ report }: MessagingOverlapProps) {
         </ChartContainer>
       </div>
 
-      <p className="mt-4 text-xs text-muted-foreground">
+      <p className="mt-4 text-sm text-muted-foreground">
         <span className="font-semibold text-foreground">
           {report.messagingOverlap.insight}
         </span>

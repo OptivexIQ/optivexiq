@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { PricingPlanAction } from "@/components/landing/PricingPlanAction";
 
 type Plan = {
   name: string;
-  price: string;
+  price: number;
   period: string;
   description: string;
   features: string[];
@@ -24,11 +25,42 @@ function getButtonClass(highlighted: boolean) {
   }`;
 }
 
-export function Pricing() {
+function resolvePricingLocaleAndCurrency(acceptLanguage: string | null) {
+  const locale = acceptLanguage?.split(",")[0]?.trim() || "en-US";
+  const region = locale.split("-")[1]?.toUpperCase() || "US";
+
+  const currencyByRegion: Record<string, string> = {
+    US: "USD",
+    CA: "CAD",
+    GB: "GBP",
+    AU: "AUD",
+    NZ: "NZD",
+    JP: "JPY",
+    SG: "SGD",
+  };
+
+  const currency = currencyByRegion[region] ?? "EUR";
+  return { locale, currency };
+}
+
+function formatPlanPrice(amount: number, locale: string, currency: string) {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export async function Pricing() {
+  const headerStore = await headers();
+  const { locale, currency } = resolvePricingLocaleAndCurrency(
+    headerStore.get("accept-language"),
+  );
+
   const plans: Plan[] = [
     {
       name: "Conversion Starter",
-      price: "49",
+      price: 49,
       period: "one-time",
       description:
         "A quick positioning audit and strategic rewrite for your core pages.",
@@ -45,7 +77,7 @@ export function Pricing() {
     },
     {
       name: "SaaS Conversion Pro",
-      price: "99",
+      price: 99,
       period: "/month",
       description:
         "Ongoing conversion intelligence and optimization for serious founders.",
@@ -66,7 +98,7 @@ export function Pricing() {
     },
     {
       name: "Growth Intelligence",
-      price: "149",
+      price: 149,
       period: "/month",
       description: "Advanced competitive intelligence for scaling SaaS teams.",
       features: [
@@ -145,8 +177,7 @@ export function Pricing() {
 
               <div className="mb-8 flex items-baseline gap-1">
                 <span className="text-4xl font-bold tracking-tight text-foreground">
-                  {"\u20AC"}
-                  {plan.price}
+                  {formatPlanPrice(plan.price, locale, currency)}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {plan.period}

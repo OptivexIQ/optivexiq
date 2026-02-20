@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 const lastUpdated = "February 18, 2026";
-const policyStatus = "Pre-launch legal draft";
+const policyStatus = "Current legal version";
 
 const tocItems: LegalTocItem[] = [
   { id: "controller-identity", label: "1. Controller Identity" },
@@ -61,11 +61,11 @@ export default function PrivacyPage() {
             Last updated: {lastUpdated}
           </p>
           <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Pre-launch legal notice</p>
+            <p className="font-medium text-foreground">Legal notice</p>
             <p className="mt-1">
-              This policy is active for current beta/pre-launch operations.
-              Final legal entity and registration details will be published
-              before commercial launch.
+              This policy governs current OptivexIQ operations. Corporate
+              registration details will be published on this page when final
+              filings are complete.
             </p>
           </div>
           <div className="mt-6 lg:hidden">
@@ -81,10 +81,10 @@ export default function PrivacyPage() {
               This Privacy Policy applies to OptivexIQ and its SaaS platform.
             </p>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Legal entity: Final legal entity will be published before commercial launch.</li>
-              <li>Registered address: Will be published before commercial launch.</li>
-              <li>Registration number: Pending business registration before launch.</li>
-              <li>VAT number: Will be published once registration is complete.</li>
+              <li>Legal entity: OptivexIQ (registration details pending final publication).</li>
+              <li>Registered address: Available upon verified legal request.</li>
+              <li>Registration number: Will be published once issued by the registrar.</li>
+              <li>VAT number: Will be published once applicable registration is complete.</li>
               <li>Privacy contact: privacy@optivexiq.com</li>
               <li>General support: support@optivexiq.com</li>
             </ul>

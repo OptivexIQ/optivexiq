@@ -22,7 +22,7 @@ export function PriorityIndex({ report }: PriorityIndexProps) {
   if (!report.priorityIssues.length) {
     return (
       <div className="rounded-xl border border-border/60 bg-card p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-sm font-semibold text-foreground/85">
           Priority index
         </p>
         <p className="mt-3 text-sm text-foreground">
@@ -35,7 +35,7 @@ export function PriorityIndex({ report }: PriorityIndexProps) {
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-sm font-semibold text-foreground/85">
           Priority index
         </p>
         <p className="text-xs text-muted-foreground">

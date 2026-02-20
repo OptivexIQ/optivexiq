@@ -37,7 +37,7 @@ export function TopPriorityFixes({ report }: TopPriorityFixesProps) {
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="text-sm font-semibold text-foreground/85">
         Top priority fixes
       </p>
       <div className="mt-4 space-y-3">
@@ -47,13 +47,13 @@ export function TopPriorityFixes({ report }: TopPriorityFixesProps) {
             return (
               <div
                 key={item.issue}
-                className="flex items-center justify-between gap-3 text-xs"
+                className="flex items-center justify-between gap-3 text-sm"
               >
                 <span className="text-foreground">
                   {index + 1}. {item.issue}
                 </span>
                 <span
-                  className={`rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${impactTone(label)}`}
+                  className={`rounded-full border px-2.5 py-1 text-sm font-semibold ${impactTone(label)}`}
                 >
                   {label}
                 </span>

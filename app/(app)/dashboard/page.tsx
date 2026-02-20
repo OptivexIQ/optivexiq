@@ -131,7 +131,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-border/60 bg-card p-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <p className="text-sm font-medium text-foreground/85">
             Conversion Gap Score
           </p>
           <div className="mt-3 flex items-end gap-2">
@@ -150,7 +150,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="rounded-xl border border-border/60 bg-card p-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <p className="text-sm font-medium text-foreground/85">
             Active Reports
           </p>
           <div className="mt-3 flex items-center gap-2">
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
           <Progress value={usagePercent} variant="info" className="mt-3 h-2" />
         </div>
         <div className="rounded-xl border border-border/60 bg-card p-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <p className="text-sm font-medium text-foreground/85">
             Competitor Coverage
           </p>
           <div className="mt-3 text-2xl font-semibold text-foreground">
@@ -176,7 +176,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="rounded-xl border border-border/60 bg-card p-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <p className="text-sm font-medium text-foreground/85">
             Conversion Focus
           </p>
           <div className="mt-3 text-2xl font-semibold text-foreground">
@@ -263,7 +263,7 @@ export default async function DashboardPage() {
             {overview.nextAction.description}
           </p>
           <div className="mt-6 rounded-lg border border-border/60 bg-secondary/40 p-4">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <p className="text-sm font-medium text-foreground/85">
               Why this matters
             </p>
             <p className="mt-2 text-sm text-foreground">

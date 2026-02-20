@@ -122,10 +122,10 @@ export function RewriteRecommendationsList({
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-sm font-semibold text-foreground/85">
                   {card.title}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Impact metric: {card.metric}
                 </p>
               </div>
@@ -136,13 +136,13 @@ export function RewriteRecommendationsList({
                   type="button"
                   className="mt-5 w-full rounded-xl border border-border/60 bg-secondary/30 p-4 text-left transition hover:border-border"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="text-sm font-semibold text-foreground/85">
                     Suggested copy
                   </p>
                   <p className="mt-2 text-sm text-foreground/90">
                     {getPreview(card.copy)}
                   </p>
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                  <p className="mt-3 text-sm font-semibold text-primary">
                     View full copy
                   </p>
                 </button>

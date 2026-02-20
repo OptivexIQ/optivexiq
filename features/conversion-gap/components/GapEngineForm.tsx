@@ -166,7 +166,7 @@ export function GapEngineForm({
             <h2 className="text-base font-semibold text-foreground">
               Analysis inputs
             </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground">
               Confirm the URLs used to benchmark your positioning.
             </p>
           </div>
@@ -197,7 +197,7 @@ export function GapEngineForm({
             name="homepageUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                <FormLabel className="text-sm font-medium text-foreground/85">
                   Homepage URL
                 </FormLabel>
                 <FormControl>
@@ -212,7 +212,7 @@ export function GapEngineForm({
             name="pricingUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                <FormLabel className="text-sm font-medium text-foreground/85">
                   Pricing page URL
                 </FormLabel>
                 <FormControl>
@@ -223,7 +223,7 @@ export function GapEngineForm({
             )}
           />
           <div className="grid gap-2">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <p className="text-sm font-medium text-foreground/85">
               Competitor URLs
             </p>
             <div className="grid gap-2">
@@ -281,7 +281,7 @@ export function GapEngineForm({
         ) : null}
 
         <div className="mt-6 rounded-lg border border-border/60 bg-secondary/40 p-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <p className="text-sm font-medium text-foreground/85">
             Expected output
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">

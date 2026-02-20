@@ -46,7 +46,9 @@ function stageCountFor(stage: string | null, status: LiveStatus): number {
     return 0;
   }
 
-  const index = TRACKED_STAGES.indexOf(stage as (typeof TRACKED_STAGES)[number]);
+  const index = TRACKED_STAGES.indexOf(
+    stage as (typeof TRACKED_STAGES)[number],
+  );
   return index >= 0 ? index + 1 : 0;
 }
 
@@ -58,9 +60,7 @@ function stageLabel(stage: string | null): string {
   return STAGE_LABELS[stage] ?? "Processing";
 }
 
-export function GapEngineStatusCard({
-  etaMinutes,
-}: GapEngineStatusCardProps) {
+export function GapEngineStatusCard({ etaMinutes }: GapEngineStatusCardProps) {
   const { liveStatus, reportStatus, executionStage, executionProgress } =
     useGapEngineLiveStatus();
   const currentStageLabel = stageLabel(executionStage);
@@ -111,9 +111,7 @@ export function GapEngineStatusCard({
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Status
-          </p>
+          <p className="text-sm font-semibold text-foreground/85">Status</p>
           <h3 className="mt-2 text-base font-semibold text-foreground">
             {statusView.description}
           </h3>
@@ -129,11 +127,9 @@ export function GapEngineStatusCard({
               : "bg-secondary/40"
         }`}
       >
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Progress
-        </p>
+        <p className="text-sm font-semibold text-foreground/85">Progress</p>
         <div
-          className={`mt-3 flex items-center justify-between text-xs ${
+          className={`mt-3 flex items-center justify-between text-sm ${
             liveStatus === "complete"
               ? "text-chart-3"
               : liveStatus === "failed"
@@ -147,7 +143,7 @@ export function GapEngineStatusCard({
           <span>
             {liveStatus === "running"
               ? typeof executionProgress === "number"
-                ? `${progressValue}% • ${currentStageLabel}`
+                ? `${progressValue}% - ${currentStageLabel}`
                 : currentStageLabel
               : liveStatus === "complete"
                 ? "100%"
@@ -163,8 +159,8 @@ export function GapEngineStatusCard({
           </p>
         ) : liveStatus === "complete" ? (
           <p className="mt-2 text-xs text-chart-3">
-            Latest run completed. Start a new analysis to begin a fresh
-            progress cycle.
+            Latest run completed. Start a new analysis to begin a fresh progress
+            cycle.
           </p>
         ) : liveStatus === "failed" ? (
           <p className="mt-2 text-xs text-destructive">
