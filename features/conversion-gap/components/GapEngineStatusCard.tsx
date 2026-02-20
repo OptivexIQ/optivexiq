@@ -111,7 +111,7 @@ export function GapEngineStatusCard({ etaMinutes }: GapEngineStatusCardProps) {
     <div className="rounded-xl border border-border/60 bg-card p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-foreground/85">Status</p>
+          <p className="text-sm font-semibold text-foreground">Status</p>
           <h3 className="mt-2 text-base font-semibold text-foreground">
             {statusView.description}
           </h3>
@@ -127,14 +127,14 @@ export function GapEngineStatusCard({ etaMinutes }: GapEngineStatusCardProps) {
               : "bg-secondary/40"
         }`}
       >
-        <p className="text-sm font-semibold text-foreground/85">Progress</p>
+        <p className="text-sm font-semibold text-foreground">Progress</p>
         <div
-          className={`mt-3 flex items-center justify-between text-sm ${
+          className={`mt-3 flex items-center justify-between text-sm font-medium ${
             liveStatus === "complete"
               ? "text-chart-3"
               : liveStatus === "failed"
                 ? "text-destructive"
-                : "text-muted-foreground"
+                : "text-foreground/85"
           }`}
         >
           <span>
@@ -154,16 +154,16 @@ export function GapEngineStatusCard({ etaMinutes }: GapEngineStatusCardProps) {
         </div>
         <Progress value={progressValue} variant="info" className="mt-2 h-2" />
         {liveStatus === "running" ? (
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-sm text-foreground/85">
             {`Current stage: ${currentStageLabel}. Estimated completion: ${etaMinutes} minutes`}
           </p>
         ) : liveStatus === "complete" ? (
-          <p className="mt-2 text-xs text-chart-3">
+          <p className="mt-2 text-sm text-chart-3">
             Latest run completed. Start a new analysis to begin a fresh progress
             cycle.
           </p>
         ) : liveStatus === "failed" ? (
-          <p className="mt-2 text-xs text-destructive">
+          <p className="mt-2 text-sm text-destructive">
             Latest run failed. Update inputs and run again.
           </p>
         ) : null}

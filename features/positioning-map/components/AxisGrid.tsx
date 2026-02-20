@@ -26,7 +26,7 @@ export function AxisGrid({
   crosshairClassName,
   crosshairSize = "md",
 }: AxisGridProps) {
-  const axisLabelClassName = labelClassName ?? "text-xs";
+  const axisLabelClassName = labelClassName ?? "text-sm";
   const cornerClassName = cornerLabelClassName ?? axisLabelClassName;
   const crosshairClass = crosshairClassName ?? "bg-foreground/20";
   const crosshairThickness =
@@ -41,42 +41,42 @@ export function AxisGrid({
       <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(to_right,rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-size-[48px_48px]" />
       {showAxisLabels ? (
         <div
-          className={`absolute left-1 top-1/2 -translate-y-1/2 -rotate-90 font-medium text-foreground/80 ${axisLabelClassName}`}
+          className={`absolute left-1 top-1/2 -translate-y-1/2 -rotate-90 font-medium text-foreground/90 ${axisLabelClassName}`}
         >
           {yLabel}
         </div>
       ) : null}
       {showAxisLabels ? (
         <div
-          className={`absolute bottom-1 left-1/2 -translate-x-1/2 font-medium text-foreground/80 ${axisLabelClassName}`}
+          className={`absolute bottom-1 left-1/2 -translate-x-1/2 font-medium text-foreground/90 ${axisLabelClassName}`}
         >
           {xLabel}
         </div>
       ) : null}
       {cornerLabels?.topLeft ? (
         <div
-          className={`absolute left-4 top-4 font-medium text-foreground/80 ${cornerClassName}`}
+          className={`absolute left-4 top-4 font-medium text-foreground/90 ${cornerClassName}`}
         >
           {cornerLabels.topLeft}
         </div>
       ) : null}
       {cornerLabels?.topRight ? (
         <div
-          className={`absolute right-4 top-4 font-medium text-foreground/80 ${cornerClassName}`}
+          className={`absolute right-4 top-4 font-medium text-foreground/90 ${cornerClassName}`}
         >
           {cornerLabels.topRight}
         </div>
       ) : null}
       {cornerLabels?.bottomLeft ? (
         <div
-          className={`absolute bottom-4 left-4 font-medium text-foreground/80 ${cornerClassName}`}
+          className={`absolute bottom-4 left-4 font-medium text-foreground/90 ${cornerClassName}`}
         >
           {cornerLabels.bottomLeft}
         </div>
       ) : null}
       {cornerLabels?.bottomRight ? (
         <div
-          className={`absolute bottom-4 right-4 font-medium text-foreground/80 ${cornerClassName}`}
+          className={`absolute bottom-4 right-4 font-medium text-foreground/90 ${cornerClassName}`}
         >
           {cornerLabels.bottomRight}
         </div>

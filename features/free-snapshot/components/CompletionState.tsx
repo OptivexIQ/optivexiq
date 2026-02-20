@@ -35,7 +35,7 @@ export function CompletionState(props: {
 
       <div className="space-y-4 rounded-xl border border-border/60 bg-secondary/30 p-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground/90">
             Executive summary
           </p>
           <p className="mt-2 text-sm text-foreground">
@@ -45,7 +45,7 @@ export function CompletionState(props: {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-border/60 bg-card/80 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-sm font-semibold text-foreground/90">
               Gap score
             </p>
             <p className="mt-2 text-xl font-semibold text-foreground">
@@ -58,7 +58,7 @@ export function CompletionState(props: {
             </p>
           </div>
           <div className="rounded-lg border border-border/60 bg-card/80 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-sm font-semibold text-foreground/90">
               Key insight
             </p>
             <p className="mt-2 text-sm text-foreground">{keyInsight}</p>
@@ -66,7 +66,7 @@ export function CompletionState(props: {
         </div>
 
         <div className="rounded-lg border border-border/60 bg-card/80 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground/90">
             Detected objection
           </p>
           <p className="mt-2 text-sm text-foreground">
@@ -76,7 +76,7 @@ export function CompletionState(props: {
 
         <div className="relative overflow-hidden rounded-lg border border-border/60 bg-card/80 p-4">
           <div className="blur-[2px]">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-sm font-semibold text-foreground/90">
               Additional findings
             </p>
             <ul className="mt-2 space-y-2 text-sm text-foreground">
@@ -84,7 +84,7 @@ export function CompletionState(props: {
                 <li key={item}>- {item}</li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-sm text-foreground/85">
               Risk estimate: {props.snapshot.riskEstimate}
             </p>
           </div>

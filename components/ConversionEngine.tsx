@@ -104,7 +104,7 @@ export function ConversionEngine() {
                     <h3 className="text-sm font-semibold tracking-tight text-foreground">
                       {feature.title}
                     </h3>
-                    <span className="rounded bg-secondary px-1.5 py-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <span className="rounded bg-secondary px-1.5 py-0.5 text-sm font-medium text-foreground/85">
                       {feature.tag}
                     </span>
                   </div>
@@ -127,10 +127,10 @@ export function ConversionEngine() {
                   <div className="h-2 w-2 rounded-full bg-foreground/10" />
                 </div>
                 <div className="ml-3 flex items-center gap-2">
-                  <span className="text-xs text-foreground/80">
+                  <span className="text-sm text-foreground/90">
                     Conversion Gap Report
                   </span>
-                  <span className="rounded bg-chart-3/10 px-1.5 py-0.5 text-xs font-medium text-chart-3">
+                  <span className="rounded bg-chart-3/10 px-1.5 py-0.5 text-sm font-medium text-chart-3">
                     LIVE
                   </span>
                 </div>
@@ -142,11 +142,11 @@ export function ConversionEngine() {
                     <p className="text-sm font-semibold text-foreground">
                       acme-saas.com
                     </p>
-                    <p className="text-xs text-foreground/80">
+                    <p className="text-sm text-foreground/90">
                       Segment: Mid-market + Enterprise
                     </p>
                   </div>
-                  <span className="rounded-md bg-secondary px-2 py-1 text-xs text-foreground/80">
+                  <span className="rounded-md bg-secondary px-2 py-1 text-sm text-foreground/90">
                     6 sources ingested
                   </span>
                 </div>
@@ -163,15 +163,15 @@ export function ConversionEngine() {
                       key={item.label}
                       className="rounded-xl bg-secondary p-4"
                     >
-                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-foreground/80">
+                      <p className="text-sm font-medium text-foreground/90">
                         {item.label}
                       </p>
                       <p className="mt-1 text-lg font-bold text-foreground">
                         {item.value}
                         {item.meta && (
-                           <span className="text-xs text-foreground/80">
-                             {item.meta}
-                           </span>
+                          <span className="text-sm text-foreground/90">
+                            {item.meta}
+                          </span>
                         )}
                       </p>
                     </div>
@@ -181,10 +181,10 @@ export function ConversionEngine() {
                 <div className="mb-5 grid gap-4 md:grid-cols-5">
                   <div className="rounded-xl bg-secondary p-4 md:col-span-3">
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                      <p className="text-sm font-medium text-foreground/90">
                         Priority gaps
                       </p>
-                      <span className="text-xs text-foreground/80">
+                      <span className="text-sm text-foreground/90">
                         Impact score
                       </span>
                     </div>
@@ -199,7 +199,7 @@ export function ConversionEngine() {
                               {gap.name}
                             </span>
                             <span
-                              className="rounded px-2 py-0.5 text-xs font-semibold"
+                              className="rounded px-2 py-0.5 text-sm font-semibold"
                               style={{
                                 background: gap.badgeBg,
                                 color: gap.color,
@@ -218,7 +218,7 @@ export function ConversionEngine() {
                                 }}
                               />
                             </div>
-                            <span className="font-mono text-xs text-foreground/80">
+                            <span className="font-mono text-sm text-foreground/90">
                               {gap.pct}%
                             </span>
                           </div>
@@ -228,7 +228,7 @@ export function ConversionEngine() {
                   </div>
 
                   <div className="rounded-xl bg-secondary p-4 md:col-span-2">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    <p className="mb-2 text-sm font-medium text-foreground/90">
                       Benchmarks
                     </p>
                     <div className="space-y-3">
@@ -238,24 +238,24 @@ export function ConversionEngine() {
                           className="flex items-center justify-between"
                         >
                           <div>
-                            <p className="text-sm leading-snug text-foreground/80">
+                            <p className="text-sm leading-snug text-foreground/90">
                               {item.label}
                             </p>
                             <p className="text-sm font-semibold text-foreground">
                               {item.value}
                             </p>
                           </div>
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-sm font-semibold text-primary">
                             {item.trend}
                           </span>
                         </div>
                       ))}
                     </div>
                     <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                      <p className="text-xs font-medium text-foreground">
+                      <p className="text-sm font-medium text-foreground">
                         Recommended modules
                       </p>
-                      <p className="text-xs text-foreground/80">
+                      <p className="text-sm text-foreground/90">
                         Security proof, ROI framing, pricing anchors
                       </p>
                     </div>
@@ -265,14 +265,14 @@ export function ConversionEngine() {
                 {/* Bottom action */}
                 <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-4">
                   <div>
-                    <span className="text-xs font-medium text-foreground">
+                    <span className="text-sm font-medium text-foreground">
                       Strategic rewrite ready
                     </span>
-                    <p className="text-xs text-foreground/80">
+                    <p className="text-sm text-foreground/90">
                       12 gaps addressed, 4 enterprise variants queued
                     </p>
                   </div>
-                  <span className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+                  <span className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
                     View Rewrites
                   </span>
                 </div>

@@ -113,19 +113,19 @@ export function Hero() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-foreground">
+                      <p className="text-sm font-semibold text-foreground">
                         Enterprise Conversion Audit
                       </p>
-                      <p className="text-xs text-foreground/80">
+                      <p className="text-sm text-foreground/90">
                         acme-saas.com | Segment: Enterprise | 5 competitors
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-chart-3/10 px-2.5 py-1 text-xs font-medium text-chart-3">
+                    <span className="rounded-md bg-chart-3/10 px-2.5 py-1 text-sm font-medium text-chart-3">
                       Confidence 96%
                     </span>
-                    <span className="rounded-md bg-secondary px-2.5 py-1 text-xs text-foreground/80">
+                    <span className="rounded-md bg-secondary px-2.5 py-1 text-sm text-foreground/90">
                       Refreshed 2 min ago
                     </span>
                   </div>
@@ -163,12 +163,12 @@ export function Hero() {
                       key={kpi.label}
                       className="rounded-xl border border-border/60 bg-secondary/50 p-4"
                     >
-                      <p className="text-xs font-medium uppercase tracking-widest text-foreground/80">
+                      <p className="text-sm font-medium text-foreground/90">
                         {kpi.label}
                       </p>
                       <div className={`mt-1.5 text-lg font-bold ${kpi.tone}`}>
                         {kpi.value}
-                        <span className="ml-1 text-xs font-medium text-foreground/80">
+                        <span className="ml-1 text-sm font-medium text-foreground/90">
                           {kpi.meta}
                         </span>
                       </div>
@@ -192,10 +192,10 @@ export function Hero() {
                 <div className="mb-4 grid gap-4 md:grid-cols-5">
                   <div className="rounded-xl border border-border/60 bg-secondary/50 p-4 md:col-span-3">
                     <div className="mb-3 flex items-center justify-between">
-                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                      <p className="text-sm font-medium text-foreground/90">
                         Funnel Impact Forecast (90d)
                       </p>
-                      <span className="text-xs text-foreground/80">
+                      <span className="text-sm text-foreground/90">
                         Baseline vs optimized
                       </span>
                     </div>
@@ -213,13 +213,13 @@ export function Hero() {
                             className="-mt-1 rounded-t bg-primary"
                             style={{ height: `${point * 0.7}px` }}
                           />
-                          <div className="mt-1 text-center text-xs text-foreground/80">
+                          <div className="mt-1 text-center text-sm text-foreground/90">
                             W{i + 1}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <p className="mt-2.5 text-xs text-foreground/80">
+                    <p className="mt-2.5 text-sm text-foreground/90">
                       Forecasted lift:{" "}
                       <span className="font-medium text-foreground">
                         +18.6%
@@ -229,7 +229,7 @@ export function Hero() {
                   </div>
 
                   <div className="rounded-xl border border-border/60 bg-secondary/50 p-4 md:col-span-2">
-                    <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    <p className="mb-3 text-sm font-medium text-foreground/90">
                       Risk by Stage
                     </p>
                     <div className="space-y-3">
@@ -241,10 +241,10 @@ export function Hero() {
                       ].map((stage) => (
                         <div key={stage.label}>
                           <div className="mb-1 flex items-center justify-between">
-                            <span className="text-[13px] leading-snug text-foreground/80">
+                            <span className="text-sm leading-snug text-foreground/90">
                               {stage.label}
                             </span>
-                            <span className="font-mono text-xs text-foreground/80">
+                            <span className="font-mono text-sm text-foreground/90">
                               {stage.pct}%
                             </span>
                           </div>
@@ -272,10 +272,10 @@ export function Hero() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-xl border border-border/60 bg-secondary/50 p-4 md:col-span-2">
                     <div className="mb-3 flex items-center justify-between">
-                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                      <p className="text-sm font-medium text-foreground/90">
                         Priority Gaps
                       </p>
-                      <span className="text-xs text-foreground/80">
+                      <span className="text-sm text-foreground/90">
                         Impact score
                       </span>
                     </div>
@@ -306,11 +306,11 @@ export function Hero() {
                             <p className="text-sm font-medium leading-snug text-foreground">
                               {gap.name}
                             </p>
-                            <p className="text-xs text-foreground/80">
+                            <p className="text-sm text-foreground/90">
                               {gap.owner}
                             </p>
                           </div>
-                          <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
+                          <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-sm font-semibold text-destructive">
                             {gap.impact}
                           </span>
                         </div>
@@ -318,7 +318,7 @@ export function Hero() {
                     </div>
                   </div>
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                    <p className="mb-3 text-xs font-medium uppercase tracking-widest text-primary">
+                    <p className="mb-3 text-sm font-medium text-primary">
                       Rewrite Queue
                     </p>
                     <div className="space-y-3">
@@ -326,19 +326,19 @@ export function Hero() {
                         <p className="text-sm font-semibold text-foreground">
                           12 rewrites
                         </p>
-                        <p className="text-xs text-foreground/80">
+                        <p className="text-sm text-foreground/90">
                           4 enterprise variants
                         </p>
                       </div>
                       <div className="rounded-lg bg-card/70 p-3">
-                        <p className="text-xs font-medium text-foreground">
+                        <p className="text-sm font-medium text-foreground">
                           Next up
                         </p>
-                        <p className="text-xs text-foreground/80">
+                        <p className="text-sm text-foreground/90">
                           Security + ROI sections
                         </p>
                       </div>
-                      <span className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+                      <span className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
                         Review rewrites
                       </span>
                     </div>

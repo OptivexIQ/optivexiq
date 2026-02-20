@@ -218,11 +218,11 @@ export function ReportExecutionStatusCard({
           </div>
           <Progress value={progressValue} />
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-foreground/85">
           Status: {execution.status}
         </p>
         {pollError ? (
-          <p className="mt-2 text-xs text-destructive">{pollError}</p>
+          <p className="mt-2 text-sm text-destructive">{pollError}</p>
         ) : null}
         {execution.status === "failed" ? (
           <div className="mt-4 flex flex-wrap gap-3">
