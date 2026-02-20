@@ -8,6 +8,7 @@ import {
   type ContactRequestInput,
 } from "@/features/contact/validators/contactRequestSchema";
 import { saveContactRequest } from "@/features/contact/services/contactRequestService";
+import { sendContactEmails } from "@/features/contact/services/contactEmailService";
 
 export type ContactActionState = {
   success: boolean;
@@ -89,6 +90,27 @@ export async function submitContactAction(
       topic: parsed.data.topic,
     });
     return { success: false, error: "Unable to submit your request right now." };
+  }
+
+  const emailResult = await sendContactEmails({
+    requestId: result.requestId,
+    name: parsed.data.name,
+    email: parsed.data.email,
+    topic: parsed.data.topic,
+    company: parsed.data.company ?? "",
+    message: parsed.data.message,
+  });
+  if (!emailResult.ok) {
+    logger.error("Contact emails failed after request persistence.", undefined, {
+      request_id: result.requestId,
+      email: parsed.data.email,
+      topic: parsed.data.topic,
+    });
+    return {
+      success: false,
+      error:
+        "Your request was received, but we could not send email notifications right now. Please contact support@optivexiq.com.",
+    };
   }
 
   return { success: true, error: null };

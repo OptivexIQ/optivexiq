@@ -1,199 +1,208 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition, type FormEvent } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { submitContactAction, type ContactActionState } from "@/app/actions/contact/submitContact";
 import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  submitContactAction,
-  type ContactActionState,
-} from "@/app/actions/contact/submitContact";
 import {
   CONTACT_TOPICS,
   CONTACT_TOPIC_HELPERS,
   type ContactTopicValue,
 } from "@/features/contact/constants/contactTopics";
+import { contactRequestSchema } from "@/features/contact/validators/contactRequestSchema";
+import { toFormData } from "@/lib/forms/toFormData";
 
-const INITIAL_STATE: ContactActionState = {
-  success: false,
-  error: null,
-};
+const INITIAL_STATE: ContactActionState = { success: false, error: null };
+
+const contactFormSchema = contactRequestSchema.omit({ honeypot: true });
+type ContactFormValues = z.infer<typeof contactFormSchema>;
 
 export function ContactForm() {
   const [isPending, startTransition] = useTransition();
-  const [state, setState] = useState<ContactActionState>(INITIAL_STATE);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [topic, setTopic] = useState<ContactTopicValue>("support");
-  const [company, setCompany] = useState("");
-  const [message, setMessage] = useState("");
+  const [actionState, setActionState] = useState<ContactActionState>(INITIAL_STATE);
 
-  const canSubmit = useMemo(() => {
-    return (
-      name.trim().length >= 2 &&
-      email.trim().length > 3 &&
-      message.trim().length >= 20
-    );
-  }, [name, email, message]);
-  const topicHelper = CONTACT_TOPIC_HELPERS[topic];
+  const form = useForm<ContactFormValues>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      topic: "support",
+      company: "",
+      message: "",
+    },
+    mode: "onChange",
+  });
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setState(INITIAL_STATE);
+  const topic = form.watch("topic") as ContactTopicValue;
+  const topicHelper = useMemo(() => CONTACT_TOPIC_HELPERS[topic] ?? CONTACT_TOPIC_HELPERS.support, [topic]);
 
-    const formData = new FormData();
-    formData.set("name", name);
-    formData.set("email", email);
-    formData.set("topic", topic);
-    formData.set("company", company);
-    formData.set("message", message);
-    formData.set("website", "");
-
+  const onSubmit = form.handleSubmit((values) => {
+    setActionState(INITIAL_STATE);
     startTransition(async () => {
+      const formData = toFormData(values);
+      formData.set("website", "");
+
       const result = await submitContactAction(INITIAL_STATE, formData);
-      setState(result);
+      setActionState(result);
 
       if (result.success) {
-        setName("");
-        setEmail("");
-        setTopic("support");
-        setCompany("");
-        setMessage("");
+        form.reset({
+          name: "",
+          email: "",
+          topic: "support",
+          company: "",
+          message: "",
+        });
       }
     });
-  };
+  });
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="space-y-5 rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur"
-    >
-      <input
-        type="text"
-        name="website"
-        className="hidden"
-        tabIndex={-1}
-        autoComplete="off"
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Full name
-          </span>
-          <Input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Jane Doe"
-            required
-            className="h-11"
-          />
-        </label>
-        <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Work email
-          </span>
-          <Input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="jane@company.com"
-            required
-            className="h-11"
-          />
-        </label>
-      </div>
+    <Form {...form}>
+      <form
+        onSubmit={onSubmit}
+        className="space-y-5 rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur"
+      >
+        <input type="text" name="website" className="hidden" tabIndex={-1} autoComplete="off" />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Topic
-          </span>
-          <Select
-            value={topic}
-            onValueChange={(value) =>
-                setTopic(value as ContactTopicValue)
-              }
-            >
-            <SelectTrigger className="h-11">
-              <SelectValue placeholder="Select a topic" />
-            </SelectTrigger>
-            <SelectContent>
-              {CONTACT_TOPICS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">{topicHelper}</p>
-        </label>
-        <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Company (optional)
-          </span>
-          <Input
-            value={company}
-            onChange={(event) => setCompany(event.target.value)}
-            placeholder="Your company"
-            className="h-11"
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Full name
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Jane Doe" className="h-11" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </label>
-      </div>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Work email
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} type="email" placeholder="jane@company.com" className="h-11" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-      <label className="grid gap-2 text-sm">
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          How can we help?
-        </span>
-        <Textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          placeholder="Describe your request, current setup, and any urgency."
-          rows={6}
-          required
-          className="min-h-36"
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="topic"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Topic
+                </FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select a topic" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {CONTACT_TOPICS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{topicHelper}</p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="company"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Company (optional)
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Your company" className="h-11" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="message"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                How can we help?
+              </FormLabel>
+              <FormControl>
+                <Textarea
+                  {...field}
+                  placeholder="Describe your request, current setup, and any urgency."
+                  rows={6}
+                  className="min-h-36"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </label>
 
-      {state.error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {state.error}
-        </p>
-      ) : null}
+        {actionState.error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {actionState.error}
+          </p>
+        ) : null}
+        {actionState.success ? (
+          <p className="text-sm text-emerald-600" role="status">
+            Request received. Confirmation was sent to your email.
+          </p>
+        ) : null}
 
-      {state.success ? (
-        <p className="text-sm text-emerald-600" role="status">
-          Request received. We will route this to the right team and follow up by email.
-        </p>
-      ) : null}
-
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          By submitting this form, you agree to our{" "}
-          <Link href="/terms" className="underline underline-offset-4">
-            Terms
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline underline-offset-4">
-            Privacy Policy
-          </Link>
-          .
-        </p>
-        <Button
-          type="submit"
-          className="h-11 px-5"
-          disabled={!canSubmit || isPending}
-        >
-          {isPending ? "Submitting..." : "Submit Request"}
-        </Button>
-      </div>
-    </form>
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            By submitting this form, you agree to our{" "}
+            <Link href="/terms" className="underline underline-offset-4">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline underline-offset-4">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+          <Button
+            type="submit"
+            className="h-11 px-5"
+            disabled={!form.formState.isValid || isPending || form.formState.isSubmitting}
+          >
+            {isPending ? "Submitting..." : "Submit Request"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

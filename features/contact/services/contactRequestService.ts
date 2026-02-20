@@ -8,7 +8,7 @@ type SaveContactRequestParams = {
 };
 
 type SaveContactRequestResult =
-  | { ok: true }
+  | { ok: true; requestId: string }
   | { ok: false; error: string };
 
 export async function saveContactRequest({
@@ -17,20 +17,24 @@ export async function saveContactRequest({
   userAgent,
 }: SaveContactRequestParams): Promise<SaveContactRequestResult> {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("contact_requests").insert({
-    name: payload.name,
-    email: payload.email,
-    topic: payload.topic,
-    company: payload.company || null,
-    message: payload.message,
-    ip_address: ipAddress || null,
-    user_agent: userAgent || null,
-    status: "new",
-  });
+  const { data, error } = await supabase
+    .from("contact_requests")
+    .insert({
+      name: payload.name,
+      email: payload.email,
+      topic: payload.topic,
+      company: payload.company || null,
+      message: payload.message,
+      ip_address: ipAddress || null,
+      user_agent: userAgent || null,
+      status: "new",
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !data?.id) {
     return { ok: false, error: "Unable to submit contact request." };
   }
 
-  return { ok: true };
+  return { ok: true, requestId: data.id };
 }
