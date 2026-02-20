@@ -1,4 +1,5 @@
-import { whatsNewReleases } from "@/data/whatsNew";
+﻿import { whatsNewReleases } from "@/data/whatsNew";
+import { AppInfo } from "@/lib/config/appInfo";
 
 export const metadata = {
   title: "What's New | OptivexIQ",
@@ -16,6 +17,10 @@ export default function WhatsNewPage() {
         This page tracks customer-facing product updates, reliability
         improvements, and operational changes. Entries are ordered by release
         date, newest first.
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        App version: v{AppInfo.version}. Release note versions describe product
+        update batches and may not match app build version numbers.
       </p>
 
       <div className="mt-10 space-y-10">

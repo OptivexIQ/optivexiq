@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,28 +16,23 @@ import {
   submitContactAction,
   type ContactActionState,
 } from "@/app/actions/contact/submitContact";
+import {
+  CONTACT_TOPICS,
+  CONTACT_TOPIC_HELPERS,
+  type ContactTopicValue,
+} from "@/features/contact/constants/contactTopics";
 
 const INITIAL_STATE: ContactActionState = {
   success: false,
   error: null,
 };
 
-const TOPICS = [
-  { value: "support", label: "Technical Support" },
-  { value: "sales", label: "Sales and Enterprise Pricing" },
-  { value: "billing", label: "Billing and Subscription" },
-  { value: "security", label: "Security and Compliance" },
-  { value: "legal", label: "Legal and Privacy" },
-  { value: "other", label: "Other" },
-] as const;
-
 export function ContactForm() {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ContactActionState>(INITIAL_STATE);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [topic, setTopic] =
-    useState<(typeof TOPICS)[number]["value"]>("support");
+  const [topic, setTopic] = useState<ContactTopicValue>("support");
   const [company, setCompany] = useState("");
   const [message, setMessage] = useState("");
 
@@ -47,6 +43,7 @@ export function ContactForm() {
       message.trim().length >= 20
     );
   }, [name, email, message]);
+  const topicHelper = CONTACT_TOPIC_HELPERS[topic];
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -122,20 +119,21 @@ export function ContactForm() {
           <Select
             value={topic}
             onValueChange={(value) =>
-              setTopic(value as (typeof TOPICS)[number]["value"])
-            }
-          >
+                setTopic(value as ContactTopicValue)
+              }
+            >
             <SelectTrigger className="h-11">
               <SelectValue placeholder="Select a topic" />
             </SelectTrigger>
             <SelectContent>
-              {TOPICS.map((option) => (
+              {CONTACT_TOPICS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">{topicHelper}</p>
         </label>
         <label className="grid gap-2 text-sm">
           <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -172,13 +170,21 @@ export function ContactForm() {
 
       {state.success ? (
         <p className="text-sm text-emerald-600" role="status">
-          Request received. We will reply from the appropriate team mailbox.
+          Request received. We will route this to the right team and follow up by email.
         </p>
       ) : null}
 
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <p className="text-xs leading-relaxed text-muted-foreground">
-          By submitting this form you agree to our Terms and Privacy Policy.
+          By submitting this form, you agree to our{" "}
+          <Link href="/terms" className="underline underline-offset-4">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline underline-offset-4">
+            Privacy Policy
+          </Link>
+          .
         </p>
         <Button
           type="submit"
