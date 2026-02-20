@@ -9,35 +9,35 @@
 export const CONTACT_OPTIONS = [
   {
     title: "Support",
-    body: "Use for product issues, report access, or workflow questions. Requests are routed to customer support for follow-up.",
+    body: "Choose this for product issues, report access, or guidance on how to use OptivexIQ effectively.",
   },
   {
     title: "Sales / Pricing",
-    body: "Use for plan selection, commercial evaluation, and purchasing discussions. We reply with practical next steps.",
+    body: "Choose this for plan selection, pricing questions, procurement scoping, or commercial evaluation.",
   },
   {
     title: "Billing & Account",
-    body: "Use for subscriptions, invoices, and account ownership updates. We validate context before responding.",
+    body: "Choose this for subscriptions, invoices, account ownership changes, or billing access issues.",
   },
   {
     title: "Legal & Privacy",
-    body: "Use for terms, privacy, and data rights requests. Communications are routed to the appropriate owners.",
+    body: "Choose this for terms, privacy rights, data handling questions, or legal documentation requests.",
   },
   {
     title: "Security Disclosure",
-    body: "Use to report potential security concerns. Reports are handled confidentially and acknowledged quickly.",
+    body: "Choose this to report potential vulnerabilities or security concerns requiring confidential handling.",
   },
   {
     title: "General Inquiry",
-    body: "Use for partnerships, media, and non-product requests. We route your message to the right contact.",
+    body: "Choose this for partnership, media, or other requests that do not fit the categories above.",
   },
 ] as const;
 
 export const CONTACT_RESPONSE_EXPECTATIONS = [
   "Support and billing: typically within 1 business day",
   "Sales and pricing: typically within 1 business day",
-  "Legal and privacy: typically within several business days",
-  "Security disclosure: rapid acknowledgement",
+  "Legal and privacy: typically several business days",
+  "Security reports: rapid acknowledgement with structured follow-up",
 ] as const;
 
 export const CONTACT_CHANNELS = [
@@ -49,8 +49,8 @@ export const CONTACT_CHANNELS = [
 ] as const;
 
 export const CONTACT_TRUST_SIGNALS = [
-  "Requests are handled by humans.",
-  "Security reports are treated confidentially.",
-  "Communications are logged for continuity.",
-  "No automated sales spam after support inquiries.",
+  "Every inquiry is reviewed by a person.",
+  "Security disclosures are handled confidentially.",
+  "Communications are tracked for continuity and follow-up.",
+  "Support requests do not trigger automated sales outreach.",
 ] as const;

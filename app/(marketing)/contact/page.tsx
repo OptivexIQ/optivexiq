@@ -31,7 +31,7 @@ export default function ContactPage() {
           Talk to the right team
         </h1>
         <p className="mt-5 text-base leading-relaxed text-muted-foreground">
-          This is the official communication channel for customers, buyers, evaluators, and researchers. Messages are routed to the appropriate team and recorded for follow-up continuity.
+          Contact the team that can help you fastest. Send your request here and we will route it to the appropriate team based on your topic.
         </p>
       </header>
 
@@ -66,7 +66,7 @@ export default function ContactPage() {
         <div className="space-y-4">
           <ContactForm />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            By contacting us, you agree to communications related to your request. For policy details, review our{" "}
+            Your message is reviewed by a human and routed to the right team. We prioritize security, billing, and access issues appropriately. For policy details, review our{" "}
             <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link> and{" "}
             <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>.
           </p>
@@ -74,12 +74,15 @@ export default function ContactPage() {
 
         <aside className="space-y-6">
           <div className="rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Response expectations</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Typical response times</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {CONTACT_RESPONSE_EXPECTATIONS.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
+            <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+              Complex legal or security matters may require additional review time.
+            </p>
           </div>
 
           <div className="rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur">
@@ -94,7 +97,7 @@ export default function ContactPage() {
               ))}
             </ul>
             <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-              Do not send passwords, API keys, or payment data by email.
+              If your organization requires direct email communication, use these addresses. For the fastest routing and complete context, the form above is recommended. Do not send passwords, API keys, or payment data by email.
             </p>
           </div>
 
@@ -110,7 +113,7 @@ export default function ContactPage() {
           <div className="rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Enterprise and procurement</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Enterprise buyers can contact sales for procurement review, vendor onboarding, legal review, and commercial terms discussions.
+              For larger-team evaluations, sales can support vendor onboarding, legal review, security questionnaires, and commercial discussions.
             </p>
           </div>
         </aside>
