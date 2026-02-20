@@ -12,6 +12,7 @@ export const metadata = {
 };
 
 const lastUpdated = "February 18, 2026";
+const termsStatus = "Pre-launch legal draft";
 
 const tocItems: LegalTocItem[] = [
   { id: "definitions", label: "1. Definitions" },
@@ -61,6 +62,14 @@ export default function TermsPage() {
           <p className="mt-3 text-sm text-muted-foreground">
             Last updated: {lastUpdated}
           </p>
+          <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Pre-launch legal notice</p>
+            <p className="mt-1">
+              These terms apply to current beta/pre-launch use of OptivexIQ.
+              Final legal entity, governing law, and venue details will be
+              published before commercial launch.
+            </p>
+          </div>
           <div className="mt-6 lg:hidden">
             <LegalToc title="Jump to section" items={tocItems} />
           </div>
@@ -73,7 +82,8 @@ export default function TermsPage() {
             <ul className="list-disc space-y-1 pl-5">
               <li>
                 <span className="font-medium text-foreground">Company:</span>{" "}
-                [LEGAL ENTITY NAME], operating OptivexIQ.
+                OptivexIQ. Final legal entity details will be published before
+                commercial launch.
               </li>
               <li>
                 <span className="font-medium text-foreground">Customer:</span> a
@@ -496,9 +506,9 @@ export default function TermsPage() {
           >
             <SectionTitle>19. Governing Law and Dispute Resolution</SectionTitle>
             <p>
-              These Terms are governed by the laws of [EU MEMBER STATE]. Courts
-              in [CITY, COUNTRY] have jurisdiction unless mandatory
-              consumer-protection law requires otherwise.
+              Governing law and venue details will be finalized and published
+              before commercial launch. Mandatory consumer-protection law
+              applies where required.
             </p>
           </section>
 
@@ -560,12 +570,12 @@ export default function TermsPage() {
           >
             <SectionTitle>22. Contact</SectionTitle>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Legal: [legal@yourdomain.com]</li>
-              <li>Privacy: [privacy@yourdomain.com]</li>
-              <li>Billing support: [billing@yourdomain.com]</li>
-              <li>General: [support@yourdomain.com]</li>
+              <li>Legal: legal@optivexiq.com</li>
+              <li>Privacy: privacy@optivexiq.com</li>
+              <li>Billing support: support@optivexiq.com (use subject: Billing)</li>
+              <li>General: support@optivexiq.com</li>
             </ul>
-            <p>Current version: Terms of Service v2.0 (EU Launch Hardened).</p>
+            <p>Current version: Terms of Service v2.0 ({termsStatus}).</p>
           </section>
         </article>
       </div>

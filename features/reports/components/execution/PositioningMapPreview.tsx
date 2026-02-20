@@ -60,18 +60,9 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
           />
 
           {secondaryPoints.map((point) => {
-            const left = toPercent(
-              point.x,
-              axes?.xMin ?? 0,
-              axes?.xMax ?? 100,
-            );
+            const left = toPercent(point.x, axes?.xMin ?? 0, axes?.xMax ?? 100);
             const top =
-              100 -
-              toPercent(
-                point.y,
-                axes?.yMin ?? 0,
-                axes?.yMax ?? 100,
-              );
+              100 - toPercent(point.y, axes?.yMin ?? 0, axes?.yMax ?? 100);
 
             return (
               <div
@@ -80,7 +71,7 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
                 style={{ left: `${left}%`, top: `${top}%` }}
               >
                 <div className="h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/60" />
-                <span className="mt-2 block -translate-x-1/2 text-[10px]">
+                <span className="mt-2 block -translate-x-1/2 text-xs">
                   {point.label}
                 </span>
               </div>
@@ -98,16 +89,12 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
                 )}%`,
                 top: `${
                   100 -
-                  toPercent(
-                    primaryPoint.y,
-                    axes?.yMin ?? 0,
-                    axes?.yMax ?? 100,
-                  )
+                  toPercent(primaryPoint.y, axes?.yMin ?? 0, axes?.yMax ?? 100)
                 }%`,
               }}
             >
               <div className="flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
-                <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-2.5 py-1 text-[10px] font-semibold text-foreground">
+                <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
                   {primaryPoint.label}
                 </div>
                 <div className="flex h-4 w-4 items-center justify-center rounded-full border border-primary/60 bg-primary/30 ring-4 ring-primary/20">

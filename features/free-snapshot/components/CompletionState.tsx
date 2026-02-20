@@ -45,7 +45,7 @@ export function CompletionState(props: {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-border/60 bg-card/80 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Gap score
             </p>
             <p className="mt-2 text-xl font-semibold text-foreground">
@@ -58,7 +58,7 @@ export function CompletionState(props: {
             </p>
           </div>
           <div className="rounded-lg border border-border/60 bg-card/80 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Key insight
             </p>
             <p className="mt-2 text-sm text-foreground">{keyInsight}</p>
@@ -66,7 +66,7 @@ export function CompletionState(props: {
         </div>
 
         <div className="rounded-lg border border-border/60 bg-card/80 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Detected objection
           </p>
           <p className="mt-2 text-sm text-foreground">
@@ -76,7 +76,7 @@ export function CompletionState(props: {
 
         <div className="relative overflow-hidden rounded-lg border border-border/60 bg-card/80 p-4">
           <div className="blur-[2px]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Additional findings
             </p>
             <ul className="mt-2 space-y-2 text-sm text-foreground">

@@ -102,7 +102,7 @@ export function Problem() {
                 <p className="text-2xl font-bold text-foreground">
                   {problem.stat}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {problem.statLabel}
                 </p>
               </div>

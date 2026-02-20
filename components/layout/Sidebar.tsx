@@ -62,7 +62,7 @@ export default function AppSidebar({ quotaResetLabel }: AppSidebarProps) {
                 <span className="text-sm font-semibold text-sidebar-foreground">
                   OptivexIQ
                 </span>
-                <span className="text-[11px] text-sidebar-foreground/60">
+                <span className="text-xs text-sidebar-foreground/60">
                   Revenue intelligence
                 </span>
               </div>
@@ -91,7 +91,7 @@ export default function AppSidebar({ quotaResetLabel }: AppSidebarProps) {
       <SidebarFooter>
         {!collapsed ? (
           <div className="space-y-2">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-[11px] text-sidebar-foreground/70">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-xs text-sidebar-foreground/70">
               {quotaResetLabel}
             </div>
             <FeedbackQuickModal />

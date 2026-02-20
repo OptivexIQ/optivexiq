@@ -9,6 +9,7 @@ export const metadata = {
 };
 
 const lastUpdated = "February 18, 2026";
+const policyStatus = "Pre-launch legal draft";
 
 const tocItems: LegalTocItem[] = [
   { id: "controller-identity", label: "1. Controller Identity" },
@@ -59,6 +60,14 @@ export default function PrivacyPage() {
           <p className="mt-3 text-sm text-muted-foreground">
             Last updated: {lastUpdated}
           </p>
+          <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Pre-launch legal notice</p>
+            <p className="mt-1">
+              This policy is active for current beta/pre-launch operations.
+              Final legal entity and registration details will be published
+              before commercial launch.
+            </p>
+          </div>
           <div className="mt-6 lg:hidden">
             <LegalToc title="Jump to section" items={tocItems} />
           </div>
@@ -72,12 +81,12 @@ export default function PrivacyPage() {
               This Privacy Policy applies to OptivexIQ and its SaaS platform.
             </p>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Legal entity: [LEGAL ENTITY NAME]</li>
-              <li>Registered address: [REGISTERED ADDRESS]</li>
-              <li>Registration number: [COMPANY REGISTRATION NUMBER]</li>
-              <li>VAT number: [VAT NUMBER]</li>
-              <li>Privacy contact: [privacy@yourdomain.com]</li>
-              <li>General support: [support@yourdomain.com]</li>
+              <li>Legal entity: Final legal entity will be published before commercial launch.</li>
+              <li>Registered address: Will be published before commercial launch.</li>
+              <li>Registration number: Pending business registration before launch.</li>
+              <li>VAT number: Will be published once registration is complete.</li>
+              <li>Privacy contact: privacy@optivexiq.com</li>
+              <li>General support: support@optivexiq.com</li>
             </ul>
             <p>
               <span className="font-medium text-foreground">
@@ -87,7 +96,7 @@ export default function PrivacyPage() {
               not mandatory based on current processing scope and scale. We
               monitor this assessment and will appoint a DPO if legal thresholds
               are met. Privacy-related requests should be sent to
-              {" [privacy@yourdomain.com]"}.
+              {" privacy@optivexiq.com"}.
             </p>
           </section>
 
@@ -254,7 +263,7 @@ export default function PrivacyPage() {
             </p>
             <p>
               Our subprocessor list is available upon request at
-              {" [privacy@yourdomain.com]"} and may be updated as operational
+              {" privacy@optivexiq.com"} and may be updated as operational
               needs evolve. For material subprocessor changes affecting data
               handling, we provide advance notice through appropriate customer
               communication channels where feasible.
@@ -384,7 +393,7 @@ export default function PrivacyPage() {
           >
             <SectionTitle>11. How to Exercise Rights</SectionTitle>
             <p>
-              Submit requests to [privacy@yourdomain.com] from your account
+              Submit requests to privacy@optivexiq.com from your account
               email or with sufficient verification information. We will verify
               identity before processing rights requests and respond within
               statutory timelines.
@@ -403,11 +412,11 @@ export default function PrivacyPage() {
             <SectionTitle>12. Complaints</SectionTitle>
             <p>
               If you believe we have processed your data unlawfully, you may
-              contact us first at [privacy@yourdomain.com]. You also have the
+              contact us first at privacy@optivexiq.com. You also have the
               right to lodge a complaint with your local supervisory authority
               in the EU/EEA and, where relevant, with the supervisory authority
-              in the Controller&apos;s EU Member State of establishment: [LEAD
-              SUPERVISORY AUTHORITY NAME].
+              in the Controller&apos;s jurisdiction once final registration
+              details are published.
             </p>
           </section>
 
@@ -489,7 +498,7 @@ export default function PrivacyPage() {
               operational changes. Material updates will be published on this
               page with a revised &quot;Last updated&quot; date.
             </p>
-            <p>Current version: Privacy Policy v2.0 (EU Launch Hardened).</p>
+            <p>Current version: Privacy Policy v2.0 ({policyStatus}).</p>
           </section>
         </article>
       </div>

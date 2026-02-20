@@ -7,6 +7,7 @@
     "build": "node scripts/build-with-contract-check.mjs",
     "start": "next start",
     "lint": "eslint .",
+    "verify:encoding": "node scripts/verify-encoding.mjs",
     "verify:db-contract": "node scripts/verify-db-contract.mjs",
     "verify:admin-client-usage": "node scripts/verify-admin-client-usage.mjs",
     "preview-email": "email dev -p 3030"

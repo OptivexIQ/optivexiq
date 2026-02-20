@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,8 +30,12 @@ export default function DashboardNavbarMenu({
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem>Account</DropdownMenuItem>
-        <DropdownMenuItem>Billing</DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/settings">Account</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/billing">Billing</Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <form action={signOutAction}>
           <DropdownMenuItem asChild>

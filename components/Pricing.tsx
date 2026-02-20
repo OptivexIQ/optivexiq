@@ -123,7 +123,7 @@ export function Pricing() {
             >
               {plan.badge ? (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-primary px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground shadow-sm shadow-black/30">
+                  <span className="rounded-full bg-primary px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-primary-foreground shadow-sm shadow-black/30">
                     {plan.badge}
                   </span>
                 </div>
@@ -171,7 +171,7 @@ export function Pricing() {
               )}
 
               <div className="border-t border-border/60 pt-6">
-                <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   What&apos;s included
                 </p>
                 <ul className="space-y-3">
@@ -220,4 +220,3 @@ export function Pricing() {
     </section>
   );
 }
-

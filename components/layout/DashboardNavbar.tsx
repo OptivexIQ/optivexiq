@@ -29,7 +29,7 @@ export default async function DashboardNavbar() {
       <div className="flex items-center gap-3">
         <SidebarToggle />
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Executive workspace
           </p>
           <p className="text-lg font-semibold text-foreground">{headline}</p>
@@ -40,7 +40,7 @@ export default async function DashboardNavbar() {
           <Badge variant="secondary">{planLabel}</Badge>
           <Badge variant={statusVariant}>{statusLabel}</Badge>
         </div>
-        <div className="hidden min-w-45 flex-col gap-1 text-xs text-muted-foreground sm:flex">
+        <div className="hidden min-w-45 flex-col gap-1 text-sm text-muted-foreground sm:flex">
           <div className="flex items-center justify-between">
             <span>Usage</span>
             <span>{usageText}</span>

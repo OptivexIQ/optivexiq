@@ -124,7 +124,7 @@ export default function StatusPageClient() {
               </p>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-sm text-muted-foreground">
             <p>Last updated: {formatStatusTime(payload.overall.updatedAt)}</p>
             <p>Refresh cadence: every {payload.meta.refreshSeconds} seconds</p>
           </div>
@@ -158,7 +158,7 @@ export default function StatusPageClient() {
                     {component.detail}
                   </p>
                 ) : null}
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Updated: {formatStatusTime(component.updatedAt)}
                 </p>
               </div>
@@ -244,17 +244,17 @@ export default function StatusPageClient() {
                   <p className="mt-2 text-sm text-muted-foreground">
                     {incident.customerImpact}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Start: {formatStatusTime(incident.startedAt)}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Resolved:{" "}
                     {incident.resolvedAt
                       ? formatStatusTime(incident.resolvedAt)
                       : "Ongoing"}
                   </p>
                   {latest ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
+                    <p className="mt-2 text-sm text-muted-foreground">
                       Latest update ({formatStatusTime(latest.at)}):{" "}
                       {latest.message}
                     </p>

@@ -8,7 +8,7 @@ export function Hero() {
         className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage:
-            "linear-gradient(to right, hsl(0 0% 100% / 0.04) 1px, transparent 1px), linear-gradient(to bottom, hsl(0 0% 100% / 0.04) 1px, transparent 1px)",
+            "linear-gradient(to right, hsl(0 0% 100% / 0.06) 1px, transparent 1px), linear-gradient(to bottom, hsl(0 0% 100% / 0.06) 1px, transparent 1px)",
           backgroundSize: "44px 44px",
           maskImage:
             "radial-gradient(circle at 50% 0%, black 0%, black 55%, transparent 78%)",
@@ -87,9 +87,9 @@ export function Hero() {
           {/* Outer frame with gradient border effect */}
           <div className="rounded-2xl border border-border/70 bg-card/40 p-1 shadow-xl shadow-black/30">
             <div className="rounded-[1.15rem] bg-card">
-              <div className="p-5 md:p-6">
+              <div className="p-6 md:p-7">
                 {/* Dashboard header */}
-                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                       <svg
@@ -116,16 +116,16 @@ export function Hero() {
                       <p className="text-xs font-semibold text-foreground">
                         Enterprise Conversion Audit
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        acme-saas.com • Segment: Enterprise • 5 competitors
+                      <p className="text-xs text-foreground/80">
+                        acme-saas.com | Segment: Enterprise | 5 competitors
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-chart-3/10 px-2.5 py-1 text-[10px] font-medium text-chart-3">
+                    <span className="rounded-md bg-chart-3/10 px-2.5 py-1 text-xs font-medium text-chart-3">
                       Confidence 96%
                     </span>
-                    <span className="rounded-md bg-secondary px-2.5 py-1 text-[10px] text-muted-foreground">
+                    <span className="rounded-md bg-secondary px-2.5 py-1 text-xs text-foreground/80">
                       Refreshed 2 min ago
                     </span>
                   </div>
@@ -163,12 +163,12 @@ export function Hero() {
                       key={kpi.label}
                       className="rounded-xl border border-border/60 bg-secondary/50 p-4"
                     >
-                      <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                      <p className="text-xs font-medium uppercase tracking-widest text-foreground/80">
                         {kpi.label}
                       </p>
                       <div className={`mt-1.5 text-lg font-bold ${kpi.tone}`}>
                         {kpi.value}
-                        <span className="ml-1 text-[10px] font-medium text-muted-foreground">
+                        <span className="ml-1 text-xs font-medium text-foreground/80">
                           {kpi.meta}
                         </span>
                       </div>
@@ -192,10 +192,10 @@ export function Hero() {
                 <div className="mb-4 grid gap-4 md:grid-cols-5">
                   <div className="rounded-xl border border-border/60 bg-secondary/50 p-4 md:col-span-3">
                     <div className="mb-3 flex items-center justify-between">
-                      <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                         Funnel Impact Forecast (90d)
                       </p>
-                      <span className="text-[9px] text-muted-foreground">
+                      <span className="text-xs text-foreground/80">
                         Baseline vs optimized
                       </span>
                     </div>
@@ -213,13 +213,13 @@ export function Hero() {
                             className="-mt-1 rounded-t bg-primary"
                             style={{ height: `${point * 0.7}px` }}
                           />
-                          <div className="mt-1 text-center text-[8px] text-muted-foreground">
+                          <div className="mt-1 text-center text-xs text-foreground/80">
                             W{i + 1}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <p className="mt-2.5 text-[10px] text-muted-foreground">
+                    <p className="mt-2.5 text-xs text-foreground/80">
                       Forecasted lift:{" "}
                       <span className="font-medium text-foreground">
                         +18.6%
@@ -229,10 +229,10 @@ export function Hero() {
                   </div>
 
                   <div className="rounded-xl border border-border/60 bg-secondary/50 p-4 md:col-span-2">
-                    <p className="mb-3 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
                       Risk by Stage
                     </p>
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       {[
                         { label: "Top-of-funnel", pct: 62 },
                         { label: "Pricing evaluation", pct: 78 },
@@ -241,10 +241,10 @@ export function Hero() {
                       ].map((stage) => (
                         <div key={stage.label}>
                           <div className="mb-1 flex items-center justify-between">
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[13px] leading-snug text-foreground/80">
                               {stage.label}
                             </span>
-                            <span className="font-mono text-[10px] text-muted-foreground">
+                            <span className="font-mono text-xs text-foreground/80">
                               {stage.pct}%
                             </span>
                           </div>
@@ -272,14 +272,14 @@ export function Hero() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-xl border border-border/60 bg-secondary/50 p-4 md:col-span-2">
                     <div className="mb-3 flex items-center justify-between">
-                      <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                         Priority Gaps
                       </p>
-                      <span className="text-[9px] text-muted-foreground">
+                      <span className="text-xs text-foreground/80">
                         Impact score
                       </span>
                     </div>
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       {[
                         {
                           name: "Hero value proposition",
@@ -300,17 +300,17 @@ export function Hero() {
                       ].map((gap) => (
                         <div
                           key={gap.name}
-                          className="flex items-center justify-between rounded-lg bg-card/60 px-3 py-2"
+                          className="flex items-center justify-between rounded-lg bg-card/60 px-3 py-2.5"
                         >
                           <div>
-                            <p className="text-[11px] font-medium text-foreground">
+                            <p className="text-sm font-medium leading-snug text-foreground">
                               {gap.name}
                             </p>
-                            <p className="text-[9px] text-muted-foreground">
+                            <p className="text-xs text-foreground/80">
                               {gap.owner}
                             </p>
                           </div>
-                          <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[9px] font-semibold text-destructive">
+                          <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
                             {gap.impact}
                           </span>
                         </div>
@@ -318,7 +318,7 @@ export function Hero() {
                     </div>
                   </div>
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                    <p className="mb-3 text-[10px] font-medium uppercase tracking-widest text-primary">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-widest text-primary">
                       Rewrite Queue
                     </p>
                     <div className="space-y-3">
@@ -326,19 +326,19 @@ export function Hero() {
                         <p className="text-sm font-semibold text-foreground">
                           12 rewrites
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-xs text-foreground/80">
                           4 enterprise variants
                         </p>
                       </div>
                       <div className="rounded-lg bg-card/70 p-3">
-                        <p className="text-[11px] font-medium text-foreground">
+                        <p className="text-xs font-medium text-foreground">
                           Next up
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-xs text-foreground/80">
                           Security + ROI sections
                         </p>
                       </div>
-                      <span className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-[10px] font-semibold text-primary-foreground">
+                      <span className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
                         Review rewrites
                       </span>
                     </div>
@@ -361,3 +361,4 @@ export function Hero() {
     </section>
   );
 }
+

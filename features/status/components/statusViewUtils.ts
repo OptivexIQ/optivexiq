@@ -8,10 +8,13 @@ export function toStatusLabel(status: SystemStatusLevel) {
 }
 
 export function statusBadgeTone(status: SystemStatusLevel) {
-  if (status === "operational") return "bg-emerald-100 text-emerald-700 border-emerald-200";
-  if (status === "degraded") return "bg-amber-100 text-amber-700 border-amber-200";
-  if (status === "partial_outage") return "bg-orange-100 text-orange-700 border-orange-200";
-  return "bg-red-100 text-red-700 border-red-200";
+  if (status === "operational")
+    return "border-emerald-500/40 bg-emerald-500/15 text-emerald-200";
+  if (status === "degraded")
+    return "border-amber-500/40 bg-amber-500/15 text-amber-200";
+  if (status === "partial_outage")
+    return "border-orange-500/40 bg-orange-500/15 text-orange-200";
+  return "border-red-500/40 bg-red-500/15 text-red-200";
 }
 
 export function statusDotTone(status: SystemStatusLevel) {

@@ -57,7 +57,7 @@ export function PositioningMapChart({ data }: PositioningMapChartProps) {
                 >
                   {isPrimary ? (
                     <div className="flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
-                      <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-2.5 py-1 text-[10px] font-semibold text-foreground">
+                      <div className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
                         {point.label}
                       </div>
                       <div className="flex h-4 w-4 items-center justify-center rounded-full border border-primary/60 bg-primary/30 ring-4 ring-primary/20">
@@ -70,7 +70,7 @@ export function PositioningMapChart({ data }: PositioningMapChartProps) {
                         className="h-2.5 w-2.5 rounded-full bg-muted-foreground/60"
                         style={{ width: DOT_SIZE - 4, height: DOT_SIZE - 4 }}
                       />
-                      <span className="mt-2 block text-[10px]">
+                      <span className="mt-2 block text-xs">
                         {point.label}
                       </span>
                     </div>

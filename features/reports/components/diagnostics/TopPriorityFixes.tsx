@@ -53,7 +53,7 @@ export function TopPriorityFixes({ report }: TopPriorityFixesProps) {
                   {index + 1}. {item.issue}
                 </span>
                 <span
-                  className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${impactTone(label)}`}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${impactTone(label)}`}
                 >
                   {label}
                 </span>

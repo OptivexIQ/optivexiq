@@ -88,7 +88,7 @@ export function Navbar() {
             <Link
               key={link.label}
               href={link.href}
-              className="rounded-lg px-3.5 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-lg px-3.5 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {link.label}
             </Link>
@@ -99,7 +99,10 @@ export function Navbar() {
           {loading ? null : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="rounded-full focus:outline-none">
+                <button
+                  className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  aria-label="Open account menu"
+                >
                   <Avatar className="h-9 w-9">
                     <AvatarImage
                       src={user.user_metadata?.avatar_url}
@@ -128,13 +131,13 @@ export function Navbar() {
             <>
               <Link
                 href="/login"
-                className="rounded-lg px-4 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="rounded-lg px-4 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Log in
               </Link>
               <Link
                 href="/#free-snapshot"
-                className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
+                className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Get Started
               </Link>
@@ -144,7 +147,7 @@ export function Navbar() {
 
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary md:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >
@@ -186,7 +189,7 @@ export function Navbar() {
               <Link
                 key={link.label}
                 href={link.href}
-                className="rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className="rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
@@ -196,7 +199,10 @@ export function Navbar() {
               {loading ? null : user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="rounded-full focus:outline-none w-full flex justify-start">
+                    <button
+                      className="w-full rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex justify-start"
+                      aria-label="Open account menu"
+                    >
                       <Avatar className="h-9 w-9">
                         <AvatarImage
                           src={user.user_metadata?.avatar_url}
@@ -230,13 +236,13 @@ export function Navbar() {
                 <>
                   <Link
                     href="/login"
-                    className="rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     Log in
                   </Link>
                   <Link
                     href="/#free-snapshot"
-                    className="rounded-lg bg-foreground px-4 py-2.5 text-center text-sm font-medium text-background"
+                    className="rounded-lg bg-foreground px-4 py-2.5 text-center text-sm font-medium text-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setMobileOpen(false)}
                   >
                     Get Started

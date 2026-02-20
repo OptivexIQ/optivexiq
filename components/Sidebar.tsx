@@ -217,7 +217,7 @@ export function SidebarItem({
     <Link
       href={href}
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -258,7 +258,7 @@ export function SidebarToggle() {
     <button
       onClick={toggle}
       aria-label="Toggle Sidebar"
-      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-sidebar-accent transition-colors"
+      className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
     </button>

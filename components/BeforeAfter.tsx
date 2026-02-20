@@ -92,7 +92,7 @@ export function BeforeAfter() {
                   <div className="rounded-xl border border-border/40 bg-card/50 p-6">
                     <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1">
                       <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Before
                       </span>
                     </div>
@@ -109,7 +109,7 @@ export function BeforeAfter() {
                     <div className="relative">
                       <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1">
                         <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-primary">
                           After OptivexIQ
                         </span>
                       </div>

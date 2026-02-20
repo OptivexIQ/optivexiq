@@ -19,7 +19,7 @@ function dotClass(level: SystemStatusLevel) {
 function renderStatus(summary: StatusSummaryState) {
   if (summary.isLoading) {
     return (
-      <span className="text-xs text-muted-foreground/80">
+      <span className="text-sm text-muted-foreground">
         Checking status...
       </span>
     );
@@ -29,7 +29,7 @@ function renderStatus(summary: StatusSummaryState) {
     return (
       <Link
         href="/status"
-        className="text-xs text-muted-foreground/80 underline underline-offset-4 transition-colors hover:text-foreground"
+        className="text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
       >
         Status unavailable
       </Link>
@@ -37,8 +37,8 @@ function renderStatus(summary: StatusSummaryState) {
   }
 
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <Badge variant="outline" className="h-5 px-2 text-[10px]">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Badge variant="outline" className="h-5 px-2 text-xs">
         v{AppInfo.version}
       </Badge>
       <span
@@ -47,7 +47,7 @@ function renderStatus(summary: StatusSummaryState) {
       <span className="whitespace-nowrap">{summary.label}</span>
       <Link
         href="/status"
-        className="text-muted-foreground/80 underline underline-offset-4 transition-colors hover:text-foreground"
+        className="text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
       >
         View status
       </Link>
@@ -59,7 +59,7 @@ export default function DashboardFooter() {
   const status = useStatusSummary();
 
   return (
-    <footer className="mt-4 px-6 py-4 text-xs text-muted-foreground">
+    <footer className="mt-4 px-6 py-4 text-sm text-muted-foreground">
       <hr className="mb-4 border-0 border-t border-border/70" />
       <div className="flex flex-col gap-3 py-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
