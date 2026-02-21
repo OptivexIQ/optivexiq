@@ -5,9 +5,10 @@ import { ProfileForm } from "@/features/saas-profile/components/ProfileForm";
 import { getProfile } from "@/features/saas-profile/services/profileService";
 import { isProfileComplete } from "@/features/saas-profile/validators/profileSchema";
 import { Button } from "@/components/ui/button";
+import { getUserSettings } from "@/features/settings/services/userSettingsService";
 
 export default async function ProfileEditPage() {
-  await requireUser();
+  const user = await requireUser();
   const profileResult = await getProfile();
 
   if (!profileResult.ok) {
@@ -38,6 +39,8 @@ export default async function ProfileEditPage() {
   if (!isProfileComplete(profile)) {
     redirect("/dashboard/onboarding");
   }
+  const settingsResult = await getUserSettings(user.id);
+  const currency = settingsResult.ok ? settingsResult.settings.currency : "USD";
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -60,7 +63,7 @@ export default async function ProfileEditPage() {
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card p-6">
-        <ProfileForm initialValues={profile} mode="edit" />
+        <ProfileForm initialValues={profile} mode="edit" currency={currency} />
       </div>
     </div>
   );

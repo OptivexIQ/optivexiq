@@ -1,5 +1,6 @@
 export type BillingPlan = "starter" | "pro" | "growth";
 export type BillingCurrency = "USD" | "EUR" | "GBP";
+export const BILLING_CURRENCIES = ["USD", "EUR", "GBP"] as const;
 
 export type SubscriptionStatus =
   | "active"

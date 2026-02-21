@@ -6,6 +6,12 @@ import {
   type SaasProfileFormValues,
   type TextItem,
 } from "@/features/saas-profile/types/profile.types";
+import {
+  normalizeAcvRangeValue,
+  normalizeConversionGoalValue,
+  normalizeRevenueStageValue,
+  sanitizeProfileText,
+} from "@/features/saas-profile/validators/profileNormalization";
 
 function normalizeStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
@@ -14,6 +20,7 @@ function normalizeStringArray(value: unknown): string[] {
 
   return value
     .map((item) => (typeof item === "string" ? item : String(item)))
+    .map((item) => sanitizeProfileText(item))
     .filter((item) => item.trim().length > 0);
 }
 
@@ -31,7 +38,7 @@ function fromTextItems(values: TextItem[]): string[] {
   }
 
   return values
-    .map((item) => item.value)
+    .map((item) => sanitizeProfileText(item.value))
     .filter((value) => value.trim().length > 0);
 }
 
@@ -49,9 +56,9 @@ function normalizeMatrix(value: unknown): DifferentiationRow[] {
       const record = item as Record<string, unknown>;
 
       return {
-        competitor: String(record.competitor ?? ""),
-        ourAdvantage: String(record.ourAdvantage ?? ""),
-        theirAdvantage: String(record.theirAdvantage ?? ""),
+        competitor: sanitizeProfileText(String(record.competitor ?? "")),
+        ourAdvantage: sanitizeProfileText(String(record.ourAdvantage ?? "")),
+        theirAdvantage: sanitizeProfileText(String(record.theirAdvantage ?? "")),
       };
     })
     .filter((item): item is DifferentiationRow => Boolean(item))
@@ -118,16 +125,20 @@ export async function getProfile(): Promise<ProfileResult> {
   }
 
   const mapped: Partial<SaasProfileFormValues> = {
-    icpRole: data.icp_role ?? "",
-    primaryPain: data.primary_pain ?? "",
-    buyingTrigger: data.buying_trigger ?? "",
-    websiteUrl: data.website_url ?? "",
-    acvRange: data.acv_range ?? "",
-    revenueStage: data.revenue_stage ?? defaultSaasProfileValues.revenueStage,
-    salesMotion: data.sales_motion ?? "",
+    icpRole: sanitizeProfileText(data.icp_role ?? ""),
+    primaryPain: sanitizeProfileText(data.primary_pain ?? ""),
+    buyingTrigger: sanitizeProfileText(data.buying_trigger ?? ""),
+    websiteUrl: sanitizeProfileText(data.website_url ?? ""),
+    acvRange:
+      normalizeAcvRangeValue(data.acv_range) ?? defaultSaasProfileValues.acvRange,
+    revenueStage:
+      normalizeRevenueStageValue(data.revenue_stage) ??
+      defaultSaasProfileValues.revenueStage,
+    salesMotion: sanitizeProfileText(data.sales_motion ?? ""),
     conversionGoal:
-      data.conversion_goal ?? defaultSaasProfileValues.conversionGoal,
-    pricingModel: data.pricing_model ?? "",
+      normalizeConversionGoalValue(data.conversion_goal) ??
+      defaultSaasProfileValues.conversionGoal,
+    pricingModel: sanitizeProfileText(data.pricing_model ?? ""),
     keyObjections: toTextItems(normalizeStringArray(data.key_objections)),
     proofPoints: toTextItems(normalizeStringArray(data.proof_points)),
     differentiationMatrix: normalizeMatrix(data.differentiation_matrix),
@@ -163,15 +174,20 @@ export async function upsertProfile(
     : (values.onboardingCompletedAt ?? null);
   const payload = {
     user_id: authData.user.id,
-    icp_role: values.icpRole,
-    primary_pain: values.primaryPain,
-    buying_trigger: values.buyingTrigger,
-    website_url: values.websiteUrl,
-    acv_range: values.acvRange,
-    revenue_stage: values.revenueStage,
-    sales_motion: values.salesMotion,
-    conversion_goal: values.conversionGoal,
-    pricing_model: values.pricingModel,
+    icp_role: sanitizeProfileText(values.icpRole),
+    primary_pain: sanitizeProfileText(values.primaryPain),
+    buying_trigger: sanitizeProfileText(values.buyingTrigger),
+    website_url: sanitizeProfileText(values.websiteUrl),
+    acv_range:
+      normalizeAcvRangeValue(values.acvRange) ?? defaultSaasProfileValues.acvRange,
+    revenue_stage:
+      normalizeRevenueStageValue(values.revenueStage) ??
+      defaultSaasProfileValues.revenueStage,
+    sales_motion: sanitizeProfileText(values.salesMotion),
+    conversion_goal:
+      normalizeConversionGoalValue(values.conversionGoal) ??
+      defaultSaasProfileValues.conversionGoal,
+    pricing_model: sanitizeProfileText(values.pricingModel),
     key_objections: fromTextItems(values.keyObjections),
     proof_points: fromTextItems(values.proofPoints),
     differentiation_matrix: values.differentiationMatrix,

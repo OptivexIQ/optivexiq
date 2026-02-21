@@ -3,21 +3,17 @@ import type {
   ExtractedPageContent,
   PricingOutput,
 } from "@/features/conversion-gap/types/gap.types";
-import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import type { SaaSProfileContext } from "@/features/conversion-gap/prompts/saasProfileContext";
 
 export function pricingModule(
-  profile: SaasProfileFormValues,
+  profile: SaaSProfileContext,
   competitors: CompetitorInsight[],
   pricingContent: ExtractedPageContent | null,
 ) {
   const outputContract: PricingOutput = {
     valueMetric: "Primary value metric used in pricing communication",
     anchor: "Pricing anchor statement users should understand immediately",
-    packagingNotes: [
-      "Package note 1",
-      "Package note 2",
-      "Package note 3",
-    ],
+    packagingNotes: ["Package note 1", "Package note 2", "Package note 3"],
   };
 
   return {

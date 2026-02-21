@@ -25,14 +25,15 @@ export async function saveProfileAction(
     return { error: "Please complete all required fields." };
   }
 
+  const normalizedValues = parsed.data as SaasProfileFormValues;
   const payload =
     mode === "onboarding"
       ? {
-          ...parsed.data,
+          ...normalizedValues,
           onboardingProgress: 6,
           onboardingCompleted: false,
         }
-      : parsed.data;
+      : normalizedValues;
 
   const result = await upsertProfile(payload, {
     markOnboardingComplete: false,
@@ -54,7 +55,7 @@ export async function saveProfileAction(
 
     const snapshot = await createSnapshotAndProcess(
       userId,
-      values.websiteUrl,
+      payload.websiteUrl,
       "onboarding-snapshot",
     );
 

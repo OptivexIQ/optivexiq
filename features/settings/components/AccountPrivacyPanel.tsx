@@ -11,6 +11,7 @@ import {
 } from "@/features/settings/types/accountPrivacy.types";
 import { SettingsItem } from "@/features/settings/components/SettingsItem";
 import { MARKET_REGIONS } from "@/lib/constants/marketRegions";
+import { BILLING_CURRENCIES } from "@/features/billing/types/billing.types";
 
 type SettingsAccountPrivacyPanelProps = {
   initialSettings: UserSettingsRecord;
@@ -83,6 +84,17 @@ export function AccountPrivacyPanel({
             placeholder: "Select primary market region",
             options: MARKET_REGIONS,
           },
+          {
+            key: "currency",
+            label: "Primary currency",
+            value: settings.currency,
+            helper:
+              "Used to format ACV and revenue range labels across profile and reports.",
+            type: "select",
+            rawValue: settings.currency,
+            placeholder: "Select primary currency",
+            options: BILLING_CURRENCIES,
+          },
         ],
       },
       {
@@ -127,6 +139,8 @@ export function AccountPrivacyPanel({
       key === "region"
     ) {
       payload = { [key]: toNullableString(String(value)) };
+    } else if (key === "currency") {
+      payload = { [key]: String(value).toUpperCase() as UserSettingsPayload["currency"] };
     } else if (key === "report_retention_days") {
       const numeric = Number(value);
       if (!Number.isFinite(numeric) || numeric < 1) {

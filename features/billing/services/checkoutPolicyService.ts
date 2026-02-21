@@ -3,6 +3,7 @@ import type {
   BillingCurrency,
   BillingPlan,
 } from "@/features/billing/types/billing.types";
+import { BILLING_CURRENCIES } from "@/features/billing/types/billing.types";
 import { BILLING_PLANS } from "@/lib/constants/plans";
 import { getPlanLimits } from "@/features/billing/services/planLimitsService";
 import { hasPaidAccess } from "@/features/billing/services/subscriptionLifecycleService";
@@ -32,8 +33,6 @@ export function parseCheckoutPlan(value: unknown): BillingPlan | null {
     ? (value as BillingPlan)
     : null;
 }
-
-const BILLING_CURRENCIES: readonly BillingCurrency[] = ["USD", "EUR", "GBP"];
 
 export function parseCheckoutCurrency(value: unknown): BillingCurrency | null {
   if (typeof value !== "string") {

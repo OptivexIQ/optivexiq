@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
 import { formatConversionGoalLabel } from "@/features/saas-profile/utils/conversionGoal";
-import { formatRevenueStageLabel } from "@/features/saas-profile/utils/revenueStage";
+import type { BillingCurrency } from "@/features/billing/types/billing.types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -11,7 +11,6 @@ import {
   Pencil,
   Users,
   DollarSign,
-  Euro,
   TrendingUp,
   CreditCard,
   AlertCircle,
@@ -26,9 +25,14 @@ import {
   Lightbulb,
   Flag,
 } from "lucide-react";
+import {
+  formatAcvRangeLabel,
+  formatRevenueStageLabel,
+} from "@/features/saas-profile/utils/monetaryLabels";
 
 type ProfileViewProps = {
   profile: SaasProfileFormValues;
+  currency?: BillingCurrency;
 };
 
 function formatDate(isoString: string | null | undefined): string {
@@ -113,7 +117,7 @@ function calculateProfileCompleteness(profile: SaasProfileFormValues): {
   };
 }
 
-export function ProfileView({ profile }: ProfileViewProps) {
+export function ProfileView({ profile, currency = "USD" }: ProfileViewProps) {
   const objections = profile.keyObjections
     .map((item) => item.value)
     .filter((v) => v.trim().length > 0);
@@ -298,7 +302,7 @@ export function ProfileView({ profile }: ProfileViewProps) {
                   Revenue Stage
                 </p>
                 <p className="mt-1 text-base font-semibold text-foreground">
-                  {formatRevenueStageLabel(profile.revenueStage, "—")}
+                  {formatRevenueStageLabel(profile.revenueStage, currency, "—")}
                 </p>
               </div>
             </div>
@@ -307,14 +311,14 @@ export function ProfileView({ profile }: ProfileViewProps) {
           <div className="rounded-xl border border-border/60 bg-card p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Euro className="h-5 w-5 text-primary" />
+                <DollarSign className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-medium text-muted-foreground">
                   ACV Range
                 </p>
                 <p className="mt-1 text-base font-semibold text-foreground">
-                  {profile.acvRange || "—"}
+                  {formatAcvRangeLabel(profile.acvRange, currency, "—")}
                 </p>
               </div>
             </div>

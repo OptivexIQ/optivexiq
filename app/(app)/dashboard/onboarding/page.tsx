@@ -3,9 +3,10 @@ import { requireUser } from "@/lib/auth/server";
 import { ProfileForm } from "@/features/saas-profile/components/ProfileForm";
 import { getProfile } from "@/features/saas-profile/services/profileService";
 import { isProfileComplete } from "@/features/saas-profile/validators/profileSchema";
+import { getUserSettings } from "@/features/settings/services/userSettingsService";
 
 export default async function OnboardingPage() {
-  await requireUser();
+  const user = await requireUser();
   const profileResult = await getProfile();
 
   const profile = profileResult.ok ? profileResult.data : null;
@@ -13,6 +14,8 @@ export default async function OnboardingPage() {
   if (profile && isProfileComplete(profile)) {
     redirect("/dashboard");
   }
+  const settingsResult = await getUserSettings(user.id);
+  const currency = settingsResult.ok ? settingsResult.settings.currency : "USD";
 
   return (
     <div className="flex min-h-screen flex-col px-6 py-10">
@@ -24,7 +27,11 @@ export default async function OnboardingPage() {
         </p>
       </div>
       <div className="mt-6 rounded-lg border bg-background p-6">
-        <ProfileForm initialValues={profile} mode="onboarding" />
+        <ProfileForm
+          initialValues={profile}
+          mode="onboarding"
+          currency={currency}
+        />
       </div>
     </div>
   );

@@ -9,12 +9,14 @@ import type {
   CompetitiveCounterOutput,
 } from "@/features/conversion-gap/types/gap.types";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import type { BillingCurrency } from "@/features/billing/types/billing.types";
 import { gapAnalysisModule } from "@/features/conversion-gap/prompts/modules/gapAnalysisModule";
 import { heroModule } from "@/features/conversion-gap/prompts/modules/heroModule";
 import { pricingModule } from "@/features/conversion-gap/prompts/modules/pricingModule";
 import { objectionModule } from "@/features/conversion-gap/prompts/modules/objectionModule";
 import { differentiationModule } from "@/features/conversion-gap/prompts/modules/differentiationModule";
 import { competitiveCounterModule } from "@/features/conversion-gap/prompts/modules/competitiveCounterModule";
+import { buildPromptProfileContext } from "@/features/conversion-gap/prompts/saasProfileContext";
 import {
   competitiveCounterOutputSchema,
   differentiationOutputSchema,
@@ -49,6 +51,7 @@ export function estimateCostCents(inputTokens: number, outputTokens: number) {
 
 export type GapEngineContext = {
   profile: SaasProfileFormValues;
+  currency?: BillingCurrency;
   companyContent: ExtractedPageContent;
   pricingContent: ExtractedPageContent | null;
   competitors: CompetitorInsight[];
@@ -61,7 +64,9 @@ export type GapEngineResults = {
   objections: ObjectionOutput;
   differentiation: DifferentiationOutput;
   competitiveCounter: CompetitiveCounterOutput;
-  competitorSynthesis: Awaited<ReturnType<typeof synthesizeCompetitorIntelligence>>;
+  competitorSynthesis: Awaited<
+    ReturnType<typeof synthesizeCompetitorIntelligence>
+  >;
 };
 
 export function deriveCompetitorUrls(value: unknown): string[] {
@@ -93,100 +98,94 @@ export async function scrapeAndExtract(
 export async function runGapEngine(
   context: GapEngineContext,
 ): Promise<{ results: GapEngineResults; usage: UsageSummary }> {
+  const promptProfile = buildPromptProfileContext(
+    context.profile,
+    context.currency ?? "USD",
+  );
   const gapAnalysisPrompt = gapAnalysisModule(
-    context.profile,
+    promptProfile,
     context.competitors,
     context.companyContent,
     context.pricingContent,
   );
-  const gapAnalysis = await runValidatedModule<GapAnalysisOutput>(
-    {
-      moduleName: "gapAnalysis",
-      schema: gapAnalysisOutputSchema,
-      schemaExample: {
-        gaps: ["string"],
-        opportunities: ["string"],
-        risks: ["string"],
-        messagingOverlap: ["string"],
-        missingObjections: ["string"],
-        differentiationGaps: ["string"],
-        pricingClarityIssues: ["string"],
-      },
-      system: gapAnalysisPrompt.system,
-      user: gapAnalysisPrompt.user,
+  const gapAnalysis = await runValidatedModule<GapAnalysisOutput>({
+    moduleName: "gapAnalysis",
+    schema: gapAnalysisOutputSchema,
+    schemaExample: {
+      gaps: ["string"],
+      opportunities: ["string"],
+      risks: ["string"],
+      messagingOverlap: ["string"],
+      missingObjections: ["string"],
+      differentiationGaps: ["string"],
+      pricingClarityIssues: ["string"],
     },
-  );
+    system: gapAnalysisPrompt.system,
+    user: gapAnalysisPrompt.user,
+  });
   const heroPrompt = heroModule(
-    context.profile,
+    promptProfile,
     context.competitors,
     context.companyContent,
   );
-  const hero = await runValidatedModule<HeroOutput>(
-    {
-      moduleName: "hero",
-      schema: heroOutputSchema,
-      schemaExample: {
-        headline: "string",
-        subheadline: "string",
-        primaryCta: "string",
-        secondaryCta: "string",
-      },
-      system: heroPrompt.system,
-      user: heroPrompt.user,
+  const hero = await runValidatedModule<HeroOutput>({
+    moduleName: "hero",
+    schema: heroOutputSchema,
+    schemaExample: {
+      headline: "string",
+      subheadline: "string",
+      primaryCta: "string",
+      secondaryCta: "string",
     },
-  );
+    system: heroPrompt.system,
+    user: heroPrompt.user,
+  });
   const pricingPrompt = pricingModule(
-    context.profile,
+    promptProfile,
     context.competitors,
     context.pricingContent,
   );
-  const pricing = await runValidatedModule<PricingOutput>(
-    {
-      moduleName: "pricing",
-      schema: pricingOutputSchema,
-      schemaExample: {
-        valueMetric: "string",
-        anchor: "string",
-        packagingNotes: ["string"],
-      },
-      system: pricingPrompt.system,
-      user: pricingPrompt.user,
+  const pricing = await runValidatedModule<PricingOutput>({
+    moduleName: "pricing",
+    schema: pricingOutputSchema,
+    schemaExample: {
+      valueMetric: "string",
+      anchor: "string",
+      packagingNotes: ["string"],
     },
-  );
+    system: pricingPrompt.system,
+    user: pricingPrompt.user,
+  });
   const objectionPrompt = objectionModule(
-    context.profile,
+    promptProfile,
     context.competitors,
     context.companyContent,
   );
-  const objections = await runValidatedModule<ObjectionOutput>(
-    {
-      moduleName: "objections",
-      schema: objectionOutputSchema,
-      schemaExample: {
-        objections: [{ objection: "string", response: "string" }],
-      },
-      system: objectionPrompt.system,
-      user: objectionPrompt.user,
+  const objections = await runValidatedModule<ObjectionOutput>({
+    moduleName: "objections",
+    schema: objectionOutputSchema,
+    schemaExample: {
+      objections: [{ objection: "string", response: "string" }],
     },
-  );
+    system: objectionPrompt.system,
+    user: objectionPrompt.user,
+  });
   const differentiationPrompt = differentiationModule(
-    context.profile,
+    promptProfile,
     context.competitors,
     context.companyContent,
   );
-  const differentiation = await runValidatedModule<DifferentiationOutput>(
-    {
-      moduleName: "differentiation",
-      schema: differentiationOutputSchema,
-      schemaExample: {
-        differentiators: [{ claim: "string", proof: "string" }],
-      },
-      system: differentiationPrompt.system,
-      user: differentiationPrompt.user,
+  const differentiation = await runValidatedModule<DifferentiationOutput>({
+    moduleName: "differentiation",
+    schema: differentiationOutputSchema,
+    schemaExample: {
+      differentiators: [{ claim: "string", proof: "string" }],
     },
-  );
+    system: differentiationPrompt.system,
+    user: differentiationPrompt.user,
+  });
   const competitiveCounterPrompt = competitiveCounterModule(
-    context.profile,
+    promptProfile,
     context.competitors,
     context.companyContent,
   );
@@ -207,9 +206,8 @@ export async function runGapEngine(
     pricingContent: context.pricingContent,
     competitorContents: context.competitors
       .map((item) => item.extracted)
-      .filter(
-        (item): item is ExtractedPageContent =>
-          Boolean(item && typeof item === "object"),
+      .filter((item): item is ExtractedPageContent =>
+        Boolean(item && typeof item === "object"),
       ),
     gapAnalysis: gapAnalysis.data,
     homepageAnalysis: hero.data,

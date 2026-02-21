@@ -3,9 +3,10 @@ import { requireUser } from "@/lib/auth/server";
 import { getProfile } from "@/features/saas-profile/services/profileService";
 import { isProfileComplete } from "@/features/saas-profile/validators/profileSchema";
 import { ProfileView } from "@/features/saas-profile/components/ProfileView";
+import { getUserSettings } from "@/features/settings/services/userSettingsService";
 
 export default async function ProfilePage() {
-  await requireUser();
+  const user = await requireUser();
   const profileResult = await getProfile();
 
   if (!profileResult.ok) {
@@ -36,6 +37,8 @@ export default async function ProfilePage() {
   if (!isProfileComplete(profile)) {
     redirect("/dashboard/onboarding");
   }
+  const settingsResult = await getUserSettings(user.id);
+  const currency = settingsResult.ok ? settingsResult.settings.currency : "USD";
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -51,7 +54,7 @@ export default async function ProfilePage() {
         </p>
       </div>
 
-      <ProfileView profile={profile} />
+      <ProfileView profile={profile} currency={currency} />
     </div>
   );
 }

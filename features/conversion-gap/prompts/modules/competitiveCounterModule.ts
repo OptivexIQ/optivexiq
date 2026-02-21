@@ -3,16 +3,19 @@ import type {
   ExtractedPageContent,
   CompetitiveCounterOutput,
 } from "@/features/conversion-gap/types/gap.types";
-import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import type { SaaSProfileContext } from "@/features/conversion-gap/prompts/saasProfileContext";
 
 export function competitiveCounterModule(
-  profile: SaasProfileFormValues,
+  profile: SaaSProfileContext,
   competitors: CompetitorInsight[],
   companyContent: ExtractedPageContent,
 ) {
   const outputContract: CompetitiveCounterOutput = {
     counters: [
-      { competitor: "Competitor name", counter: "Counter-positioning statement" },
+      {
+        competitor: "Competitor name",
+        counter: "Counter-positioning statement",
+      },
     ],
   };
 

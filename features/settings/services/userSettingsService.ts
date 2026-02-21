@@ -1,12 +1,14 @@
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import { logger } from "@/lib/logger";
 import { hasActiveSubscription } from "@/features/billing/services/planValidationService";
+import type { BillingCurrency } from "@/features/billing/types/billing.types";
 
 export type UserSettingsRecord = {
   user_id: string;
   workspace_name: string | null;
   primary_contact: string | null;
   region: string | null;
+  currency: BillingCurrency;
   report_retention_days: number;
   export_restricted: boolean;
   weekly_exec_summary: boolean;
@@ -22,6 +24,7 @@ export type UserSettingsUpdate = Partial<{
   workspace_name: string | null;
   primary_contact: string | null;
   region: string | null;
+  currency: BillingCurrency;
   report_retention_days: number;
   export_restricted: boolean;
   weekly_exec_summary: boolean;
@@ -46,6 +49,7 @@ function buildDefaultSettings(userId: string): UserSettingsRecord {
     workspace_name: null,
     primary_contact: null,
     region: null,
+    currency: "USD",
     report_retention_days: 180,
     export_restricted: false,
     weekly_exec_summary: false,
@@ -55,6 +59,25 @@ function buildDefaultSettings(userId: string): UserSettingsRecord {
     security_review_date: null,
     created_at: now,
     updated_at: now,
+  };
+}
+
+function normalizeSettingsRecord(
+  userId: string,
+  record: Partial<UserSettingsRecord>,
+): UserSettingsRecord {
+  const defaults = buildDefaultSettings(userId);
+
+  return {
+    ...defaults,
+    ...record,
+    user_id: userId,
+    currency:
+      record.currency === "USD" ||
+      record.currency === "EUR" ||
+      record.currency === "GBP"
+        ? record.currency
+        : "USD",
   };
 }
 
@@ -140,7 +163,10 @@ async function fetchUserSettings(userId: string): Promise<UserSettingsResult> {
     }
 
     if (data) {
-      return { ok: true, settings: data as UserSettingsRecord };
+      return {
+        ok: true,
+        settings: normalizeSettingsRecord(userId, data as UserSettingsRecord),
+      };
     }
 
     if (!(await subscriptionExists(userId))) {
@@ -165,7 +191,10 @@ async function fetchUserSettings(userId: string): Promise<UserSettingsResult> {
       };
     }
 
-    return { ok: true, settings: inserted as UserSettingsRecord };
+    return {
+      ok: true,
+      settings: normalizeSettingsRecord(userId, inserted as UserSettingsRecord),
+    };
   } catch (error) {
     logger.error("User settings fetch crashed.", error, { user_id: userId });
     return { ok: false, error: "Unexpected error" };
@@ -222,7 +251,10 @@ async function updateUserSettingsRecord(
       return { ok: false, error: error?.message ?? "Settings unavailable" };
     }
 
-    return { ok: true, settings: data as UserSettingsRecord };
+    return {
+      ok: true,
+      settings: normalizeSettingsRecord(userId, data as UserSettingsRecord),
+    };
   } catch (error) {
     logger.error("User settings update crashed.", error, { user_id: userId });
     return { ok: false, error: "Unexpected error" };

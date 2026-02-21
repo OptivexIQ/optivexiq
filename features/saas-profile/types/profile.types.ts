@@ -1,3 +1,9 @@
+import type {
+  AcvRangeValue,
+  ConversionGoalValue,
+  RevenueStageValue,
+} from "@/features/saas-profile/constants/profileEnums";
+
 export type DifferentiationRow = {
   competitor: string;
   ourAdvantage: string;
@@ -13,10 +19,10 @@ export type SaasProfileFormValues = {
   primaryPain: string;
   buyingTrigger: string;
   websiteUrl: string;
-  acvRange: "<€10k" | "€10k-50k" | "€50k-150k" | "€150k-500k" | "€500k+";
-  revenueStage: "pre" | "<€10k" | "€10k-50k" | "€50k+";
+  acvRange: AcvRangeValue;
+  revenueStage: RevenueStageValue;
   salesMotion: string;
-  conversionGoal: "demo" | "trial" | "paid" | "educate";
+  conversionGoal: ConversionGoalValue;
   pricingModel: string;
   keyObjections: TextItem[];
   proofPoints: TextItem[];
@@ -32,7 +38,7 @@ export const defaultSaasProfileValues: SaasProfileFormValues = {
   primaryPain: "",
   buyingTrigger: "",
   websiteUrl: "",
-  acvRange: "<€10k",
+  acvRange: "lt_10k",
   revenueStage: "pre",
   salesMotion: "",
   conversionGoal: "demo",

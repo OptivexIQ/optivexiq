@@ -3,10 +3,10 @@ import type {
   ExtractedPageContent,
   GapAnalysisOutput,
 } from "@/features/conversion-gap/types/gap.types";
-import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import type { SaaSProfileContext } from "@/features/conversion-gap/prompts/saasProfileContext";
 
 export function gapAnalysisModule(
-  profile: SaasProfileFormValues,
+  profile: SaaSProfileContext,
   competitors: CompetitorInsight[],
   companyContent: ExtractedPageContent,
   pricingContent: ExtractedPageContent | null,

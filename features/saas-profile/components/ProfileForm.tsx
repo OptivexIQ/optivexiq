@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { saveProfileAction } from "@/app/actions/saas-profile/saveProfile";
+import type { BillingCurrency } from "@/features/billing/types/billing.types";
 import {
   defaultSaasProfileValues,
   type SaasProfileFormValues,
@@ -37,6 +38,10 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import {
+  formatAcvRangeLabel,
+  formatRevenueStageLabel,
+} from "@/features/saas-profile/utils/monetaryLabels";
 
 const stepOneFields: Array<keyof SaasProfileFormValues> = [
   "icpRole",
@@ -54,9 +59,15 @@ type ProfileFormProps = {
   initialValues?: SaasProfileFormValues | null;
   mode?: "onboarding" | "edit";
   layout?: "steps" | "sections";
+  currency?: BillingCurrency;
 };
 
-export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
+export function ProfileForm({
+  initialValues,
+  mode,
+  layout,
+  currency = "USD",
+}: ProfileFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -152,6 +163,37 @@ export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
   });
 
   const submitLabel = isEditing ? "Update profile" : "Save profile";
+  const acvOptions = [
+    { value: "lt_10k", label: formatAcvRangeLabel("lt_10k", currency, "<10k") },
+    { value: "10k_50k", label: formatAcvRangeLabel("10k_50k", currency, "10k-50k") },
+    {
+      value: "50k_150k",
+      label: formatAcvRangeLabel("50k_150k", currency, "50k-150k"),
+    },
+    {
+      value: "150k_500k",
+      label: formatAcvRangeLabel("150k_500k", currency, "150k-500k"),
+    },
+    {
+      value: "gte_500k",
+      label: formatAcvRangeLabel("gte_500k", currency, "500k+"),
+    },
+  ] as const;
+  const revenueOptions = [
+    { value: "pre", label: "Pre-revenue" },
+    {
+      value: "lt_10k",
+      label: formatRevenueStageLabel("lt_10k", currency, "<10k MRR"),
+    },
+    {
+      value: "10k_50k",
+      label: formatRevenueStageLabel("10k_50k", currency, "10k-50k MRR"),
+    },
+    {
+      value: "gte_50k",
+      label: formatRevenueStageLabel("gte_50k", currency, "50k+ MRR"),
+    },
+  ] as const;
 
   return (
     <Form {...form}>
@@ -220,23 +262,21 @@ export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>ACV range</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select ACV range" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="<€10k">&lt;€10k</SelectItem>
-                          <SelectItem value="€10k-50k">€10k–€50k</SelectItem>
-                          <SelectItem value="€50k-150k">€50k–€150k</SelectItem>
-                          <SelectItem value="€150k-500k">
-                            €150k–€500k
-                          </SelectItem>
-                          <SelectItem value="€500k+">€500k+</SelectItem>
+                          {acvOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -249,22 +289,21 @@ export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Revenue stage</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select revenue stage" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="pre">Pre-revenue</SelectItem>
-                          <SelectItem value="<€10k">&lt;€10k MRR</SelectItem>
-                          <SelectItem value="€10k-50k">
-                            €10k–€50k MRR
-                          </SelectItem>
-                          <SelectItem value="€50k+">€50k+ MRR</SelectItem>
+                          {revenueOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -485,7 +524,7 @@ export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
                   <FormLabel>ACV range</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -493,11 +532,11 @@ export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="<€10k">&lt;€10k</SelectItem>
-                      <SelectItem value="€10k-50k">€10k–€50k</SelectItem>
-                      <SelectItem value="€50k-150k">€50k–€150k</SelectItem>
-                      <SelectItem value="€150k-500k">€150k–€500k</SelectItem>
-                      <SelectItem value="€500k+">€500k+</SelectItem>
+                      {acvOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -512,7 +551,7 @@ export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
                   <FormLabel>Revenue stage</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -520,10 +559,11 @@ export function ProfileForm({ initialValues, mode, layout }: ProfileFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="pre">Pre-revenue</SelectItem>
-                      <SelectItem value="<€10k">&lt;€10k MRR</SelectItem>
-                      <SelectItem value="€10k-50k">€10k–€50k MRR</SelectItem>
-                      <SelectItem value="€50k+">€50k+ MRR</SelectItem>
+                      {revenueOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

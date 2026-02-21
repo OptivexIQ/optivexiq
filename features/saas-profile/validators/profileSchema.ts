@@ -1,6 +1,20 @@
 import { z } from "zod";
+import {
+  ACV_RANGE_VALUES,
+  CONVERSION_GOAL_VALUES,
+  REVENUE_STAGE_VALUES,
+} from "@/features/saas-profile/constants/profileEnums";
+import {
+  normalizeAcvRangeValue,
+  normalizeConversionGoalValue,
+  normalizeRevenueStageValue,
+  sanitizeProfileText,
+} from "@/features/saas-profile/validators/profileNormalization";
 
-const requiredString = z.string().trim().min(1, "Required");
+const requiredString = z.preprocess(
+  (value) => (typeof value === "string" ? sanitizeProfileText(value) : value),
+  z.string().trim().min(1, "Required"),
+);
 const placeholderValues = new Set([
   "n/a",
   "na",
@@ -17,10 +31,11 @@ const placeholderValues = new Set([
 ]);
 
 const requiredLongText = z
-  .string()
-  .trim()
-  .min(20, "Provide at least 20 characters")
-  .refine((value) => {
+  .preprocess(
+    (value) => (typeof value === "string" ? sanitizeProfileText(value) : value),
+    z.string().trim().min(20, "Provide at least 20 characters"),
+  )
+  .refine((value: string) => {
     const normalized = value.toLowerCase().trim();
     if (placeholderValues.has(normalized)) {
       return false;
@@ -29,10 +44,11 @@ const requiredLongText = z
   }, "Use real content, not placeholder text");
 
 const requiredUrl = z
-  .string()
-  .trim()
-  .url("Enter a valid URL")
-  .min(1, "Required");
+  .preprocess(
+    (value) => (typeof value === "string" ? sanitizeProfileText(value) : value),
+    z.string().trim().url("Enter a valid URL").min(1, "Required"),
+  )
+;
 
 const textItemSchema = z.object({
   value: requiredString,
@@ -44,21 +60,30 @@ export const differentiationRowSchema = z.object({
   theirAdvantage: requiredString,
 });
 
+const acvRangeSchema = z.preprocess(
+  (value) => normalizeAcvRangeValue(value) ?? value,
+  z.enum(ACV_RANGE_VALUES, { required_error: "Required" }),
+);
+
+const revenueStageSchema = z.preprocess(
+  (value) => normalizeRevenueStageValue(value) ?? value,
+  z.enum(REVENUE_STAGE_VALUES, { required_error: "Required" }),
+);
+
+const conversionGoalSchema = z.preprocess(
+  (value) => normalizeConversionGoalValue(value) ?? value,
+  z.enum(CONVERSION_GOAL_VALUES, { required_error: "Required" }),
+);
+
 export const profileSchema = z.object({
   icpRole: requiredString,
   primaryPain: requiredLongText,
   buyingTrigger: requiredLongText,
   websiteUrl: requiredUrl,
-  acvRange: z.enum(["<€10k", "€10k-50k", "€50k-150k", "€150k-500k", "€500k+"], {
-    required_error: "Required",
-  }),
-  revenueStage: z.enum(["pre", "<€10k", "€10k-50k", "€50k+"], {
-    required_error: "Required",
-  }),
+  acvRange: acvRangeSchema,
+  revenueStage: revenueStageSchema,
   salesMotion: requiredString,
-  conversionGoal: z.enum(["demo", "trial", "paid", "educate"], {
-    required_error: "Required",
-  }),
+  conversionGoal: conversionGoalSchema,
   pricingModel: requiredString,
   keyObjections: z.array(textItemSchema).min(1, "Add at least one objection"),
   proofPoints: z.array(textItemSchema).min(1, "Add at least one proof point"),
@@ -76,16 +101,10 @@ export const profileUpdateSchema = z.object({
   primaryPain: requiredLongText,
   buyingTrigger: requiredLongText,
   websiteUrl: requiredUrl,
-  acvRange: z.enum(["<€10k", "€10k-50k", "€50k-150k", "€150k-500k", "€500k+"], {
-    required_error: "Required",
-  }),
-  revenueStage: z.enum(["pre", "<€10k", "€10k-50k", "€50k+"], {
-    required_error: "Required",
-  }),
+  acvRange: acvRangeSchema,
+  revenueStage: revenueStageSchema,
   salesMotion: requiredString,
-  conversionGoal: z.enum(["demo", "trial", "paid", "educate"], {
-    required_error: "Required",
-  }),
+  conversionGoal: conversionGoalSchema,
   pricingModel: requiredString,
   keyObjections: z.array(textItemSchema).min(1, "Add at least one objection"),
   proofPoints: z.array(textItemSchema).min(1, "Add at least one proof point"),

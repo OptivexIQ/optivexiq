@@ -12,6 +12,7 @@ import {
 import { buildConversionGapReport } from "@/features/conversion-gap/services/reportAggregationService";
 import { logger } from "@/lib/logger";
 import { getActiveSubscription } from "@/features/billing/services/planValidationService";
+import { parseCheckoutCurrency } from "@/features/billing/services/checkoutPolicyService";
 import { getOnboardingState } from "@/features/saas-profile/services/profileService";
 import { analyzeCompetitors } from "@/features/conversion-gap/services/competitorAnalysisService";
 import {
@@ -37,6 +38,12 @@ import type {
 import type { SnapshotResult } from "@/features/conversion-gap/types/snapshot.types";
 import { defaultSaasProfileValues } from "@/features/saas-profile/types/profile.types";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import {
+  normalizeAcvRangeValue,
+  normalizeConversionGoalValue,
+  normalizeRevenueStageValue,
+  sanitizeProfileText,
+} from "@/features/saas-profile/validators/profileNormalization";
 import { validateGapReport } from "@/features/reports/services/reportService";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
 
@@ -330,8 +337,17 @@ function deriveSegment(profile: SaasProfileFormValues): string {
   }
 
   const revenueStage = profile.revenueStage.trim();
+  if (revenueStage === "lt_10k") {
+    return "<10k MRR";
+  }
+  if (revenueStage === "10k_50k") {
+    return "10k-50k MRR";
+  }
+  if (revenueStage === "gte_50k") {
+    return "50k+ MRR";
+  }
   if (revenueStage.length > 0) {
-    return revenueStage;
+    return "Pre-revenue";
   }
 
   return "SaaS";
@@ -408,21 +424,29 @@ async function fetchProfileForUser(
   }
 
   return {
-    icpRole: data.icp_role ?? "",
-    primaryPain: data.primary_pain ?? "",
-    buyingTrigger: data.buying_trigger ?? "",
-    websiteUrl: data.website_url ?? "",
-    acvRange: data.acv_range ?? "",
-    revenueStage: data.revenue_stage ?? defaultSaasProfileValues.revenueStage,
-    salesMotion: data.sales_motion ?? "",
+    icpRole: sanitizeProfileText(data.icp_role ?? ""),
+    primaryPain: sanitizeProfileText(data.primary_pain ?? ""),
+    buyingTrigger: sanitizeProfileText(data.buying_trigger ?? ""),
+    websiteUrl: sanitizeProfileText(data.website_url ?? ""),
+    acvRange:
+      normalizeAcvRangeValue(data.acv_range) ?? defaultSaasProfileValues.acvRange,
+    revenueStage:
+      normalizeRevenueStageValue(data.revenue_stage) ??
+      defaultSaasProfileValues.revenueStage,
+    salesMotion: sanitizeProfileText(data.sales_motion ?? ""),
     conversionGoal:
-      data.conversion_goal ?? defaultSaasProfileValues.conversionGoal,
-    pricingModel: data.pricing_model ?? "",
+      normalizeConversionGoalValue(data.conversion_goal) ??
+      defaultSaasProfileValues.conversionGoal,
+    pricingModel: sanitizeProfileText(data.pricing_model ?? ""),
     keyObjections: Array.isArray(data.key_objections)
-      ? data.key_objections.map((value: string) => ({ value }))
+      ? data.key_objections.map((value: string) => ({
+          value: sanitizeProfileText(value),
+        }))
       : [{ value: "" }],
     proofPoints: Array.isArray(data.proof_points)
-      ? data.proof_points.map((value: string) => ({ value }))
+      ? data.proof_points.map((value: string) => ({
+          value: sanitizeProfileText(value),
+        }))
       : [{ value: "" }],
     differentiationMatrix: Array.isArray(data.differentiation_matrix)
       ? data.differentiation_matrix
@@ -432,6 +456,24 @@ async function fetchProfileForUser(
     updatedAt: null,
     onboardingCompletedAt: null,
   };
+}
+
+async function fetchUserCurrencyForPrompts(userId: string) {
+  const admin = createSupabaseAdminClient("worker");
+  const { data, error } = await admin
+    .from("user_settings")
+    .select("currency")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("Failed to load user currency for prompt context.", error, {
+      user_id: userId,
+    });
+    return "USD" as const;
+  }
+
+  return parseCheckoutCurrency(data?.currency) ?? "USD";
 }
 
 async function updateReportStatus(
@@ -689,10 +731,12 @@ async function processSnapshotReport(
     if (!profile) {
       throw new Error("profile_missing");
     }
+    const promptCurrency = await fetchUserCurrencyForPrompts(userId);
     const companyContent = await scrapeAndExtract(report.homepage_url);
     await updateExecutionState(reportId, "gap_analysis", 50);
     const { results, usage } = await runGapEngine({
       profile,
+      currency: promptCurrency,
       companyContent,
       pricingContent: null,
       competitors: [],
@@ -830,6 +874,7 @@ async function processGapReport(
     if (!profile) {
       throw new Error("profile_missing");
     }
+    const promptCurrency = await fetchUserCurrencyForPrompts(userId);
     await updateExecutionState(reportId, "scraping_homepage", 12);
     const companyContent = await scrapeAndExtract(report.homepage_url);
     await updateExecutionState(
@@ -870,6 +915,7 @@ async function processGapReport(
     await updateExecutionState(reportId, "gap_analysis", 55);
     const { results, usage } = await runGapEngine({
       profile,
+      currency: promptCurrency,
       companyContent,
       pricingContent,
       competitors,

@@ -3,10 +3,10 @@ import type {
   ExtractedPageContent,
   ObjectionOutput,
 } from "@/features/conversion-gap/types/gap.types";
-import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import type { SaaSProfileContext } from "@/features/conversion-gap/prompts/saasProfileContext";
 
 export function objectionModule(
-  profile: SaasProfileFormValues,
+  profile: SaaSProfileContext,
   competitors: CompetitorInsight[],
   companyContent: ExtractedPageContent,
 ) {
