@@ -67,7 +67,7 @@ function mapStatus(status: string | null): OverviewReport["status"] {
     case "failed":
       return "Failed";
     default:
-      return "Queued";
+      return "Unknown";
   }
 }
 

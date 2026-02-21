@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 type ReportExportActionsProps = {
   reportId: string;
-  reportStatus?: "queued" | "running" | "completed" | "failed";
+  reportStatus?: "queued" | "running" | "retrying" | "completed" | "failed";
   exportRestricted?: boolean;
 };
 
@@ -12,8 +12,18 @@ export function ReportExportActions({
   reportStatus = "completed",
   exportRestricted = false,
 }: ReportExportActionsProps) {
-  const exportDisabled =
-    exportRestricted || reportStatus === "queued" || reportStatus === "running";
+  const isInProgress =
+    reportStatus === "queued" ||
+    reportStatus === "running" ||
+    reportStatus === "retrying";
+  const exportDisabled = exportRestricted || isInProgress || reportStatus === "failed";
+  const helperText = exportRestricted
+    ? "Exports are restricted for this workspace."
+    : isInProgress
+      ? "Export is available after report completion."
+      : reportStatus === "failed"
+        ? "Failed reports are not exportable."
+        : "Available formats: PDF, HTML, and TXT. Exports are available for completed reports only.";
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
@@ -26,9 +36,7 @@ export function ReportExportActions({
             Deliver this report to your revenue and product teams.
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            {exportDisabled
-              ? "Exports are restricted for this workspace."
-              : "Export this report as PDF, HTML, or plain text sections."}
+            {helperText}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">

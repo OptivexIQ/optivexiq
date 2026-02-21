@@ -4,6 +4,7 @@ import { errorResponse } from "@/lib/api/errorResponse";
 import { getUserSettings } from "@/features/settings/services/userSettingsService";
 import { getGapReport } from "@/features/reports/services/reportService";
 import { buildReportExport } from "@/features/reports/services/reportExportService";
+import { getGapReportForUser } from "@/features/reports/services/gapReportReadService";
 
 type ExportFormat = "pdf" | "html" | "txt";
 
@@ -37,6 +38,32 @@ export async function GET(
   const settingsResult = await getUserSettings(user.id);
   if (!settingsResult.ok || settingsResult.settings.export_restricted) {
     return errorResponse("forbidden", "Exports are restricted.", 403, {
+      requestId,
+      headers: { "x-request-id": requestId },
+    });
+  }
+
+  const executionResult = await getGapReportForUser(resolvedParams.reportId, user.id);
+  if (!executionResult) {
+    return errorResponse("not_found", "Not found.", 404, {
+      requestId,
+      headers: { "x-request-id": requestId },
+    });
+  }
+
+  if (
+    executionResult.status === "queued" ||
+    executionResult.status === "running" ||
+    executionResult.status === "retrying"
+  ) {
+    return errorResponse("conflict", "Export is available only after completion.", 409, {
+      requestId,
+      headers: { "x-request-id": requestId },
+    });
+  }
+
+  if (executionResult.status === "failed") {
+    return errorResponse("conflict", "Failed reports cannot be exported.", 409, {
       requestId,
       headers: { "x-request-id": requestId },
     });

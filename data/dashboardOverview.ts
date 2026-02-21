@@ -2,7 +2,7 @@ export type OverviewReport = {
   id: string;
   site: string;
   score: number;
-  status: "Complete" | "Running" | "Queued" | "Failed";
+  status: "Complete" | "Running" | "Queued" | "Failed" | "Unknown";
   date: string;
 };
 
