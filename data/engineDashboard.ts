@@ -10,7 +10,7 @@ export type EngineData = {
   status: EngineStatus;
   latestReport: {
     id: string | null;
-    status: "queued" | "running" | "completed" | "failed" | null;
+    status: "queued" | "running" | "retrying" | "completed" | "failed" | null;
     executionStage: string | null;
     executionProgress: number | null;
   };

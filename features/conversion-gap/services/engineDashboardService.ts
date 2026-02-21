@@ -28,6 +28,7 @@ function mapEngineStatus(status: string | null): EngineStatus {
       return "complete";
     case "queued":
     case "running":
+    case "retrying":
       return "running";
     case "failed":
     default:
@@ -41,6 +42,7 @@ function normalizeReportStatus(
   if (
     status === "queued" ||
     status === "running" ||
+    status === "retrying" ||
     status === "completed" ||
     status === "failed"
   ) {

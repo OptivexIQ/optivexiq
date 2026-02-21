@@ -16,7 +16,7 @@ type LiveStatus = "idle" | "running" | "complete" | "failed";
 
 type LatestReportInput = {
   id: string | null;
-  status: "queued" | "running" | "completed" | "failed" | null;
+  status: "queued" | "running" | "retrying" | "completed" | "failed" | null;
   executionStage?: string | null;
   executionProgress?: number | null;
 };
@@ -40,6 +40,7 @@ type GapEngineLiveStatusProviderProps = {
 
 const POLL_INTERVAL_MS = 2500;
 const POLL_FAILURE_THRESHOLD = 3;
+const MAX_POLL_INTERVAL_MS = 20000;
 
 const GapEngineLiveStatusContext =
   createContext<GapEngineLiveStatusContextValue | null>(null);
@@ -48,7 +49,7 @@ function normalizeLiveStatus(
   status: GapReportExecutionPayload["status"] | null,
   engineStatus: EngineStatus,
 ): LiveStatus {
-  if (status === "queued" || status === "running") {
+  if (status === "queued" || status === "running" || status === "retrying") {
     return "running";
   }
   if (status === "completed") {
@@ -92,6 +93,10 @@ export function GapEngineLiveStatusProvider({
     setLive(getLatestSnapshot());
     setPollFailureCount(0);
   }, [getLatestSnapshot]);
+  const pollIntervalMs = useMemo(() => {
+    const exponent = Math.min(pollFailureCount, POLL_FAILURE_THRESHOLD);
+    return Math.min(POLL_INTERVAL_MS * 2 ** exponent, MAX_POLL_INTERVAL_MS);
+  }, [pollFailureCount]);
 
   const startNewAnalysis = useCallback(() => {
     setLive(() => ({
@@ -116,7 +121,10 @@ export function GapEngineLiveStatusProvider({
   }, [getLatestSnapshot]);
 
   useEffect(() => {
-    const isRunning = live.status === "queued" || live.status === "running";
+    const isRunning =
+      live.status === "queued" ||
+      live.status === "running" ||
+      live.status === "retrying";
     if (!live.reportId || !isRunning) {
       return;
     }
@@ -164,20 +172,7 @@ export function GapEngineLiveStatusProvider({
         console.error("Gap engine polling failed.", context);
         setPollFailureCount((previous) => {
           const next = previous + 1;
-          if (next >= POLL_FAILURE_THRESHOLD) {
-            setLive((current) => {
-              if (current.status === "queued" || current.status === "running") {
-                return {
-                  ...current,
-                  status: "failed",
-                  stage: "failed",
-                  progress: 100,
-                };
-              }
-              return current;
-            });
-          }
-          return next;
+          return next >= POLL_FAILURE_THRESHOLD ? POLL_FAILURE_THRESHOLD : next;
         });
       }
     };
@@ -185,13 +180,13 @@ export function GapEngineLiveStatusProvider({
     void poll();
     const timer = window.setInterval(() => {
       void poll();
-    }, POLL_INTERVAL_MS);
+    }, pollIntervalMs);
 
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [live.reportId, live.status]);
+  }, [live.reportId, live.status, pollIntervalMs]);
 
   const value = useMemo<GapEngineLiveStatusContextValue>(
     () => ({

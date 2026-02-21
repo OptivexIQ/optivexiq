@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/report-jobs",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/free-snapshot-jobs",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/usage-reconciliation",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/weekly-summary",
+      "schedule": "0 14 * * 1"
+    }
+  ]
+}

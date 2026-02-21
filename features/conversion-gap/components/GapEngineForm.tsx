@@ -154,6 +154,7 @@ export function GapEngineForm({
     liveStatus === "complete" || liveStatus === "failed"
       ? "Run new analysis"
       : "Run analysis";
+  const isRunInProgress = liveStatus === "running";
 
   return (
     <Form {...form}>
@@ -170,13 +171,16 @@ export function GapEngineForm({
               Confirm the URLs used to benchmark your positioning.
             </p>
           </div>
-          <Button type="submit" disabled={isPending || usageBlocked}>
-            {isPending ? (
+          <Button
+            type="submit"
+            disabled={isPending || usageBlocked || isRunInProgress}
+          >
+            {isPending || isRunInProgress ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Play className="h-4 w-4" />
             )}
-            {isPending ? "Running..." : submitLabel}
+            {isPending || isRunInProgress ? "Running..." : submitLabel}
           </Button>
         </div>
 

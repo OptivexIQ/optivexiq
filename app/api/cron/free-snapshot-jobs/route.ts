@@ -1,19 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { CRON_SECRET, NODE_ENV } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { runFreeSnapshotJobWorker } from "@/features/free-snapshot/services/freeSnapshotJobQueueService";
+import { isAuthorizedCronRequest } from "@/lib/cron/isAuthorizedCronRequest";
 
-function isAuthorized(request: NextRequest) {
-  if (!CRON_SECRET) {
-    return NODE_ENV !== "production";
-  }
-
-  const provided = request.headers.get("x-cron-secret");
-  return Boolean(provided && provided === CRON_SECRET);
-}
-
-export async function POST(request: NextRequest) {
-  if (!isAuthorized(request)) {
+async function run(request: NextRequest) {
+  if (!isAuthorizedCronRequest(request)) {
     logger.warn("cron.free_snapshot_jobs_unauthorized");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -27,4 +18,12 @@ export async function POST(request: NextRequest) {
     failure_rate: result.failureRate,
   });
   return NextResponse.json({ ok: true, ...result });
+}
+
+export async function GET(request: NextRequest) {
+  return run(request);
+}
+
+export async function POST(request: NextRequest) {
+  return run(request);
 }

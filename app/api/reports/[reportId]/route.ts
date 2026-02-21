@@ -4,9 +4,12 @@ import { requireApiUser } from "@/lib/auth/requireApiUser";
 import { errorResponse } from "@/lib/api/errorResponse";
 import {
   getGapReportForUser,
-  ReportDataIntegrityError,
+  ReportReadQueryError,
 } from "@/features/reports/services/gapReportReadService";
 import { logger } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(
   _request: Request,
@@ -16,29 +19,29 @@ export async function GET(
   const resolvedParams = await params;
   const { user, response } = await requireApiUser();
   if (response) {
+    if (response.status === 401) {
+      return errorResponse("forbidden", "Forbidden.", 403, {
+        requestId,
+        headers: { "x-request-id": requestId },
+      });
+    }
     response.headers.set("x-request-id", requestId);
     return response;
   }
-
-  let report;
+  let report = null;
   try {
     report = await getGapReportForUser(resolvedParams.reportId, user.id);
   } catch (error) {
-    if (error instanceof ReportDataIntegrityError) {
-      logger.error("Report API rejected corrupt canonical report_data.", {
+    if (error instanceof ReportReadQueryError) {
+      logger.error("Report API failed to query report state.", {
         report_id: error.reportId,
         user_id: error.userId,
         request_id: requestId,
       });
-      return errorResponse(
-        "internal_error",
-        "Report data integrity fault.",
-        500,
-        {
-          requestId,
-          headers: { "x-request-id": requestId },
-        },
-      );
+      return errorResponse("internal_error", "Unable to load report state.", 500, {
+        requestId,
+        headers: { "x-request-id": requestId },
+      });
     }
     throw error;
   }
@@ -52,6 +55,11 @@ export async function GET(
 
   return NextResponse.json(
     { report },
-    { headers: { "x-request-id": requestId } },
+    {
+      headers: {
+        "x-request-id": requestId,
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      },
+    },
   );
 }

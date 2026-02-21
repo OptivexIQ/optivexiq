@@ -15,9 +15,11 @@ type ReportExecutionStatusCardProps = {
 
 const POLL_INTERVAL_MS = 2500;
 const POLL_FAILURE_THRESHOLD = 3;
+const MAX_POLL_INTERVAL_MS = 20000;
 
 const STAGE_LABELS: Record<string, string> = {
   queued: "Queued",
+  retrying: "Retrying",
   scraping_homepage: "Scraping homepage",
   scraping_pricing: "Scraping pricing",
   scraping_competitors: "Scraping competitors",
@@ -53,7 +55,9 @@ export function ReportExecutionStatusCard({
   const completionHandledRef = useRef(false);
 
   const isInProgress =
-    execution.status === "queued" || execution.status === "running";
+    execution.status === "queued" ||
+    execution.status === "running" ||
+    execution.status === "retrying";
   const isCompleted = execution.status === "completed";
 
   const progressValue = useMemo(() => {
@@ -64,6 +68,10 @@ export function ReportExecutionStatusCard({
       ? 100
       : 0;
   }, [execution.executionProgress, execution.status]);
+  const pollIntervalMs = useMemo(() => {
+    const exponent = Math.min(pollFailureCount, POLL_FAILURE_THRESHOLD);
+    return Math.min(POLL_INTERVAL_MS * 2 ** exponent, MAX_POLL_INTERVAL_MS);
+  }, [pollFailureCount]);
 
   useEffect(() => {
     setShowStageSpinner(false);
@@ -141,21 +149,9 @@ export function ReportExecutionStatusCard({
           setPollFailureCount((prev) => {
             const next = prev + 1;
             if (next >= POLL_FAILURE_THRESHOLD) {
-              setExecution((current) => {
-                if (
-                  current.status === "queued" ||
-                  current.status === "running"
-                ) {
-                  return {
-                    ...current,
-                    status: "failed",
-                    executionStage: "failed",
-                    executionProgress: 100,
-                  };
-                }
-                return current;
-              });
-              setPollError("Unable to refresh progress. Marked as failed.");
+              setPollError(
+                "Unable to refresh progress right now. Still retrying.",
+              );
               return next;
             }
 
@@ -171,13 +167,13 @@ export function ReportExecutionStatusCard({
     void poll();
     const timer = window.setInterval(() => {
       void poll();
-    }, POLL_INTERVAL_MS);
+    }, pollIntervalMs);
 
     return () => {
       mounted = false;
       window.clearInterval(timer);
     };
-  }, [isInProgress, reportId, router]);
+  }, [isInProgress, pollIntervalMs, reportId, router]);
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -204,7 +200,8 @@ export function ReportExecutionStatusCard({
         </div>
         <p className="mt-2 text-sm text-foreground">
           {execution.status === "failed"
-            ? "Report processing failed. Review inputs and run a new analysis."
+            ? execution.error ??
+              "Report processing failed. Review inputs and run a new analysis."
             : isCompleted
               ? "Report completed successfully. Loading final output."
               : showCompletionTransition
