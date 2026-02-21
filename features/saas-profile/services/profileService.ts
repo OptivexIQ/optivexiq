@@ -190,7 +190,7 @@ export async function upsertProfile(
     pricing_model: sanitizeProfileText(values.pricingModel),
     key_objections: fromTextItems(values.keyObjections),
     proof_points: fromTextItems(values.proofPoints),
-    differentiation_matrix: values.differentiationMatrix,
+    differentiation_matrix: normalizeMatrix(values.differentiationMatrix),
     onboarding_progress: values.onboardingProgress,
     onboarding_completed: values.onboardingCompleted,
     updated_at: new Date().toISOString(),

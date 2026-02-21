@@ -54,10 +54,32 @@ const textItemSchema = z.object({
   value: requiredString,
 });
 
+const textItemUpdateSchema = z.object({
+  value: z.preprocess(
+    (value) => (typeof value === "string" ? sanitizeProfileText(value) : ""),
+    z.string(),
+  ),
+});
+
 export const differentiationRowSchema = z.object({
   competitor: requiredString,
   ourAdvantage: requiredString,
   theirAdvantage: requiredString,
+});
+
+const differentiationRowUpdateSchema = z.object({
+  competitor: z.preprocess(
+    (value) => (typeof value === "string" ? sanitizeProfileText(value) : ""),
+    z.string(),
+  ),
+  ourAdvantage: z.preprocess(
+    (value) => (typeof value === "string" ? sanitizeProfileText(value) : ""),
+    z.string(),
+  ),
+  theirAdvantage: z.preprocess(
+    (value) => (typeof value === "string" ? sanitizeProfileText(value) : ""),
+    z.string(),
+  ),
 });
 
 const acvRangeSchema = z.preprocess(
@@ -73,6 +95,11 @@ const revenueStageSchema = z.preprocess(
 const conversionGoalSchema = z.preprocess(
   (value) => normalizeConversionGoalValue(value) ?? value,
   z.enum(CONVERSION_GOAL_VALUES, { required_error: "Required" }),
+);
+
+const timestampSchema = z.preprocess(
+  (value) => (typeof value === "string" && value.trim().length === 0 ? null : value),
+  z.string().datetime({ offset: true }).optional().nullable(),
 );
 
 export const profileSchema = z.object({
@@ -92,29 +119,29 @@ export const profileSchema = z.object({
     .min(1, "Add at least one competitor"),
   onboardingProgress: z.number().int().min(0),
   onboardingCompleted: z.boolean(),
-  updatedAt: z.string().datetime().optional().nullable(),
-  onboardingCompletedAt: z.string().datetime().optional().nullable(),
+  updatedAt: timestampSchema,
+  onboardingCompletedAt: timestampSchema,
 });
 
 export const profileUpdateSchema = z.object({
   icpRole: requiredString,
-  primaryPain: requiredLongText,
-  buyingTrigger: requiredLongText,
+  primaryPain: requiredString,
+  buyingTrigger: requiredString,
   websiteUrl: requiredUrl,
   acvRange: acvRangeSchema,
   revenueStage: revenueStageSchema,
   salesMotion: requiredString,
   conversionGoal: conversionGoalSchema,
   pricingModel: requiredString,
-  keyObjections: z.array(textItemSchema).min(1, "Add at least one objection"),
-  proofPoints: z.array(textItemSchema).min(1, "Add at least one proof point"),
+  keyObjections: z.array(textItemUpdateSchema).min(1),
+  proofPoints: z.array(textItemUpdateSchema).min(1),
   differentiationMatrix: z
-    .array(differentiationRowSchema)
-    .min(1, "Add at least one competitor"),
+    .array(differentiationRowUpdateSchema)
+    .min(1),
   onboardingProgress: z.number().int().min(0),
   onboardingCompleted: z.boolean(),
-  updatedAt: z.string().datetime().optional().nullable(),
-  onboardingCompletedAt: z.string().datetime().optional().nullable(),
+  updatedAt: timestampSchema,
+  onboardingCompletedAt: timestampSchema,
 });
 
 export type ProfileValues = z.infer<typeof profileSchema>;

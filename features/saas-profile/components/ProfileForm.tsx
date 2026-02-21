@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { saveProfileAction } from "@/app/actions/saas-profile/saveProfile";
 import type { BillingCurrency } from "@/features/billing/types/billing.types";
@@ -42,6 +42,7 @@ import {
   formatAcvRangeLabel,
   formatRevenueStageLabel,
 } from "@/features/saas-profile/utils/monetaryLabels";
+import { sanitizeProfileText } from "@/features/saas-profile/validators/profileNormalization";
 
 const stepOneFields: Array<keyof SaasProfileFormValues> = [
   "icpRole",
@@ -54,6 +55,54 @@ const stepOneFields: Array<keyof SaasProfileFormValues> = [
   "conversionGoal",
   "pricingModel",
 ];
+
+type ComparableProfileValues = {
+  icpRole: string;
+  primaryPain: string;
+  buyingTrigger: string;
+  websiteUrl: string;
+  acvRange: SaasProfileFormValues["acvRange"];
+  revenueStage: SaasProfileFormValues["revenueStage"];
+  salesMotion: string;
+  conversionGoal: SaasProfileFormValues["conversionGoal"];
+  pricingModel: string;
+  keyObjections: string[];
+  proofPoints: string[];
+  differentiationMatrix: Array<{
+    competitor: string;
+    ourAdvantage: string;
+    theirAdvantage: string;
+  }>;
+  onboardingProgress: number;
+  onboardingCompleted: boolean;
+};
+
+function toComparableValues(
+  values: SaasProfileFormValues,
+): ComparableProfileValues {
+  return {
+    icpRole: sanitizeProfileText(values.icpRole),
+    primaryPain: sanitizeProfileText(values.primaryPain),
+    buyingTrigger: sanitizeProfileText(values.buyingTrigger),
+    websiteUrl: sanitizeProfileText(values.websiteUrl),
+    acvRange: values.acvRange,
+    revenueStage: values.revenueStage,
+    salesMotion: sanitizeProfileText(values.salesMotion),
+    conversionGoal: values.conversionGoal,
+    pricingModel: sanitizeProfileText(values.pricingModel),
+    keyObjections: values.keyObjections.map((item) =>
+      sanitizeProfileText(item.value),
+    ),
+    proofPoints: values.proofPoints.map((item) => sanitizeProfileText(item.value)),
+    differentiationMatrix: values.differentiationMatrix.map((item) => ({
+      competitor: sanitizeProfileText(item.competitor),
+      ourAdvantage: sanitizeProfileText(item.ourAdvantage),
+      theirAdvantage: sanitizeProfileText(item.theirAdvantage),
+    })),
+    onboardingProgress: values.onboardingProgress,
+    onboardingCompleted: values.onboardingCompleted,
+  };
+}
 
 type ProfileFormProps = {
   initialValues?: SaasProfileFormValues | null;
@@ -96,10 +145,27 @@ export function ProfileForm({
     setValue,
     reset,
   } = form;
+  const watchedValues = useWatch({ control: form.control });
+  const initialComparable = useMemo(
+    () => toComparableValues(initialValues ?? defaultSaasProfileValues),
+    [initialValues],
+  );
+  const hasActualChanges = useMemo(() => {
+    if (!watchedValues) {
+      return false;
+    }
+    return (
+      JSON.stringify(toComparableValues(watchedValues as SaasProfileFormValues)) !==
+      JSON.stringify(initialComparable)
+    );
+  }, [initialComparable, watchedValues]);
 
   const canSubmit = useMemo(
-    () => !isPending && formState.isDirty && formState.isValid,
-    [formState.isDirty, formState.isValid, isPending],
+    () =>
+      !isPending &&
+      formState.isValid &&
+      (formMode === "edit" ? hasActualChanges : formState.isDirty),
+    [formMode, formState.isDirty, formState.isValid, hasActualChanges, isPending],
   );
 
   const handleNext = async () => {
@@ -148,17 +214,15 @@ export function ProfileForm({
 
       reset(values, { keepValues: true });
 
-      toast({
-        title: "Profile saved",
-        description: "Your onboarding details have been updated.",
-      });
-
       if (formMode === "onboarding") {
         const target = result?.snapshotReportId
           ? `/dashboard/reports/snapshot?reportId=${result.snapshotReportId}`
           : "/dashboard/reports/snapshot";
         router.push(target);
+        return;
       }
+
+      router.push("/dashboard/profile?updated=1");
     });
   });
 

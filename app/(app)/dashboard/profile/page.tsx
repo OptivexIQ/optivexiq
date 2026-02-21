@@ -1,13 +1,25 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { CheckCircle2, X } from "lucide-react";
 import { requireUser } from "@/lib/auth/server";
 import { getProfile } from "@/features/saas-profile/services/profileService";
 import { isProfileComplete } from "@/features/saas-profile/validators/profileSchema";
 import { ProfileView } from "@/features/saas-profile/components/ProfileView";
 import { getUserSettings } from "@/features/settings/services/userSettingsService";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export default async function ProfilePage() {
+type ProfilePageProps = {
+  searchParams?: Promise<{ updated?: string | string[] }>;
+};
+
+export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const user = await requireUser();
   const profileResult = await getProfile();
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const updatedFlag = resolvedSearchParams?.updated;
+  const showUpdatedBanner = Array.isArray(updatedFlag)
+    ? updatedFlag.includes("1")
+    : updatedFlag === "1";
 
   if (!profileResult.ok) {
     return (
@@ -53,6 +65,27 @@ export default async function ProfilePage() {
           prioritizes the signals that drive revenue.
         </p>
       </div>
+
+      {showUpdatedBanner ? (
+        <Alert className="border-emerald-500/30 bg-emerald-500/8">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <AlertTitle>Profile updated</AlertTitle>
+              <AlertDescription>
+                Your profile changes were saved successfully.
+              </AlertDescription>
+            </div>
+            <Link
+              href="/dashboard/profile"
+              aria-label="Dismiss success message"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </Link>
+          </div>
+        </Alert>
+      ) : null}
 
       <ProfileView profile={profile} currency={currency} />
     </div>
