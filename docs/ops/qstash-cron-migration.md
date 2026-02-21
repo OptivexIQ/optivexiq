@@ -7,8 +7,13 @@ Vercel Hobby cannot run sub-daily Vercel cron jobs, so schedules are managed by 
 
 - `QSTASH_TOKEN`: QStash API token with schedule management access.
 - `CRON_SECRET`: Existing cron auth secret already required by this app.
-- `QSTASH_TARGET_BASE_URL` (recommended): Full base URL for target deployment, e.g. `https://your-domain.com`.
-  - Fallbacks used by script: `NEXT_PUBLIC_SITE_URL`, then `VERCEL_PROJECT_PRODUCTION_URL`.
+- `QSTASH_TARGET_BASE_URL` (required): Full base URL for target deployment, e.g. `https://your-domain.com`.
+
+## Optional Safety Controls
+
+- `QSTASH_ALLOWED_HOSTS`: Comma-separated host allowlist for schedule target protection.
+  - Example: `app.example.com,www.example.com`
+- `QSTASH_ALLOW_LOCAL_TARGET=true`: Allow localhost/.local targets for local testing only.
 
 ## Sync Schedules
 
@@ -26,6 +31,7 @@ This upserts the following schedules:
 - `0 14 * * 1` -> `/api/cron/weekly-summary`
 
 The script forwards `x-cron-secret` to keep current endpoint authorization behavior unchanged.
+The script also verifies each schedule after upsert and fails if destination host does not match target.
 
 ## Deployment Notes
 

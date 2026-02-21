@@ -41,17 +41,12 @@ function requireEnv(name, aliases = []) {
   return value;
 }
 
-function resolveSiteUrl() {
-  const baseUrl =
-    process.env.QSTASH_TARGET_BASE_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    process.env.VERCEL_PROJECT_PRODUCTION_URL;
+function parseBool(value) {
+  return typeof value === "string" && value.toLowerCase() === "true";
+}
 
-  if (!baseUrl) {
-    throw new Error(
-      "Missing site URL. Set QSTASH_TARGET_BASE_URL or NEXT_PUBLIC_SITE_URL.",
-    );
-  }
+function resolveSiteUrl() {
+  const baseUrl = requireEnv("QSTASH_TARGET_BASE_URL");
 
   const normalized = baseUrl.trim().replace(/^['"]|['"]$/g, "");
   const withScheme =
@@ -65,6 +60,32 @@ function resolveSiteUrl() {
   } catch {
     throw new Error(
       `Invalid site URL: ${baseUrl}. Set QSTASH_TARGET_BASE_URL to a full URL like https://your-domain.com`,
+    );
+  }
+}
+
+function assertSafeTargetHost(baseUrl) {
+  const host = new URL(baseUrl).hostname.toLowerCase();
+  const isLocalHost =
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host.endsWith(".local");
+
+  if (isLocalHost && !parseBool(process.env.QSTASH_ALLOW_LOCAL_TARGET)) {
+    throw new Error(
+      "Refusing localhost/.local target. Set QSTASH_ALLOW_LOCAL_TARGET=true only for local testing.",
+    );
+  }
+
+  const allowedHosts = (process.env.QSTASH_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (allowedHosts.length > 0 && !allowedHosts.includes(host)) {
+    throw new Error(
+      `Target host '${host}' is not in QSTASH_ALLOWED_HOSTS: ${allowedHosts.join(", ")}`,
     );
   }
 }
@@ -95,10 +116,54 @@ async function upsertSchedule({ token, baseUrl, cronSecret, schedule }) {
   return payload.scheduleId ?? schedule.id;
 }
 
+async function listSchedules(token) {
+  const response = await fetch("https://qstash.upstash.io/v2/schedules", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `Failed to list schedules during verification (${response.status}): ${details}`,
+    );
+  }
+  const payload = await response.json();
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && typeof payload === "object" && Array.isArray(payload.schedules)) {
+    return payload.schedules;
+  }
+  return [];
+}
+
+function verifySchedule({ schedule, baseUrl, schedules }) {
+  const destination = `${baseUrl}${schedule.path}`;
+  const expectedHost = new URL(baseUrl).host;
+  const match = schedules.find((item) => {
+    const blob = JSON.stringify(item);
+    return blob.includes(destination) && blob.includes(schedule.cron);
+  });
+  if (!match) {
+    throw new Error(
+      `Verification failed for ${schedule.id}: destination '${destination}' with cron '${schedule.cron}' not found.`,
+    );
+  }
+  const blob = JSON.stringify(match);
+  if (!blob.includes(expectedHost)) {
+    throw new Error(
+      `Verification failed for ${schedule.id}: matched entry does not include expected host '${expectedHost}'.`,
+    );
+  }
+}
+
 async function main() {
   const token = requireEnv("QSTASH_TOKEN", ["UPSTASH_QSTASH_TOKEN"]);
   const cronSecret = requireEnv("CRON_SECRET");
   const baseUrl = resolveSiteUrl();
+  assertSafeTargetHost(baseUrl);
 
   for (const schedule of schedules) {
     const scheduleId = await upsertSchedule({
@@ -110,6 +175,12 @@ async function main() {
     console.log(
       `Synced ${schedule.id} (${schedule.cron}) -> ${schedule.path} [${scheduleId}]`,
     );
+  }
+
+  const existingSchedules = await listSchedules(token);
+  for (const schedule of schedules) {
+    verifySchedule({ schedule, baseUrl, schedules: existingSchedules });
+    console.log(`Verified ${schedule.id} host and destination.`);
   }
 }
 
