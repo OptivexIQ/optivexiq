@@ -80,7 +80,7 @@ function buildRewriteFeature(limits: PlanLimitsRecord | null) {
   }
 
   if (limits.rewrite_limit === null) {
-    return "Unlimited homepage + pricing rewrites";
+    return "No hard cap on homepage + pricing rewrites";
   }
 
   return `${limits.rewrite_limit} homepage + pricing rewrites per ${formatQuotaWindowLabel(limits.rewrite_window)}`;

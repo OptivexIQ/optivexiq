@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { FeedbackIntakeForm } from "@/features/feedback/components/FeedbackIntakeForm";
 
@@ -13,8 +12,6 @@ export const metadata = {
 };
 
 export default function RequestFeaturePage() {
-  notFound();
-
   return (
     <section className="relative mx-auto max-w-6xl px-6 py-42">
       <div

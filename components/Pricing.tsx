@@ -119,7 +119,7 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
         "Ongoing conversion intelligence and optimization for serious founders.",
       highlightNote: "Best for mid-market + enterprise teams",
       features: [
-        "Unlimited homepage + pricing rewrites",
+        "No hard cap on homepage + pricing rewrites",
         "Competitor Gap Analysis (3/month)",
         "Objection Engine",
         "Differentiation Builder",
