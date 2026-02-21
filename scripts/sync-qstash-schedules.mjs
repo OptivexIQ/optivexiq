@@ -1,3 +1,8 @@
+import nextEnv from "@next/env";
+
+const { loadEnvConfig } = nextEnv;
+loadEnvConfig(process.cwd());
+
 const schedules = [
   {
     id: "optivexiq-report-jobs",
@@ -21,10 +26,17 @@ const schedules = [
   },
 ];
 
-function requireEnv(name) {
-  const value = process.env[name];
+function requireEnv(name, aliases = []) {
+  const keys = [name, ...aliases];
+  const value = keys.map((key) => process.env[key]).find((candidate) =>
+    Boolean(candidate),
+  );
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+    throw new Error(
+      `Missing required environment variable: ${name}${
+        aliases.length > 0 ? ` (or ${aliases.join(", ")})` : ""
+      }`,
+    );
   }
   return value;
 }
@@ -41,17 +53,25 @@ function resolveSiteUrl() {
     );
   }
 
-  if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) {
-    return baseUrl.replace(/\/+$/, "");
-  }
+  const normalized = baseUrl.trim().replace(/^['"]|['"]$/g, "");
+  const withScheme =
+    normalized.startsWith("http://") || normalized.startsWith("https://")
+      ? normalized
+      : `https://${normalized}`;
 
-  return `https://${baseUrl.replace(/\/+$/, "")}`;
+  try {
+    const parsed = new URL(withScheme);
+    return parsed.origin;
+  } catch {
+    throw new Error(
+      `Invalid site URL: ${baseUrl}. Set QSTASH_TARGET_BASE_URL to a full URL like https://your-domain.com`,
+    );
+  }
 }
 
 async function upsertSchedule({ token, baseUrl, cronSecret, schedule }) {
   const destination = `${baseUrl}${schedule.path}`;
-  const encodedDestination = encodeURIComponent(destination);
-  const endpoint = `https://qstash.upstash.io/v2/schedules/${encodedDestination}`;
+  const endpoint = `https://qstash.upstash.io/v2/schedules/${destination}`;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -76,7 +96,7 @@ async function upsertSchedule({ token, baseUrl, cronSecret, schedule }) {
 }
 
 async function main() {
-  const token = requireEnv("QSTASH_TOKEN");
+  const token = requireEnv("QSTASH_TOKEN", ["UPSTASH_QSTASH_TOKEN"]);
   const cronSecret = requireEnv("CRON_SECRET");
   const baseUrl = resolveSiteUrl();
 
