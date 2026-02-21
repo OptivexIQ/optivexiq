@@ -1,4 +1,7 @@
-import type { StatusIncident, SystemStatusLevel } from "@/features/status/types/status.types";
+import type {
+  StatusIncident,
+  SystemStatusLevel,
+} from "@/features/status/types/status.types";
 
 export function toStatusLabel(status: SystemStatusLevel) {
   if (status === "operational") return "Operational";
@@ -8,13 +11,10 @@ export function toStatusLabel(status: SystemStatusLevel) {
 }
 
 export function statusBadgeTone(status: SystemStatusLevel) {
-  if (status === "operational")
-    return "border-emerald-500/40 bg-emerald-500/15 text-emerald-200";
-  if (status === "degraded")
-    return "border-amber-500/40 bg-amber-500/15 text-amber-200";
-  if (status === "partial_outage")
-    return "border-orange-500/40 bg-orange-500/15 text-orange-200";
-  return "border-red-500/40 bg-red-500/15 text-red-200";
+  if (status === "operational") return "text-sm text-emerald-500";
+  if (status === "degraded") return "text-sm text-amber-500";
+  if (status === "partial_outage") return "text-sm text-orange-500";
+  return "text-sm text-red-500";
 }
 
 export function statusDotTone(status: SystemStatusLevel) {
@@ -22,6 +22,13 @@ export function statusDotTone(status: SystemStatusLevel) {
   if (status === "degraded") return "bg-amber-500";
   if (status === "partial_outage") return "bg-orange-500";
   return "bg-red-600";
+}
+
+export function statusDotRingTone(status: SystemStatusLevel) {
+  if (status === "operational") return "bg-emerald-500/25";
+  if (status === "degraded") return "bg-amber-500/25";
+  if (status === "partial_outage") return "bg-orange-500/25";
+  return "bg-red-600/25";
 }
 
 export function formatStatusTime(iso: string) {

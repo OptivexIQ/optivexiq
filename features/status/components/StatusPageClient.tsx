@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,37 +12,54 @@ import {
   formatStatusTime,
   latestIncidentUpdate,
   statusBadgeTone,
+  statusDotRingTone,
   statusDotTone,
   toStatusLabel,
 } from "@/features/status/components/statusViewUtils";
 
 export default function StatusPageClient() {
+  const fallbackRefreshSeconds = 60;
   const [payload, setPayload] = useState<StatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(
+    fallbackRefreshSeconds,
+  );
 
-  async function loadStatus() {
+  const loadStatus = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const next = await getStatus();
       setPayload(next);
       setError(null);
+      setSecondsUntilRefresh(next.meta.refreshSeconds);
     } catch {
       setError("Unable to load status. Please refresh.");
     } finally {
       setIsRefreshing(false);
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void loadStatus();
-    const timer = setInterval(() => {
-      void loadStatus();
-    }, 60_000);
-    return () => clearInterval(timer);
-  }, []);
+  }, [loadStatus]);
+
+  useEffect(() => {
+    const refreshWindow =
+      payload?.meta.refreshSeconds ?? fallbackRefreshSeconds;
+    const timer = window.setInterval(() => {
+      setSecondsUntilRefresh((previous) => {
+        if (previous <= 1) {
+          void loadStatus();
+          return refreshWindow;
+        }
+        return previous - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [loadStatus, payload?.meta.refreshSeconds]);
 
   if (loading) {
     return (
@@ -110,11 +127,22 @@ export default function StatusPageClient() {
         <CardContent className="flex flex-wrap items-start justify-between gap-5 py-6">
           <div className="flex items-start gap-4">
             <span
-              className={`mt-1 inline-block h-3 w-3 rounded-full ${statusDotTone(payload.overall.status)} ${isRefreshing ? "animate-pulse" : ""}`}
+              className="relative mt-1 inline-flex h-10 w-10 items-center justify-center"
               aria-label={
                 isRefreshing ? "Refreshing live status" : "Live status current"
               }
-            />
+            >
+              {isRefreshing ? (
+                <span
+                  className={`absolute inset-0 rounded-full ${statusDotRingTone(payload.overall.status)} animate-[pulse_2.2s_cubic-bezier(0.4,0,0.2,1)_infinite]`}
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span
+                className={`h-6 w-6 rounded-full ${statusDotTone(payload.overall.status)}`}
+                aria-hidden="true"
+              />
+            </span>
             <div className="space-y-1">
               <p className="text-xl font-semibold text-foreground">
                 {toStatusLabel(payload.overall.status)}
@@ -126,7 +154,10 @@ export default function StatusPageClient() {
           </div>
           <div className="text-sm text-muted-foreground">
             <p>Last updated: {formatStatusTime(payload.overall.updatedAt)}</p>
-            <p>Refresh cadence: every {payload.meta.refreshSeconds} seconds</p>
+            <p>
+              Next refresh in {secondsUntilRefresh}s (every{" "}
+              {payload.meta.refreshSeconds}s)
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -149,9 +180,9 @@ export default function StatusPageClient() {
                       {component.description}
                     </p>
                   </div>
-                  <Badge className={statusBadgeTone(component.status)}>
+                  <span className={statusBadgeTone(component.status)}>
                     {toStatusLabel(component.status)}
-                  </Badge>
+                  </span>
                 </div>
                 {component.detail ? (
                   <p className="text-sm text-muted-foreground">
@@ -169,11 +200,16 @@ export default function StatusPageClient() {
         <div className="space-y-6">
           <Card className="border-border/70">
             <CardHeader>
-              <CardTitle className="text-lg">Reliability Snapshot</CardTitle>
+              <CardTitle className="text-lg">Status Methodology</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>
-                Reliability metrics will be published as we expand monitoring.
+                Status updates every {payload.meta.refreshSeconds} seconds from
+                live operational signals.
+              </p>
+              <p>
+                This page lists customer-impacting incidents and service health
+                changes.
               </p>
               <p>{payload.meta.dataSourceNote}</p>
             </CardContent>
