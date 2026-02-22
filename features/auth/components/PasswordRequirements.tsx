@@ -28,10 +28,11 @@ export function PasswordRequirements({
             : "font-medium text-amber-600"
         }
         aria-live="polite"
+        aria-atomic="true"
       >
         Password strength: {strength}
       </p>
-      <ul className="mt-2 space-y-1" aria-live="polite">
+      <ul className="mt-2 space-y-1" aria-live="polite" aria-atomic="true">
         {requirements.map((item) => (
           <li
             key={item.key}
