@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+import Link from "next/link";
+import Image from "next/image";
 
 export function Footer() {
   const linkGroups = [
@@ -36,31 +37,16 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-4">
           {/* Brand */}
           <div>
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="text-primary-foreground"
-                >
-                  <path
-                    d="M2 4L8 2L14 4L8 6L2 4Z"
-                    fill="currentColor"
-                    opacity="0.9"
-                  />
-                  <path
-                    d="M2 4V10L8 12V6L2 4Z"
-                    fill="currentColor"
-                    opacity="0.6"
-                  />
-                  <path d="M8 6V12L14 10V4L8 6Z" fill="currentColor" />
-                </svg>
-              </div>
-              <span className="text-base font-semibold text-foreground">
-                OptivexIQ
-              </span>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/optivex_white_logo.png"
+                alt="OptivexIQ"
+                width={132}
+                height={32}
+                sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, 100vw"
+                quality={100}
+                className="h-8 w-auto"
+              />
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               SaaS Conversion Intelligence. Analyze positioning, uncover gaps,

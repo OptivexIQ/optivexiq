@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { createSupabaseBrowserClient } from "@/services/supabase/browser";
 import { useMemo, useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -56,26 +57,16 @@ export function Navbar() {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="text-primary-foreground"
-            >
-              <path
-                d="M2 4L8 2L14 4L8 6L2 4Z"
-                fill="currentColor"
-                opacity="0.9"
-              />
-              <path d="M2 4V10L8 12V6L2 4Z" fill="currentColor" opacity="0.6" />
-              <path d="M8 6V12L14 10V4L8 6Z" fill="currentColor" />
-            </svg>
-          </div>
-          <span className="text-base font-semibold tracking-tight text-foreground">
-            OptivexIQ
-          </span>
+          <Image
+            src="/optivex_white_logo.png"
+            alt="OptivexIQ"
+            width={132}
+            height={32}
+            sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, 100vw"
+            quality={100}
+            className="h-8 w-auto"
+            priority
+          />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">

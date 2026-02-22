@@ -27,7 +27,7 @@ export default async function DashboardNavbar() {
   const headline = workspaceName ? `${workspaceName} Dashboard` : "Dashboard";
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 px-6 py-4">
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 px-6 py-4 pb-3">
       <div className="flex items-center gap-3">
         <SidebarToggle />
         <div>
