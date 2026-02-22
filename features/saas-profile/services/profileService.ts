@@ -1,4 +1,7 @@
-import { createSupabaseServerClient } from "@/services/supabase/server";
+import {
+  createSupabaseServerMutableClient,
+  createSupabaseServerReadOnlyClient,
+} from "@/services/supabase/server";
 import { createSupabaseAdminClient } from "@/services/supabase/admin";
 import {
   defaultSaasProfileValues,
@@ -101,7 +104,7 @@ export type ProfileResult =
   | { ok: false; error: string };
 
 export async function getProfile(): Promise<ProfileResult> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerReadOnlyClient();
   const { data: authData } = await supabase.auth.getUser();
 
   if (!authData.user) {
@@ -161,7 +164,7 @@ export async function upsertProfile(
   values: SaasProfileFormValues,
   options?: UpsertProfileOptions,
 ) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerMutableClient();
   const { data: authData } = await supabase.auth.getUser();
 
   if (!authData.user) {
@@ -244,7 +247,7 @@ type OnboardingState = {
 export async function getOnboardingState(
   userId: string,
 ): Promise<OnboardingState | null> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerReadOnlyClient();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user || authData.user.id !== userId) {
     return null;

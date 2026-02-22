@@ -2,7 +2,7 @@ import { logger } from "@/lib/logger";
 import type { SubscriptionRecord } from "@/features/billing/types/billing.types";
 import { getPlanLimits } from "@/features/billing/services/planLimitsService";
 import { evaluateSubscriptionLifecycle } from "@/features/billing/services/subscriptionLifecycleService";
-import { createSupabaseServerClient } from "@/services/supabase/server";
+import { createSupabaseServerReadOnlyClient } from "@/services/supabase/server";
 
 async function isSubscriptionActive(record: SubscriptionRecord | null) {
   if (!record) {
@@ -22,7 +22,7 @@ export async function getSubscription(
   userId: string,
 ): Promise<SubscriptionRecord | null> {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerReadOnlyClient();
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError || !authData.user || authData.user.id !== userId) {
       logger.error("Subscription scope validation failed.", authError, {

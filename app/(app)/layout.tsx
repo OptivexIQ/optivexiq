@@ -4,6 +4,8 @@ import AppSidebar from "@/components/layout/Sidebar";
 import DashboardFooter from "@/components/dashboard/DashboardFooter";
 import DashboardNavbar from "@/components/layout/DashboardNavbar";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: Readonly<{

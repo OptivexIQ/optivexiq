@@ -6,7 +6,19 @@ import {
 } from "@/lib/env";
 import { logger } from "@/lib//logger";
 
-export const createSupabaseServerClient = async () => {
+type SupabaseServerClientMode = "readOnly" | "mutable";
+
+function isDynamicServerUsageError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes("Dynamic server usage") &&
+    error.message.includes("cookies")
+  );
+}
+
+async function createSupabaseServerClientWithMode(
+  mode: SupabaseServerClientMode,
+) {
   if (!NEXT_PUBLIC_SUPABASE_URL || !NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     logger.error("Missing Supabase environment variables.");
     throw new Error("Missing Supabase environment variables.");
@@ -20,6 +32,10 @@ export const createSupabaseServerClient = async () => {
         return entries.map(({ name, value }) => ({ name, value }));
       },
       setAll(cookiesToSet) {
+        if (mode === "readOnly") {
+          return;
+        }
+
         cookiesToSet.forEach(({ name, value, options }) => {
           try {
             cookieStore.set({ name, value, ...options });
@@ -41,7 +57,17 @@ export const createSupabaseServerClient = async () => {
       },
     );
   } catch (error) {
-    logger.error("Failed to create Supabase server client.", error);
+    if (!isDynamicServerUsageError(error)) {
+      logger.error("Failed to create Supabase server client.", error);
+    }
     throw error;
   }
-};
+}
+
+export const createSupabaseServerReadOnlyClient = async () =>
+  createSupabaseServerClientWithMode("readOnly");
+
+export const createSupabaseServerMutableClient = async () =>
+  createSupabaseServerClientWithMode("mutable");
+
+export const createSupabaseServerClient = createSupabaseServerMutableClient;

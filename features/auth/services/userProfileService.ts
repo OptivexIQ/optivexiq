@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/services/supabase/server";
+import { createSupabaseServerReadOnlyClient } from "@/services/supabase/server";
 import { logger } from "@/lib/logger";
 
 export type UserProfile = {
@@ -11,7 +11,7 @@ export async function getUserProfile(
   userId: string,
 ): Promise<UserProfile | null> {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerReadOnlyClient();
     const { data, error } = await supabase
       .from("user_profiles")
       .select("full_name, avatar_url, role")

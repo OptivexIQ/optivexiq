@@ -1,4 +1,7 @@
-import { createSupabaseServerClient } from "@/services/supabase/server";
+import {
+  createSupabaseServerMutableClient,
+  createSupabaseServerReadOnlyClient,
+} from "@/services/supabase/server";
 import { logger } from "@/lib/logger";
 import { hasActiveSubscription } from "@/features/billing/services/planValidationService";
 import type { BillingCurrency } from "@/features/billing/types/billing.types";
@@ -82,7 +85,7 @@ function normalizeSettingsRecord(
 }
 
 async function subscriptionExists(userId: string): Promise<boolean> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerReadOnlyClient();
   const { data, error } = await supabase
     .from("subscriptions")
     .select("user_id")
@@ -111,7 +114,7 @@ async function assertUserScopeOrSystem(
   userId: string,
   source: "read" | "write",
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerReadOnlyClient();
   const { data, error } = await supabase.auth.getUser();
 
   if (error) {
@@ -150,7 +153,7 @@ async function fetchUserSettings(userId: string): Promise<UserSettingsResult> {
       return { ok: false, error: scope.error };
     }
 
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerReadOnlyClient();
     const { data, error } = await supabase
       .from("user_settings")
       .select("*")
@@ -232,7 +235,7 @@ async function updateUserSettingsRecord(
       return { ok: false, error: "Subscription missing." };
     }
 
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerMutableClient();
     const { data, error } = await supabase
       .from("user_settings")
       .upsert(

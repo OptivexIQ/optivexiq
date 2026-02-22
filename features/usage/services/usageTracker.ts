@@ -1,6 +1,6 @@
 import { logger } from "@/lib/logger";
 import { createSupabaseAdminClient } from "@/services/supabase/admin";
-import { createSupabaseServerClient } from "@/services/supabase/server";
+import { createSupabaseServerReadOnlyClient } from "@/services/supabase/server";
 import type { UsageRecord, UsageMutationResult } from "./../types/usage.types";
 
 type InitializeResult = UsageRecord | null;
@@ -23,7 +23,7 @@ function nowIso() {
 }
 
 async function getUserScopedSupabase(userId: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerReadOnlyClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user || authData.user.id !== userId) {
     logger.error("Usage scope validation failed.", authError, {
