@@ -57,7 +57,7 @@ export function Footer() {
           {/* Link groups */}
           {linkGroups.map((group) => (
             <div key={group.title}>
-              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="mb-4 text-sm font-semibold tracking-[0.14em] text-muted-foreground">
                 {group.title}
               </p>
               <ul className="space-y-2.5">
@@ -65,7 +65,7 @@ export function Footer() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-[15px] text-muted-foreground transition-colors hover:text-foreground"
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {link.label}
                     </Link>
