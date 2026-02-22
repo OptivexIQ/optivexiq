@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   AcvRangeValue,
   ConversionGoalValue,
   RevenueStageValue,
@@ -8,9 +8,9 @@ function normalizeTextBase(value: string): string {
   return value
     .normalize("NFKC")
     .replace(/[\u0000-\u001F\u007F]/g, "")
-    .replace(/Ã¢â€šÂ¬/g, "EUR")
-    .replace(/â‚¬/g, "EUR")
-    .replace(/[â€“â€”]/g, "-")
+    .replace(/\u20AC/g, "EUR")
+    .replace(/\u00E2\u201A\u00AC/g, "EUR")
+    .replace(/(?:\u00E2\u20AC\u201C|\u00E2\u20AC\u201D|\u2013|\u2014)/g, "-")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -22,9 +22,8 @@ function compactForEnum(value: string): string {
     .replace(/mrr/g, "")
     .replace(/annualrecurringrevenue/g, "")
     .replace(/arr/g, "")
-    .replace(/€/g, "eur")
-    .replace(/â‚¬/g, "eur")
-    .replace(/£/g, "gbp")
+    .replace(/(?:\u20AC|\u00E2\u201A\u00AC)/g, "eur")
+    .replace(/(?:\u00A3|\u00C2\u00A3)/g, "gbp")
     .replace(/\$/g, "usd");
 }
 
