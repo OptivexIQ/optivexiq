@@ -4,7 +4,7 @@ import { evaluatePasswordPolicy } from "@/lib/auth/passwordPolicy";
 export const signUpSchema = z
   .object({
     email: z.string().email(),
-    password: z.string().min(8),
+    password: z.string().min(12),
     name: z.string().max(100).optional(),
   })
   .superRefine((values, context) => {

@@ -1,5 +1,12 @@
 export type PasswordRequirement = {
-  key: "length" | "numberOrSymbol" | "noEmail" | "noName";
+  key:
+    | "length"
+    | "lowercase"
+    | "uppercase"
+    | "number"
+    | "special"
+    | "noEmail"
+    | "noUsername";
   label: string;
   valid: boolean;
 };
@@ -10,7 +17,10 @@ type PasswordPolicyInput = {
   name?: string | null;
 };
 
-const numberOrSymbol = /[0-9]|[^a-zA-Z0-9]/;
+const hasLowercase = /[a-z]/;
+const hasUppercase = /[A-Z]/;
+const hasNumber = /[0-9]/;
+const hasSpecial = /[^a-zA-Z0-9]/;
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -35,48 +45,66 @@ export function evaluatePasswordPolicy(input: PasswordPolicyInput) {
   const password = input.password ?? "";
   const normalizedPassword = password.toLowerCase();
   const normalizedEmail = normalize(input.email);
-  const normalizedName = normalize(input.name);
+  const normalizedUsername = normalize(input.name);
   const emailLocalPart = normalizedEmail.split("@")[0] ?? "";
   const emailTokens = [
     normalizedEmail,
     emailLocalPart,
     ...tokenize(emailLocalPart),
   ].filter(Boolean);
-  const nameTokens = [
-    normalizedName,
-    normalizedName.replace(/\s+/g, ""),
-    ...tokenize(normalizedName),
+  const usernameTokens = [
+    normalizedUsername,
+    normalizedUsername.replace(/\s+/g, ""),
+    ...tokenize(normalizedUsername),
   ].filter(Boolean);
 
-  const lengthValid = password.length >= 8;
-  const numberOrSymbolValid = numberOrSymbol.test(password);
+  const lengthValid = password.length >= 12;
+  const lowercaseValid = hasLowercase.test(password);
+  const uppercaseValid = hasUppercase.test(password);
+  const numberValid = hasNumber.test(password);
+  const specialValid = hasSpecial.test(password);
   const noEmailValid = emailTokens.every(
     (token) => !contains(normalizedPassword, token),
   );
-  const noNameValid = nameTokens.every(
+  const noUsernameValid = usernameTokens.every(
     (token) => !contains(normalizedPassword, token),
   );
 
   const requirements: PasswordRequirement[] = [
     {
       key: "length",
-      label: "At least 8 characters",
+      label: "Includes 12 characters",
       valid: lengthValid,
     },
     {
-      key: "numberOrSymbol",
-      label: "Includes a number or symbol",
-      valid: numberOrSymbolValid,
+      key: "lowercase",
+      label: "Lowercase letter",
+      valid: lowercaseValid,
+    },
+    {
+      key: "uppercase",
+      label: "Uppercase letter",
+      valid: uppercaseValid,
+    },
+    {
+      key: "number",
+      label: "Number",
+      valid: numberValid,
+    },
+    {
+      key: "special",
+      label: "Special character",
+      valid: specialValid,
     },
     {
       key: "noEmail",
-      label: "Does not include your email",
+      label: "Not your email",
       valid: noEmailValid,
     },
     {
-      key: "noName",
-      label: "Does not include your name",
-      valid: noNameValid,
+      key: "noUsername",
+      label: "Not your username",
+      valid: noUsernameValid,
     },
   ];
 
