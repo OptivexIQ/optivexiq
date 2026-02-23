@@ -205,9 +205,7 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
               className={`relative flex flex-col rounded-2xl transition-all duration-300 ${
                 plan.highlighted
                   ? "z-10 border border-primary/50 bg-card p-8 shadow-xl shadow-black/30 lg:-translate-y-3 lg:scale-110 lg:py-10"
-                  : plan.action === "contact"
-                    ? "border border-primary/30 bg-card p-8 shadow-sm shadow-primary/10"
-                    : "border border-border/60 bg-card p-8 hover:border-border"
+                  : "border border-border/60 bg-card p-8 hover:border-border"
               }`}
             >
               {plan.badge ? (
