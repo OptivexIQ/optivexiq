@@ -1,22 +1,11 @@
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
-
-export type ScoringModel = {
-  clarityWeight: number;
-  differentiationWeight: number;
-  objectionCoverageWeight: number;
-  competitiveOverlapWeight: number;
-  pricingExposureWeight: number;
-};
+import {
+  CANONICAL_SCORING_MODEL,
+  CANONICAL_SCORING_MODEL_VERSION,
+  type ScoringModel,
+} from "@/features/conversion-gap/services/scoringModelRegistry";
 
 type ThreatLevel = "low" | "medium" | "high";
-
-const DEFAULT_SCORING_MODEL: ScoringModel = {
-  clarityWeight: 0.24,
-  differentiationWeight: 0.24,
-  objectionCoverageWeight: 0.2,
-  competitiveOverlapWeight: 0.16,
-  pricingExposureWeight: 0.16,
-};
 
 function clampScore(value: number): number {
   if (!Number.isFinite(value)) {
@@ -46,12 +35,14 @@ function toThreatLevel(value: number): ThreatLevel {
 
 export function calculateScore(
   report: ConversionGapReport,
-  model: ScoringModel = DEFAULT_SCORING_MODEL,
+  model: ScoringModel = CANONICAL_SCORING_MODEL,
 ): {
   gapScore: number;
   revenueRiskLevel: ThreatLevel;
   competitiveThreatLevel: ThreatLevel;
-  scoringBreakdown: Record<string, number>;
+  overallThreatLevel: ThreatLevel;
+  scoringModelVersion: string;
+  scoringBreakdown: ConversionGapReport["scoringBreakdown"];
 } {
   const objectionAverage = clampScore(average(Object.values(report.objectionCoverage)));
   const overlapAverage = clampScore(
@@ -80,11 +71,20 @@ export function calculateScore(
   const competitiveThreatSignal = clampScore(
     Math.round(overlapAverage * 0.6 + (100 - differentiationHealth) * 0.4),
   );
+  const revenueRiskLevel = toThreatLevel(revenueRiskSignal);
+  const competitiveThreatLevel = toThreatLevel(competitiveThreatSignal);
 
   return {
     gapScore,
-    revenueRiskLevel: toThreatLevel(revenueRiskSignal),
-    competitiveThreatLevel: toThreatLevel(competitiveThreatSignal),
+    revenueRiskLevel,
+    competitiveThreatLevel,
+    overallThreatLevel:
+      revenueRiskLevel === "high" || competitiveThreatLevel === "high"
+        ? "high"
+        : revenueRiskLevel === "medium" || competitiveThreatLevel === "medium"
+          ? "medium"
+          : "low",
+    scoringModelVersion: CANONICAL_SCORING_MODEL_VERSION,
     scoringBreakdown: {
       clarity: clarityHealth,
       differentiation: differentiationHealth,
@@ -97,4 +97,3 @@ export function calculateScore(
     },
   };
 }
-

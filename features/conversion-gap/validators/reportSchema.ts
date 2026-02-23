@@ -12,6 +12,17 @@ export const conversionGapReportSchema = z.object({
   pricingScore: z.number(),
   clarityScore: z.number(),
   confidenceScore: z.number(),
+  scoringModelVersion: z.string().min(1),
+  scoringBreakdown: z.object({
+    clarity: z.number(),
+    differentiation: z.number(),
+    objectionCoverage: z.number(),
+    competitiveOverlap: z.number(),
+    pricingExposure: z.number(),
+    weightedScore: z.number(),
+    revenueRiskSignal: z.number(),
+    competitiveThreatSignal: z.number(),
+  }),
   messagingOverlap: z.object({
     items: z.array(
       z.object({

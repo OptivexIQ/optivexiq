@@ -46,6 +46,7 @@ import {
 } from "@/features/saas-profile/validators/profileNormalization";
 import { validateGapReport } from "@/features/reports/services/reportService";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
+import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
 
 export type ReportCreatePayload = {
   homepage_url: string;
@@ -374,6 +375,17 @@ function buildFailedReportData(
     clarityScore: 0,
     confidenceScore: 0,
     threatLevel: "low",
+    scoringModelVersion: CANONICAL_SCORING_MODEL_VERSION,
+    scoringBreakdown: {
+      clarity: 0,
+      differentiation: 0,
+      objectionCoverage: 0,
+      competitiveOverlap: 0,
+      pricingExposure: 0,
+      weightedScore: 0,
+      revenueRiskSignal: 0,
+      competitiveThreatSignal: 0,
+    },
     executiveNarrative: safeMessage,
     executiveSummary: safeMessage,
     messagingOverlap: {

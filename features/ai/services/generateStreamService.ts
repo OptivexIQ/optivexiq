@@ -9,6 +9,7 @@ import {
   reserveGenerateUsage,
   rollbackGenerateUsage,
 } from "@/features/usage/services/usageTracker";
+import { enqueueUsageFinalizationReconciliation } from "@/features/usage/services/usageFinalizationReconciliationService";
 import { emitOperationalAlert } from "@/lib/ops/criticalAlertService";
 import { errorResponse } from "@/lib/api/errorResponse";
 import type { NextRequest } from "next/server";
@@ -335,9 +336,23 @@ export async function handleGenerateStream(params: {
                   actualCostCents: reservedCostCents,
                 });
                 if (!fallback.ok) {
+                  const errorMessage =
+                    fallback.error ??
+                    abortedFinalization.error ??
+                    "aborted_stream_finalization_failed";
+                  await enqueueUsageFinalizationReconciliation({
+                    reservationKey: requestId,
+                    userId,
+                    route: "/api/generate",
+                    exactTokens: actualTokens,
+                    exactCostCents: actualCostCents,
+                    fallbackTokens: reservedTokens,
+                    fallbackCostCents: reservedCostCents,
+                    errorMessage,
+                  });
                   logger.error("Failed to finalize usage for aborted stream.", {
                     requestId,
-                    error: fallback.error ?? abortedFinalization.error,
+                    error: errorMessage,
                     charge_state: "reservation_retained",
                   });
                   await emitOperationalAlert({
@@ -352,10 +367,7 @@ export async function handleGenerateStream(params: {
                       exact_cost_cents: actualCostCents,
                       fallback_tokens: reservedTokens,
                       fallback_cost_cents: reservedCostCents,
-                      error:
-                        fallback.error ??
-                        abortedFinalization.error ??
-                        "aborted_stream_finalization_failed",
+                      error: errorMessage,
                     },
                   });
                 }
@@ -388,6 +400,16 @@ export async function handleGenerateStream(params: {
           });
 
           if (!finalization.ok) {
+            await enqueueUsageFinalizationReconciliation({
+              reservationKey: requestId,
+              userId,
+              route: "/api/generate",
+              exactTokens: finalizedTokens,
+              exactCostCents: finalizedCostCents,
+              fallbackTokens: reservedTokens,
+              fallbackCostCents: reservedCostCents,
+              errorMessage: "finalization_failed_after_retries",
+            });
             logger.error("AI usage finalization failed after retries.", {
               request_id: requestId,
               user_id: userId,

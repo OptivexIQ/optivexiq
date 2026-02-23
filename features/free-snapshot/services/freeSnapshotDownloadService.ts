@@ -3,6 +3,8 @@ import type { FreeConversionSnapshot } from "@/features/free-snapshot/types/free
 import { getFreeSnapshotById } from "@/features/free-snapshot/services/freeSnapshotRepository";
 import { freeConversionSnapshotSchema } from "@/features/free-snapshot/validators/freeSnapshotSchema";
 import { generateSnapshotPdf } from "@/features/free-snapshot/pdf/generateSnapshotPdf";
+import { calculateScore } from "@/features/conversion-gap/services/scoringEngine";
+import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
 
 function toCanonicalReport(
   snapshotId: string,
@@ -13,8 +15,7 @@ function toCanonicalReport(
   const gapA = snapshot.topMessagingGap;
   const gapB = snapshot.topObjectionGap;
   const score = Math.round((snapshot.clarityScore + snapshot.positioningScore) / 2);
-
-  return {
+  const baseReport: ConversionGapReport = {
     id: snapshotId,
     company: websiteUrl,
     segment: "SaaS",
@@ -28,7 +29,18 @@ function toCanonicalReport(
     pricingScore: score,
     clarityScore: snapshot.clarityScore,
     confidenceScore: score,
-    threatLevel: score >= 70 ? "low" : score >= 45 ? "medium" : "high",
+    threatLevel: "low",
+    scoringModelVersion: CANONICAL_SCORING_MODEL_VERSION,
+    scoringBreakdown: {
+      clarity: 0,
+      differentiation: 0,
+      objectionCoverage: 0,
+      competitiveOverlap: 0,
+      pricingExposure: 0,
+      weightedScore: 0,
+      revenueRiskSignal: 0,
+      competitiveThreatSignal: 0,
+    },
     executiveNarrative: snapshot.executiveSummary,
     executiveSummary: snapshot.executiveSummary,
     messagingOverlap: {
@@ -85,6 +97,15 @@ function toCanonicalReport(
       },
     ],
     priorityIndex: [],
+  };
+
+  const modeled = calculateScore(baseReport);
+  return {
+    ...baseReport,
+    conversionScore: modeled.gapScore,
+    threatLevel: modeled.overallThreatLevel,
+    scoringModelVersion: modeled.scoringModelVersion,
+    scoringBreakdown: modeled.scoringBreakdown,
   };
 }
 

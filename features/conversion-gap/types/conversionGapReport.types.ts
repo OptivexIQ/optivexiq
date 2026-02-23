@@ -22,6 +22,17 @@ export type RevenueImpact = {
   projectedPipelineRecovery: number;
 };
 
+export type ScoringBreakdown = {
+  clarity: number;
+  differentiation: number;
+  objectionCoverage: number;
+  competitiveOverlap: number;
+  pricingExposure: number;
+  weightedScore: number;
+  revenueRiskSignal: number;
+  competitiveThreatSignal: number;
+};
+
 export type RewriteRecommendation = {
   title: string;
   slug: string;
@@ -47,6 +58,8 @@ export type ConversionGapReport = {
   clarityScore: number;
   confidenceScore: number;
   threatLevel: ThreatLevel;
+  scoringModelVersion: string;
+  scoringBreakdown: ScoringBreakdown;
 
   executiveNarrative: string;
   executiveSummary: string;

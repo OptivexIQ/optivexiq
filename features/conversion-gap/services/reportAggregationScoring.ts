@@ -1,5 +1,4 @@
 import type { GapAnalysisOutput } from "@/features/conversion-gap/types/gap.types";
-import type { ThreatLevel } from "@/features/conversion-gap/types/conversionGapReport.types";
 
 export function clampScore(value: number) {
   if (!Number.isFinite(value)) {
@@ -7,19 +6,6 @@ export function clampScore(value: number) {
   }
 
   return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-export function mapThreatLevel(
-  funnelRisk: number,
-  differentiationScore: number,
-): ThreatLevel {
-  if (funnelRisk >= 65 || differentiationScore <= 35) {
-    return "high";
-  }
-  if (funnelRisk >= 35 || differentiationScore <= 60) {
-    return "medium";
-  }
-  return "low";
 }
 
 export function toSafeArray(value: unknown): string[] {
@@ -79,4 +65,3 @@ export function normalizeCompanyName(company: string, websiteUrl: string) {
     throw new Error("company_resolution_failed");
   }
 }
-

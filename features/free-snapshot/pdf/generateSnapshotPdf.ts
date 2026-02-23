@@ -4,6 +4,7 @@ import {
 } from "@/features/free-snapshot/pdf/renderSnapshotHtml";
 import type { SnapshotPdfProps } from "@/features/free-snapshot/pdf/SnapshotPdfTemplate";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
+import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
 
 type PuppeteerBrowser = {
   newPage: () => Promise<{
@@ -138,6 +139,17 @@ function buildVerificationReport(): ConversionGapReport {
     clarityScore: 67,
     confidenceScore: 60,
     threatLevel: "medium",
+    scoringModelVersion: CANONICAL_SCORING_MODEL_VERSION,
+    scoringBreakdown: {
+      clarity: 67,
+      differentiation: 61,
+      objectionCoverage: 42,
+      competitiveOverlap: 0,
+      pricingExposure: 42,
+      weightedScore: 64,
+      revenueRiskSignal: 36,
+      competitiveThreatSignal: 39,
+    },
     executiveNarrative: verbose,
     executiveSummary: verbose,
     messagingOverlap: {

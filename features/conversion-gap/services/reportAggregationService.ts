@@ -3,7 +3,6 @@ import { modelRevenueImpact } from "@/features/conversion-gap/services/revenueMo
 import { calculateScore } from "@/features/conversion-gap/services/scoringEngine";
 import {
   computeScores,
-  mapThreatLevel,
   normalizeCompanyName,
   toSafeArray,
 } from "@/features/conversion-gap/services/reportAggregationScoring";
@@ -29,7 +28,6 @@ export function buildConversionGapReport(
 ): ConversionGapReport {
   const company = normalizeCompanyName(input.company, input.websiteUrl);
   const scores = computeScores(input.gapAnalysis);
-  const threatLevel = mapThreatLevel(scores.funnelRisk, scores.differentiationScore);
   const competitors = Array.isArray(input.competitorData.competitors)
     ? input.competitorData.competitors
     : [];
@@ -109,7 +107,18 @@ export function buildConversionGapReport(
     pricingScore: scores.pricingScore,
     clarityScore: scores.clarityScore,
     confidenceScore: scores.confidenceScore,
-    threatLevel,
+    threatLevel: "low",
+    scoringModelVersion: "",
+    scoringBreakdown: {
+      clarity: 0,
+      differentiation: 0,
+      objectionCoverage: 0,
+      competitiveOverlap: 0,
+      pricingExposure: 0,
+      weightedScore: 0,
+      revenueRiskSignal: 0,
+      competitiveThreatSignal: 0,
+    },
     executiveNarrative,
     executiveSummary: executiveNarrative,
     messagingOverlap,
@@ -131,18 +140,12 @@ export function buildConversionGapReport(
   };
 
   const modeledScore = calculateScore(baseReport);
-  const modeledThreatLevel =
-    modeledScore.revenueRiskLevel === "high" ||
-    modeledScore.competitiveThreatLevel === "high"
-      ? "high"
-      : modeledScore.revenueRiskLevel === "medium" ||
-          modeledScore.competitiveThreatLevel === "medium"
-        ? "medium"
-        : "low";
 
   return {
     ...baseReport,
     conversionScore: modeledScore.gapScore,
-    threatLevel: modeledThreatLevel,
+    threatLevel: modeledScore.overallThreatLevel,
+    scoringModelVersion: modeledScore.scoringModelVersion,
+    scoringBreakdown: modeledScore.scoringBreakdown,
   };
 }

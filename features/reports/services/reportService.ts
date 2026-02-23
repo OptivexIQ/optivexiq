@@ -8,7 +8,6 @@ import type {
 import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import { getUserSettings } from "@/features/settings/services/userSettingsService";
-import { calculateScore } from "@/features/conversion-gap/services/scoringModelService";
 
 type GapReportRow = {
   id: string;
@@ -36,19 +35,6 @@ function isReportExpired(createdAt: string | null, retentionDays: number) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - retentionDays);
   return created < cutoff;
-}
-
-function maxThreatLevel(
-  a: ConversionGapReport["threatLevel"],
-  b: ConversionGapReport["threatLevel"],
-): ConversionGapReport["threatLevel"] {
-  const rank: Record<ConversionGapReport["threatLevel"], number> = {
-    low: 1,
-    medium: 2,
-    high: 3,
-  };
-
-  return rank[a] >= rank[b] ? a : b;
 }
 
 async function fetchGapReport(reportId: string): Promise<ReportFetchResult> {
@@ -109,19 +95,9 @@ async function fetchGapReport(reportId: string): Promise<ReportFetchResult> {
       return { status: "error", message: "Report data invalid." };
     }
 
-    const modeled = calculateScore(report);
-    const threatLevel = maxThreatLevel(
-      modeled.revenueRiskLevel,
-      modeled.competitiveThreatLevel,
-    );
-
     return {
       status: "ok",
-      report: {
-        ...report,
-        conversionScore: modeled.gapScore,
-        threatLevel,
-      },
+      report,
     };
   } catch (error) {
     logger.error("Failed to fetch gap report.", error);
