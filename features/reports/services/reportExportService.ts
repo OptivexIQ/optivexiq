@@ -1,5 +1,4 @@
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
-
 type ExportFormat = "pdf" | "html" | "txt";
 
 type ExportPayload = {

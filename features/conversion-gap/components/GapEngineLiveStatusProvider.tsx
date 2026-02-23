@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { EngineStatus } from "@/data/engineDashboard";
 import type { GapReportExecutionPayload } from "@/features/reports/types/reportExecution.types";
+import { useReportExecutionPolling } from "@/features/reports/hooks/useReportExecutionPolling";
 
 type LiveStatus = "idle" | "running" | "complete" | "failed";
 
@@ -37,10 +38,6 @@ type GapEngineLiveStatusProviderProps = {
   latestReport: LatestReportInput;
   children: ReactNode;
 };
-
-const POLL_INTERVAL_MS = 2500;
-const POLL_FAILURE_THRESHOLD = 3;
-const MAX_POLL_INTERVAL_MS = 20000;
 
 const GapEngineLiveStatusContext =
   createContext<GapEngineLiveStatusContextValue | null>(null);
@@ -87,16 +84,10 @@ export function GapEngineLiveStatusProvider({
     stage: latestReport.executionStage ?? null,
     progress: latestReport.executionProgress ?? null,
   });
-  const [pollFailureCount, setPollFailureCount] = useState(0);
 
   useEffect(() => {
     setLive(getLatestSnapshot());
-    setPollFailureCount(0);
   }, [getLatestSnapshot]);
-  const pollIntervalMs = useMemo(() => {
-    const exponent = Math.min(pollFailureCount, POLL_FAILURE_THRESHOLD);
-    return Math.min(POLL_INTERVAL_MS * 2 ** exponent, MAX_POLL_INTERVAL_MS);
-  }, [pollFailureCount]);
 
   const startNewAnalysis = useCallback(() => {
     setLive(() => ({
@@ -120,73 +111,26 @@ export function GapEngineLiveStatusProvider({
     setLive(getLatestSnapshot());
   }, [getLatestSnapshot]);
 
-  useEffect(() => {
-    const isRunning =
-      live.status === "queued" ||
-      live.status === "running" ||
-      live.status === "retrying";
-    if (!live.reportId || !isRunning) {
-      return;
-    }
+  const isRunning =
+    live.status === "queued" ||
+    live.status === "running" ||
+    live.status === "retrying";
 
-    let cancelled = false;
+  const handlePollResult = useCallback((execution: GapReportExecutionPayload) => {
+    setLive({
+      reportId: execution.id,
+      status: execution.status,
+      stage: execution.executionStage,
+      progress: execution.executionProgress,
+    });
+  }, []);
 
-    const poll = async () => {
-      try {
-        const response = await fetch(`/api/reports/${live.reportId}`, {
-          method: "GET",
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          throw new Error(`poll_http_error:${response.status}`);
-        }
-
-        const body = (await response.json()) as {
-          report: GapReportExecutionPayload;
-        };
-
-        if (cancelled) {
-          return;
-        }
-
-        setLive({
-          reportId: body.report.id,
-          status: body.report.status,
-          stage: body.report.executionStage,
-          progress: body.report.executionProgress,
-        });
-        setPollFailureCount(0);
-      } catch (error) {
-        const errorType =
-          error instanceof Error && error.message
-            ? error.message
-            : "poll_failure";
-        const context = {
-          source: "gap_engine_live_status_polling",
-          route: `/api/reports/${live.reportId}`,
-          report_id: live.reportId,
-          previous_status: live.status,
-          error_type: errorType,
-          timestamp: new Date().toISOString(),
-        };
-        console.error("Gap engine polling failed.", context);
-        setPollFailureCount((previous) => {
-          const next = previous + 1;
-          return next >= POLL_FAILURE_THRESHOLD ? POLL_FAILURE_THRESHOLD : next;
-        });
-      }
-    };
-
-    void poll();
-    const timer = window.setInterval(() => {
-      void poll();
-    }, pollIntervalMs);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [live.reportId, live.status, pollIntervalMs]);
+  useReportExecutionPolling({
+    reportId: live.reportId,
+    enabled: isRunning,
+    loggerSource: "gap_engine_live_status_polling",
+    onResult: handlePollResult,
+  });
 
   const value = useMemo<GapEngineLiveStatusContextValue>(
     () => ({

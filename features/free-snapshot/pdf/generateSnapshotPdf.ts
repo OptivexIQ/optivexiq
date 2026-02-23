@@ -152,13 +152,19 @@ function buildVerificationReport(): ConversionGapReport {
     },
     executiveNarrative: verbose,
     executiveSummary: verbose,
+    diagnosis: {
+      summary: verbose,
+      primaryGap: "Message-value mismatch",
+      primaryRisk: "High overlap with competitor claims compresses perceived differentiation.",
+      primaryOpportunity: "Clarify ICP-specific outcomes and support each claim with proof.",
+    },
     messagingOverlap: {
       items: [],
       insight: "Overlap risk requires tighter differentiation.",
       ctaLabel: "Upgrade for full overlap analysis",
     },
     objectionCoverage: { trust: 42 },
-    competitiveMatrix: {},
+    competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},
     rewriteRecommendations: [

@@ -29,6 +29,35 @@ export function buildExecutiveNarrative(input: {
   return [headline, diagnosis, opportunity].join(" ");
 }
 
+export function buildDiagnosis(input: {
+  gapAnalysis: GapAnalysisOutput;
+  executiveNarrative: string;
+}): ConversionGapReport["diagnosis"] {
+  const primaryGap =
+    input.gapAnalysis.gaps
+      .map((item) => item.trim())
+      .find((item) => item.length > 0) ?? "No primary gap identified.";
+  const primaryRisk =
+    input.gapAnalysis.risks
+      .map((item) => item.trim())
+      .find((item) => item.length > 0) ?? "No primary risk identified.";
+  const primaryOpportunity =
+    input.gapAnalysis.opportunities
+      .map((item) => item.trim())
+      .find((item) => item.length > 0) ?? "No primary opportunity identified.";
+  const summary = input.executiveNarrative.trim();
+
+  return {
+    summary:
+      summary.length > 0
+        ? summary
+        : `Primary gap: ${primaryGap}. Primary risk: ${primaryRisk}. Highest-leverage opportunity: ${primaryOpportunity}.`,
+    primaryGap,
+    primaryRisk,
+    primaryOpportunity,
+  };
+}
+
 export function buildMessagingOverlap(input: {
   overlapSignals: string[];
   competitors: CompetitorInsight[];

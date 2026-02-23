@@ -1,21 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { GapReportExecutionPayload } from "@/features/reports/types/reportExecution.types";
+import { useReportExecutionPolling } from "@/features/reports/hooks/useReportExecutionPolling";
 
 type ReportExecutionStatusCardProps = {
   reportId: string;
   initialExecution: GapReportExecutionPayload;
 };
-
-const POLL_INTERVAL_MS = 2500;
-const POLL_FAILURE_THRESHOLD = 3;
-const MAX_POLL_INTERVAL_MS = 20000;
 
 const STAGE_LABELS: Record<string, string> = {
   queued: "Queued",
@@ -46,12 +43,9 @@ export function ReportExecutionStatusCard({
 }: ReportExecutionStatusCardProps) {
   const router = useRouter();
   const [execution, setExecution] = useState(initialExecution);
-  const [pollError, setPollError] = useState<string | null>(null);
-  const [pollFailureCount, setPollFailureCount] = useState(0);
   const [showStageSpinner, setShowStageSpinner] = useState(false);
   const [showCompletionTransition, setShowCompletionTransition] =
     useState(false);
-  const pollingRef = useRef(false);
   const completionHandledRef = useRef(false);
 
   const isInProgress =
@@ -68,10 +62,36 @@ export function ReportExecutionStatusCard({
       ? 100
       : 0;
   }, [execution.executionProgress, execution.status]);
-  const pollIntervalMs = useMemo(() => {
-    const exponent = Math.min(pollFailureCount, POLL_FAILURE_THRESHOLD);
-    return Math.min(POLL_INTERVAL_MS * 2 ** exponent, MAX_POLL_INTERVAL_MS);
-  }, [pollFailureCount]);
+  const handlePollResult = useCallback(
+    (nextExecution: GapReportExecutionPayload) => {
+      setExecution(nextExecution);
+      if (
+        nextExecution.status === "completed" ||
+        nextExecution.status === "failed"
+      ) {
+        if (
+          nextExecution.status === "completed" &&
+          !completionHandledRef.current
+        ) {
+          completionHandledRef.current = true;
+          setShowCompletionTransition(true);
+          window.setTimeout(() => {
+            router.refresh();
+          }, 700);
+          return;
+        }
+        router.refresh();
+      }
+    },
+    [router],
+  );
+
+  const { pollError } = useReportExecutionPolling({
+    reportId,
+    enabled: isInProgress,
+    loggerSource: "report_execution_status_polling",
+    onResult: handlePollResult,
+  });
 
   useEffect(() => {
     setShowStageSpinner(false);
@@ -87,93 +107,6 @@ export function ReportExecutionStatusCard({
       window.clearTimeout(timer);
     };
   }, [isInProgress, execution.executionStage]);
-
-  useEffect(() => {
-    if (!isInProgress) {
-      return;
-    }
-
-    let mounted = true;
-    const poll = async () => {
-      if (pollingRef.current) {
-        return;
-      }
-      pollingRef.current = true;
-      try {
-        const response = await fetch(`/api/reports/${reportId}`, {
-          method: "GET",
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          throw new Error(`report_poll_failed_${response.status}`);
-        }
-        const body = (await response.json()) as {
-          report: GapReportExecutionPayload;
-        };
-        if (!mounted) {
-          return;
-        }
-        setExecution(body.report);
-        setPollError(null);
-        setPollFailureCount(0);
-        if (
-          body.report.status === "completed" ||
-          body.report.status === "failed"
-        ) {
-          if (
-            body.report.status === "completed" &&
-            !completionHandledRef.current
-          ) {
-            completionHandledRef.current = true;
-            setShowCompletionTransition(true);
-            window.setTimeout(() => {
-              router.refresh();
-            }, 700);
-            return;
-          }
-          router.refresh();
-        }
-      } catch (error) {
-        const errorType =
-          error instanceof Error && error.message
-            ? error.message
-            : "report_execution_poll_failed";
-        console.error("Report execution polling failed.", {
-          source: "report_execution_status_polling",
-          route: `/api/reports/${reportId}`,
-          report_id: reportId,
-          error_type: errorType,
-          timestamp: new Date().toISOString(),
-        });
-        if (mounted) {
-          setPollFailureCount((prev) => {
-            const next = prev + 1;
-            if (next >= POLL_FAILURE_THRESHOLD) {
-              setPollError(
-                "Unable to refresh progress right now. Still retrying.",
-              );
-              return next;
-            }
-
-            setPollError("Unable to refresh progress. Retrying.");
-            return next;
-          });
-        }
-      } finally {
-        pollingRef.current = false;
-      }
-    };
-
-    void poll();
-    const timer = window.setInterval(() => {
-      void poll();
-    }, pollIntervalMs);
-
-    return () => {
-      mounted = false;
-      window.clearInterval(timer);
-    };
-  }, [isInProgress, pollIntervalMs, reportId, router]);
 
   return (
     <div className="flex w-full flex-col gap-6">

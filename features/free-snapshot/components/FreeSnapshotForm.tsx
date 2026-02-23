@@ -8,17 +8,13 @@ import { CompletionState } from "@/features/free-snapshot/components/CompletionS
 import { FailureState } from "@/features/free-snapshot/components/FailureState";
 import { RunningState } from "@/features/free-snapshot/components/RunningState";
 import {
-  getFreeSnapshotStatus,
   startFreeSnapshot,
   unlockFreeSnapshot,
-  type FreeSnapshotStatusResponse,
 } from "@/features/free-snapshot/services/freeSnapshotClient";
-import type { FreeSnapshotStatus } from "@/features/free-snapshot/types/freeSnapshot.types";
+import { useFreeSnapshotStatus } from "@/features/free-snapshot/hooks/useFreeSnapshotStatus";
 
 const MAX_COMPETITORS = 2;
 const STORAGE_KEY = "free_snapshot_active";
-
-type ViewState = "form" | "running" | "completed" | "failed";
 
 function normalizeUrlInput(value: string) {
   const trimmed = value.trim();
@@ -58,23 +54,6 @@ function getDomain(value: string): string {
   }
 }
 
-function getViewState(status: FreeSnapshotStatus | null): ViewState {
-  if (status === "completed") {
-    return "completed";
-  }
-  if (status === "failed") {
-    return "failed";
-  }
-  if (status) {
-    return "running";
-  }
-  return "form";
-}
-
-function isTerminalStatus(status: FreeSnapshotStatus | null) {
-  return status === "completed" || status === "failed";
-}
-
 export function FreeSnapshotForm() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [competitorUrlsInput, setCompetitorUrlsInput] = useState("");
@@ -87,8 +66,15 @@ export function FreeSnapshotForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
-  const [statusPayload, setStatusPayload] =
-    useState<FreeSnapshotStatusResponse | null>(null);
+  const {
+    statusPayload,
+    setStatusPayload,
+    viewState,
+    progress,
+    pollError,
+    pollFailureCount,
+  } =
+    useFreeSnapshotStatus(snapshotId);
 
   const websiteCandidate = normalizeUrlInput(websiteUrl);
   const isWebsiteValid =
@@ -98,8 +84,6 @@ export function FreeSnapshotForm() {
     () => parseCompetitorUrls(competitorUrlsInput),
     [competitorUrlsInput],
   );
-
-  const viewState = getViewState(statusPayload?.status ?? null);
 
   const domain = getDomain(
     statusPayload?.websiteUrl || websiteCandidate || websiteUrl || "your site",
@@ -129,64 +113,14 @@ export function FreeSnapshotForm() {
   }, []);
 
   useEffect(() => {
-    if (!snapshotId) {
+    if (!statusPayload || typeof window === "undefined") {
       return;
     }
-
-    let cancelled = false;
-
-    const poll = async () => {
-      try {
-        const data = await getFreeSnapshotStatus(snapshotId);
-        if (cancelled) {
-          return;
-        }
-        setStatusPayload(data);
-
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify({ snapshotId: data.snapshotId }),
-          );
-        }
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to refresh snapshot status.";
-        setStatusPayload((prev) => {
-          if (!prev) {
-            return null;
-          }
-          return {
-            ...prev,
-            status: "failed",
-            error: message,
-          };
-        });
-      }
-    };
-
-    void poll();
-
-    if (isTerminalStatus(statusPayload?.status ?? null)) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const timer = window.setInterval(() => {
-      void poll();
-    }, 3000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [snapshotId, statusPayload?.status]);
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ snapshotId: statusPayload.snapshotId }),
+    );
+  }, [statusPayload]);
 
   const resetFlow = () => {
     setSubmitError(null);
@@ -415,14 +349,17 @@ export function FreeSnapshotForm() {
           </form>
         ) : null}
 
-        {viewState === "running" && statusPayload ? (
+        {viewState === "running" ? (
           <div className="mx-auto max-w-3xl">
             <RunningState
               domain={domain}
               competitorCount={competitorCount}
-              startedAtIso={statusPayload.createdAt}
-              status={statusPayload.status}
-              executionStage={statusPayload.executionStage}
+              startedAtIso={statusPayload?.createdAt ?? new Date().toISOString()}
+              stageLabel={progress.label}
+              progressValue={progress.value}
+              activeStageIndex={progress.activeStageIndex}
+              pollError={pollError}
+              pollFailureCount={pollFailureCount}
             />
           </div>
         ) : null}

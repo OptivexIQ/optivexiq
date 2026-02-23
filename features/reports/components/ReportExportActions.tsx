@@ -23,7 +23,7 @@ export function ReportExportActions({
       ? "Export is available after report completion."
       : reportStatus === "failed"
         ? "Failed reports are not exportable."
-        : "Available formats: PDF, HTML, and TXT. Exports are available for completed reports only.";
+        : "Available formats: PDF, HTML, TXT, and JSON. Exports are available for completed reports only.";
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
@@ -47,6 +47,9 @@ export function ReportExportActions({
                 Export HTML
               </Button>
               <Button variant="outline" disabled>
+                Export JSON
+              </Button>
+              <Button variant="outline" disabled>
                 Copy sections
               </Button>
             </>
@@ -60,6 +63,11 @@ export function ReportExportActions({
               <Button variant="outline" asChild>
                 <Link href={`/api/reports/${reportId}/export?format=html`}>
                   Export HTML
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/api/reports/${reportId}/export?format=json`}>
+                  Export JSON
                 </Link>
               </Button>
               <Button variant="outline" asChild>

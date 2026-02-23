@@ -47,6 +47,7 @@ import {
 import { validateGapReport } from "@/features/reports/services/reportService";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
 import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
+import { assertCanonicalSectionCompleteness } from "@/features/reports/services/canonicalSectionCompletenessService";
 
 export type ReportCreatePayload = {
   homepage_url: string;
@@ -388,13 +389,19 @@ function buildFailedReportData(
     },
     executiveNarrative: safeMessage,
     executiveSummary: safeMessage,
+    diagnosis: {
+      summary: safeMessage,
+      primaryGap: safeMessage,
+      primaryRisk: safeMessage,
+      primaryOpportunity: safeMessage,
+    },
     messagingOverlap: {
       items: [],
       insight: "",
       ctaLabel: "",
     },
     objectionCoverage: {},
-    competitiveMatrix: {},
+    competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},
     rewriteRecommendations: [],
@@ -958,6 +965,10 @@ async function processGapReport(
       profile,
       status: "completed",
     });
+    const completeness = assertCanonicalSectionCompleteness(canonicalReport);
+    if (!completeness.ok) {
+      throw new Error(`incomplete_canonical_report_data:${completeness.reason}`);
+    }
     if (!validateGapReport(canonicalReport)) {
       throw new Error("invalid_report_data");
     }

@@ -123,7 +123,7 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
         "Competitor Gap Analysis (3/month)",
         "Objection Engine",
         "Differentiation Builder",
-        "Export integration (JSON, HTML, Markdown)",
+        "Export as JSON, HTML, PDF, and TXT",
         "Priority analysis queue",
       ],
       highlighted: true,

@@ -43,6 +43,12 @@ function toCanonicalReport(
     },
     executiveNarrative: snapshot.executiveSummary,
     executiveSummary: snapshot.executiveSummary,
+    diagnosis: {
+      summary: snapshot.executiveSummary,
+      primaryGap: gapA,
+      primaryRisk: snapshot.riskEstimate,
+      primaryOpportunity: snapshot.quickWins[0] ?? "Apply quick wins to reduce conversion friction.",
+    },
     messagingOverlap: {
       items: [],
       insight: snapshot.topMessagingGap,
@@ -51,7 +57,7 @@ function toCanonicalReport(
     objectionCoverage: {
       "primary-objection": Math.max(0, 100 - Math.round((snapshot.positioningScore + snapshot.clarityScore) / 2)),
     },
-    competitiveMatrix: {},
+    competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},
     rewriteRecommendations: snapshot.quickWins.map((win, index) => ({

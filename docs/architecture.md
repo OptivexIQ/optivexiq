@@ -80,7 +80,7 @@ Revenue model:
 - Report rows are persisted as `queued` before processing.
 - Processing transitions report status through `running` to terminal state.
 - Retry and stale-claim logic mitigate dropped or interrupted executions.
-- Processing is in-process asynchronous execution (no external queue worker).
+- Processing uses durable DB-backed job queues (`report_jobs`, `free_snapshot_jobs`) with cron-triggered workers.
 
 ## 3. Feature Architecture
 
@@ -135,7 +135,7 @@ Revenue model:
 2. User profile, subscription, settings, and usage baseline are initialized.
 3. User completes onboarding.
 4. User submits report request.
-5. Guards validate auth, onboarding, entitlement, and quota.
+5. Guards validate auth, rate limits, onboarding, entitlement, and quota.
 6. Report is inserted idempotently as `queued`.
 7. API returns `202` immediately with report id and queued/running status.
 8. Background processor claims report as `running`.
@@ -164,6 +164,10 @@ User -> `/api/generate` -> Guard Stack -> Token Reservation -> Stream Initializa
 Failure flow:
 
 User -> `/api/generate` -> Reservation -> Stream Failure -> Reservation Rollback -> Error Response
+
+Finalization failure flow:
+
+User -> `/api/generate` -> Stream Complete -> Finalization Retry Exhausted -> Reconciliation Queue -> Cron Reconciliation Commit
 
 ### Quota Reservation Flow
 
@@ -216,8 +220,8 @@ LemonSqueezy Webhook -> Signature Verify -> Ownership Resolution -> Subscription
 
 ### Guard Stack
 
-- `rateLimitGuard`: throttles abusive traffic.
 - `authGuard`: enforces authenticated context.
+- `rateLimitGuard`: throttles abusive traffic.
 - `onboardingGuard`: gates protected report mutations.
 - `planGuard`: validates entitlement and quotas.
 - `usageGuard`: validates active entitlement for usage views.

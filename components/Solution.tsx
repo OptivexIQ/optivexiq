@@ -22,7 +22,7 @@ export function Solution() {
       number: "04",
       title: "Deploy Optimized Copy",
       description:
-        "Export your new messaging directly to your CMS, landing page builder, or as structured JSON for your dev workflow.",
+        "Export your report artifacts as JSON, HTML, PDF, or TXT and implement the recommendations in your CMS or dev workflow.",
     },
   ];
 

@@ -33,6 +33,13 @@ export type ScoringBreakdown = {
   competitiveThreatSignal: number;
 };
 
+export type Diagnosis = {
+  summary: string;
+  primaryGap: string;
+  primaryRisk: string;
+  primaryOpportunity: string;
+};
+
 export type RewriteRecommendation = {
   title: string;
   slug: string;
@@ -40,6 +47,31 @@ export type RewriteRecommendation = {
   metric: string;
   copy: string;
   iconName?: "home" | "pricing" | "trust" | "objection" | "default";
+};
+
+export type CompetitiveMatrixProfileRow = {
+  competitor: string;
+  ourAdvantage: string;
+  theirAdvantage: string;
+};
+
+export type CompetitiveMatrixCompetitorRow = {
+  competitor: string;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  positioning: string[];
+};
+
+export type CompetitiveMatrix = {
+  profileMatrix: CompetitiveMatrixProfileRow[];
+  competitorRows: CompetitiveMatrixCompetitorRow[];
+  differentiators: Array<{ claim: string; proof: string }>;
+  counters: Array<{ competitor: string; counter: string }>;
+  coreDifferentiationTension?: string;
+  substitutionRiskNarrative?: string;
+  counterPositioningVector?: string;
+  pricingDefenseNarrative?: string;
 };
 
 export type ConversionGapReport = {
@@ -63,10 +95,11 @@ export type ConversionGapReport = {
 
   executiveNarrative: string;
   executiveSummary: string;
+  diagnosis: Diagnosis;
 
   messagingOverlap: MessagingOverlap;
   objectionCoverage: Record<string, number>;
-  competitiveMatrix: Record<string, unknown>;
+  competitiveMatrix: CompetitiveMatrix;
   positioningMap: Record<string, unknown>;
   rewrites: Record<string, unknown>;
   rewriteRecommendations: RewriteRecommendation[];

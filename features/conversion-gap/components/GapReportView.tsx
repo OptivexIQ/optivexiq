@@ -9,11 +9,11 @@ import { TopPriorityFixes } from "@/features/reports/components/diagnostics/TopP
 import { PriorityIndex } from "@/features/reports/components/PriorityIndex";
 import { ObjectionCoverage } from "@/features/reports/components/diagnostics/ObjectionCoverage";
 import { CompetitiveThreatLevel } from "@/features/reports/components/CompetitiveThreatLevel";
-import { CompetitiveMatrix } from "@/features/conversion-gap/components/CompetitiveMatrix";
 import { MessagingOverlap } from "@/features/reports/components/diagnostics/MessagingOverlap";
 import { RewriteRecommendations } from "@/features/reports/components/execution/RewriteRecommendations";
 import { WhatHappensIfUnchanged } from "@/features/reports/components/WhatHappensIfUnchanged";
 import { ReportExportActions } from "@/features/reports/components/ReportExportActions";
+import { CompetitiveMatrixPreview } from "@/features/reports/components/execution/CompetitiveMatrixPreview";
 
 const PositioningMapPreview = dynamic(
   () =>
@@ -82,7 +82,7 @@ export function GapReportView({
         </div>
         <div className="flex flex-col gap-6">
           <ObjectionCoverage report={report} />
-          <CompetitiveMatrix report={report} />
+          <CompetitiveMatrixPreview report={report} />
           <PositioningMapPreview report={report} />
         </div>
       </div>

@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import { getUserSettings } from "@/features/settings/services/userSettingsService";
 import { getSubscription } from "@/features/billing/services/planValidationService";
 import { getUsageSummary } from "@/features/usage/services/usageSummaryService";
-import { parseStoredReportData } from "@/features/reports/services/reportService";
+import { parseStoredReportData } from "@/features/reports/services/canonicalReportReadService";
 import { formatConversionGoalLabel } from "@/features/saas-profile/utils/conversionGoal";
 
 type GapReportRow = {

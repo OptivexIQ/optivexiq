@@ -4,11 +4,20 @@ import { errorResponse } from "@/lib/api/errorResponse";
 import { generateFreeSnapshotDownload } from "@/features/free-snapshot/services/freeSnapshotDownloadService";
 import { sendSnapshotEmail } from "@/features/free-snapshot/email/sendSnapshotEmail";
 import { logger } from "@/lib/logger";
+import { consumeFreeSnapshotDownloadRateLimit } from "@/features/free-snapshot/services/freeSnapshotRateLimitService";
 
 const requestSchema = z.object({
   snapshotId: z.string().uuid(),
   email: z.string().email(),
 });
+
+function getClientIp(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (!forwarded) {
+    return null;
+  }
+  return forwarded.split(",")[0]?.trim() || null;
+}
 
 export async function POST(request: Request) {
   const requestId = randomUUID();
@@ -17,6 +26,23 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     return errorResponse("invalid_payload", "Invalid payload.", 400, {
+      requestId,
+      headers: { "x-request-id": requestId },
+    });
+  }
+
+  const ipAddress = getClientIp(request);
+  const rateLimit = await consumeFreeSnapshotDownloadRateLimit({
+    ipAddress,
+    email: parsed.data.email,
+  });
+  if (!rateLimit.allowed) {
+    logger.warn("free_snapshot.download_rate_limited", {
+      request_id: requestId,
+      ip_address: ipAddress,
+      email: parsed.data.email,
+    });
+    return errorResponse("rate_limited", "Rate limit exceeded.", 429, {
       requestId,
       headers: { "x-request-id": requestId },
     });

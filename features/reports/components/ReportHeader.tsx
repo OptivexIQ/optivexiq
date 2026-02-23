@@ -2,13 +2,21 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
-import { Info } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -34,10 +42,16 @@ export function ReportHeader({
   report,
   exportRestricted = false,
 }: ReportHeaderProps) {
-  const exportDisabled =
+  const exportUnavailable =
     exportRestricted ||
     report.status === "queued" ||
-    report.status === "running";
+    report.status === "running" ||
+    report.status === "failed";
+  const exportReason = exportRestricted
+    ? "Export restricted for this workspace."
+    : report.status === "failed"
+      ? "Failed reports are not exportable."
+      : "Export is available after report completion.";
 
   return (
     <div className="rounded-xl p-6">
@@ -71,17 +85,47 @@ export function ReportHeader({
           <Button variant="outline" asChild>
             <Link href="/dashboard/reports">Back to reports</Link>
           </Button>
-          {exportDisabled ? (
-            <Button variant="secondary" disabled>
-              Export summary
-            </Button>
-          ) : (
-            <Button variant="secondary" asChild>
-              <Link href={`/api/reports/${report.id}/export?format=pdf`}>
-                Export summary
-              </Link>
-            </Button>
-          )}
+          <Button variant="outline" asChild>
+            <Link href={`/dashboard/reports/${report.id}/compare`}>Compare runs</Link>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" disabled={exportUnavailable}>
+                Export
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Export report</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {exportUnavailable ? (
+                <DropdownMenuItem disabled>{exportReason}</DropdownMenuItem>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/api/reports/${report.id}/export?format=pdf`}>
+                      Export PDF
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/api/reports/${report.id}/export?format=html`}>
+                      Export HTML
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/api/reports/${report.id}/export?format=txt`}>
+                      Export TXT
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/api/reports/${report.id}/export?format=json`}>
+                      Export JSON
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

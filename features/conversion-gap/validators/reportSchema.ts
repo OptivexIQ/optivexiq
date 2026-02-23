@@ -36,7 +36,42 @@ export const conversionGapReportSchema = z.object({
     ctaLabel: z.string(),
   }),
   objectionCoverage: z.record(z.number()),
-  competitiveMatrix: z.record(z.unknown()),
+  competitiveMatrix: z
+    .object({
+      profileMatrix: z.array(
+        z.object({
+          competitor: z.string(),
+          ourAdvantage: z.string(),
+          theirAdvantage: z.string(),
+        }),
+      ),
+      competitorRows: z.array(
+        z.object({
+          competitor: z.string(),
+          summary: z.string(),
+          strengths: z.array(z.string()),
+          weaknesses: z.array(z.string()),
+          positioning: z.array(z.string()),
+        }),
+      ),
+      differentiators: z.array(
+        z.object({
+          claim: z.string(),
+          proof: z.string(),
+        }),
+      ),
+      counters: z.array(
+        z.object({
+          competitor: z.string(),
+          counter: z.string(),
+        }),
+      ),
+      coreDifferentiationTension: z.string().optional(),
+      substitutionRiskNarrative: z.string().optional(),
+      counterPositioningVector: z.string().optional(),
+      pricingDefenseNarrative: z.string().optional(),
+    })
+    .passthrough(),
   positioningMap: z.record(z.unknown()),
   rewrites: z.record(z.unknown()),
   rewriteRecommendations: z.array(
@@ -65,6 +100,12 @@ export const conversionGapReportSchema = z.object({
     .optional(),
   executiveNarrative: z.string(),
   executiveSummary: z.string(),
+  diagnosis: z.object({
+    summary: z.string().trim().min(1),
+    primaryGap: z.string().trim().min(1),
+    primaryRisk: z.string().trim().min(1),
+    primaryOpportunity: z.string().trim().min(1),
+  }),
   threatLevel: z.enum(["low", "medium", "high"]),
   revenueImpact: z.object({
     pipelineAtRisk: z.number(),

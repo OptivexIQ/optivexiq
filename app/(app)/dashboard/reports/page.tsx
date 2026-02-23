@@ -153,11 +153,18 @@ export default async function ReportsPage() {
                   </TableCell>
                   <TableCell>{report.date}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/dashboard/reports/${report.id}`}>
-                        View report
-                      </Link>
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/dashboard/reports/${report.id}`}>
+                          View report
+                        </Link>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/dashboard/reports/${report.id}/compare`}>
+                          Compare
+                        </Link>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import type { PositioningMapData } from "@/features/positioning-map/types/positioningMap.types";
-import { parseStoredReportData } from "@/features/reports/services/reportService";
+import { parseStoredReportData } from "@/features/reports/services/canonicalReportReadService";
 
 type PositioningMapRow = {
   id: string;

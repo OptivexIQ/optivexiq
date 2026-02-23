@@ -2,6 +2,16 @@ import { randomUUID } from "crypto";
 import { errorResponse } from "@/lib/api/errorResponse";
 import { freeSnapshotUnlockRequestSchema } from "@/features/free-snapshot/validators/freeSnapshotSchema";
 import { unlockFreeSnapshot } from "@/features/free-snapshot/services/freeSnapshotUnlockService";
+import { consumeFreeSnapshotUnlockRateLimit } from "@/features/free-snapshot/services/freeSnapshotRateLimitService";
+import { logger } from "@/lib/logger";
+
+function getClientIp(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (!forwarded) {
+    return null;
+  }
+  return forwarded.split(",")[0]?.trim() || null;
+}
 
 export async function POST(request: Request) {
   const requestId = randomUUID();
@@ -17,6 +27,23 @@ export async function POST(request: Request) {
 
   if ((parsed.data.honeypot ?? "").trim().length > 0) {
     return errorResponse("forbidden", "Bot submission rejected.", 403, {
+      requestId,
+      headers: { "x-request-id": requestId },
+    });
+  }
+
+  const ipAddress = getClientIp(request);
+  const rateLimit = await consumeFreeSnapshotUnlockRateLimit({
+    ipAddress,
+    email: parsed.data.email,
+  });
+  if (!rateLimit.allowed) {
+    logger.warn("free_snapshot.unlock_rate_limited", {
+      request_id: requestId,
+      ip_address: ipAddress,
+      email: parsed.data.email,
+    });
+    return errorResponse("rate_limited", "Rate limit exceeded.", 429, {
       requestId,
       headers: { "x-request-id": requestId },
     });

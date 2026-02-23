@@ -7,6 +7,7 @@ import {
   toSafeArray,
 } from "@/features/conversion-gap/services/reportAggregationScoring";
 import {
+  buildDiagnosis,
   buildExecutiveNarrative,
   buildMessagingOverlap,
   buildMessagingOverlapFromSynthesis,
@@ -92,6 +93,10 @@ export function buildConversionGapReport(
     gapAnalysis: input.gapAnalysis,
     scores,
   });
+  const diagnosis = buildDiagnosis({
+    gapAnalysis: input.gapAnalysis,
+    executiveNarrative,
+  });
 
   const baseReport: ConversionGapReport = {
     id: input.reportId,
@@ -121,6 +126,7 @@ export function buildConversionGapReport(
     },
     executiveNarrative,
     executiveSummary: executiveNarrative,
+    diagnosis,
     messagingOverlap,
     objectionCoverage,
     competitiveMatrix,

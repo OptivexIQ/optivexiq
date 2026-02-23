@@ -16,25 +16,25 @@ export async function withGuards(
     return response;
   };
 
-  // Rate limit (by IP)
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const rateLimitResult = await rateLimitGuard(
-    ip,
-    requestId,
-    request.nextUrl.pathname,
-    null,
-  );
-  if (rateLimitResult && rateLimitResult.response) {
-    return withRequestId(rateLimitResult.response);
-  }
-
   // Auth
   const authResult = await authGuard(request);
   if ("response" in authResult) {
     return withRequestId(authResult.response);
   }
   const userId = authResult.userId;
+
+  // Rate limit (by IP + user where available)
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimitResult = await rateLimitGuard(
+    ip,
+    requestId,
+    request.nextUrl.pathname,
+    userId,
+  );
+  if (rateLimitResult && rateLimitResult.response) {
+    return withRequestId(rateLimitResult.response);
+  }
 
   // Onboarding completion guard for protected mutation paths.
   const onboardingResult = await onboardingGuard(

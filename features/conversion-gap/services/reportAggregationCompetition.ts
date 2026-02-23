@@ -7,6 +7,7 @@ import type {
 import type { CompetitorSynthesisOutput } from "@/features/conversion-gap/services/competitorSynthesisService";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
 import type { PositioningMapData } from "@/features/positioning-map/types/positioningMap.types";
+import type { CompetitiveMatrix } from "@/features/conversion-gap/types/conversionGapReport.types";
 import { clampScore } from "@/features/conversion-gap/services/reportAggregationScoring";
 
 function normalizeCompetitorName(value: string): string {
@@ -44,7 +45,7 @@ export function buildCompetitiveMatrix(input: {
   competitors: CompetitorInsight[];
   differentiation: DifferentiationOutput;
   counters: CompetitiveCounterOutput;
-}) {
+}): CompetitiveMatrix {
   const profileMatrix = input.profile.differentiationMatrix
     .filter(
       (item) =>
@@ -76,8 +77,8 @@ export function buildCompetitiveMatrix(input: {
 
 export function buildCompetitiveMatrixFromSynthesis(
   synthesis: CompetitorSynthesisOutput,
-  baseMatrix: Record<string, unknown>,
-): Record<string, unknown> {
+  baseMatrix: CompetitiveMatrix,
+): CompetitiveMatrix {
   return {
     ...baseMatrix,
     coreDifferentiationTension: synthesis.coreDifferentiationTension,

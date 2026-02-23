@@ -19,6 +19,7 @@ const shouldVerify =
 if (shouldVerify) {
   run(npmCommand, ["run", "verify:db-contract"]);
   run(npmCommand, ["run", "verify:admin-client-usage"]);
+  run(npmCommand, ["run", "verify:decision-infra"]);
 }
 
 run(process.execPath, ["./node_modules/next/dist/bin/next", "build"]);
