@@ -14,7 +14,21 @@ export const metadata = {
     "Official contact hub for support, sales, billing, legal, privacy, and security requests.",
 };
 
-export default function ContactPage() {
+type ContactPageProps = {
+  searchParams?:
+    | { intent?: string | string[] }
+    | Promise<{ intent?: string | string[] }>;
+};
+
+function resolveGrowthIntent(value: string | string[] | undefined): "growth" | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "growth" ? "growth" : null;
+}
+
+export default async function ContactPage({ searchParams }: ContactPageProps) {
+  const resolvedSearchParams = (await Promise.resolve(searchParams)) ?? {};
+  const initialIntent = resolveGrowthIntent(resolvedSearchParams.intent);
+
   return (
     <section className="relative mx-auto max-w-6xl px-6 py-42">
       <div
@@ -64,7 +78,7 @@ export default function ContactPage() {
 
       <section className="mt-10 grid gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-start">
         <div className="space-y-4">
-          <ContactForm />
+          <ContactForm initialIntent={initialIntent} />
           <p className="text-xs leading-relaxed text-muted-foreground">
             Your message is reviewed by a human and routed to the right team. We prioritize security, billing, and access issues appropriately. For policy details, review our{" "}
             <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link> and{" "}

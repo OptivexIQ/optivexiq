@@ -17,14 +17,18 @@ export async function saveContactRequest({
   userAgent,
 }: SaveContactRequestParams): Promise<SaveContactRequestResult> {
   const supabase = await createSupabaseServerClient();
+  const isGrowthLead = payload.intent === "growth";
   const { data, error } = await supabase
     .from("contact_requests")
     .insert({
       name: payload.name,
       email: payload.email,
       topic: payload.topic,
+      intent: payload.intent ?? null,
       company: payload.company || null,
       message: payload.message,
+      lead_tag: isGrowthLead ? "Growth Lead" : null,
+      priority: isGrowthLead,
       ip_address: ipAddress || null,
       user_agent: userAgent || null,
       status: "new",

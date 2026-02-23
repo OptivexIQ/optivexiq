@@ -5,11 +5,27 @@ import { useMemo, useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { submitContactAction, type ContactActionState } from "@/app/actions/contact/submitContact";
+import {
+  submitContactAction,
+  type ContactActionState,
+} from "@/app/actions/contact/submitContact";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CONTACT_TOPICS,
@@ -24,30 +40,44 @@ const INITIAL_STATE: ContactActionState = { success: false, error: null };
 const contactFormSchema = contactRequestSchema.omit({ honeypot: true });
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
-export function ContactForm() {
+type ContactFormProps = {
+  initialIntent?: "growth" | null;
+};
+
+export function ContactForm({ initialIntent = null }: ContactFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [actionState, setActionState] = useState<ContactActionState>(INITIAL_STATE);
+  const [actionState, setActionState] =
+    useState<ContactActionState>(INITIAL_STATE);
+  const defaultTopic: ContactTopicValue =
+    initialIntent === "growth" ? "sales" : "support";
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
       name: "",
       email: "",
-      topic: "support",
+      topic: defaultTopic,
       company: "",
       message: "",
+      intent: initialIntent ?? undefined,
     },
     mode: "onChange",
   });
 
   const topic = form.watch("topic") as ContactTopicValue;
-  const topicHelper = useMemo(() => CONTACT_TOPIC_HELPERS[topic] ?? CONTACT_TOPIC_HELPERS.support, [topic]);
+  const topicHelper = useMemo(
+    () => CONTACT_TOPIC_HELPERS[topic] ?? CONTACT_TOPIC_HELPERS.support,
+    [topic],
+  );
 
   const onSubmit = form.handleSubmit((values) => {
     setActionState(INITIAL_STATE);
     startTransition(async () => {
       const formData = toFormData(values);
       formData.set("website", "");
+      if (initialIntent === "growth") {
+        formData.set("intent", "growth");
+      }
 
       const result = await submitContactAction(INITIAL_STATE, formData);
       setActionState(result);
@@ -56,9 +86,10 @@ export function ContactForm() {
         form.reset({
           name: "",
           email: "",
-          topic: "support",
+          topic: defaultTopic,
           company: "",
           message: "",
+          intent: initialIntent ?? undefined,
         });
       }
     });
@@ -70,7 +101,16 @@ export function ContactForm() {
         onSubmit={onSubmit}
         className="space-y-5 rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur"
       >
-        <input type="text" name="website" className="hidden" tabIndex={-1} autoComplete="off" />
+        <input
+          type="text"
+          name="website"
+          className="hidden"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+        {initialIntent === "growth" ? (
+          <input type="hidden" name="intent" value="growth" />
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
@@ -82,7 +122,11 @@ export function ContactForm() {
                   Full name
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Jane Doe" className="h-11" />
+                  <Input
+                    {...field}
+                    placeholder="Alice Watson"
+                    className="h-11"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -97,7 +141,12 @@ export function ContactForm() {
                   Work email
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} type="email" placeholder="jane@company.com" className="h-11" />
+                  <Input
+                    {...field}
+                    type="email"
+                    placeholder="you@company.com"
+                    className="h-11"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -129,6 +178,11 @@ export function ContactForm() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">{topicHelper}</p>
+                {initialIntent === "growth" ? (
+                  <p className="text-xs text-primary">
+                    Routed as Growth Lead for sales and pricing follow-up.
+                  </p>
+                ) : null}
                 <FormMessage />
               </FormItem>
             )}
@@ -142,7 +196,11 @@ export function ContactForm() {
                   Company (optional)
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Your company" className="h-11" />
+                  <Input
+                    {...field}
+                    placeholder="Your company"
+                    className="h-11"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -197,7 +255,11 @@ export function ContactForm() {
           <Button
             type="submit"
             className="h-11 px-5"
-            disabled={!form.formState.isValid || isPending || form.formState.isSubmitting}
+            disabled={
+              !form.formState.isValid ||
+              isPending ||
+              form.formState.isSubmitting
+            }
           >
             {isPending ? "Submitting..." : "Submit Request"}
           </Button>

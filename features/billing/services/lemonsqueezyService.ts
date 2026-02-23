@@ -1,8 +1,5 @@
 import {
   LEMONSQUEEZY_API_KEY,
-  LEMONSQUEEZY_GROWTH_GBP_VARIANT_ID,
-  LEMONSQUEEZY_GROWTH_USD_VARIANT_ID,
-  LEMONSQUEEZY_GROWTH_VARIANT_ID,
   LEMONSQUEEZY_PRO_GBP_VARIANT_ID,
   LEMONSQUEEZY_PRO_USD_VARIANT_ID,
   LEMONSQUEEZY_PRO_VARIANT_ID,
@@ -49,16 +46,6 @@ function resolveVariantId(plan: BillingPlan, currency: BillingCurrency): string 
       return LEMONSQUEEZY_PRO_GBP_VARIANT_ID ?? LEMONSQUEEZY_PRO_VARIANT_ID ?? null;
     }
     return LEMONSQUEEZY_PRO_VARIANT_ID ?? null;
-  }
-
-  if (plan === "growth") {
-    if (currency === "USD") {
-      return LEMONSQUEEZY_GROWTH_USD_VARIANT_ID ?? LEMONSQUEEZY_GROWTH_VARIANT_ID ?? null;
-    }
-    if (currency === "GBP") {
-      return LEMONSQUEEZY_GROWTH_GBP_VARIANT_ID ?? LEMONSQUEEZY_GROWTH_VARIANT_ID ?? null;
-    }
-    return LEMONSQUEEZY_GROWTH_VARIANT_ID ?? null;
   }
 
   return null;

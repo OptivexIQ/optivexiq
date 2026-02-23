@@ -11,6 +11,7 @@ import { hasPaidAccess } from "@/features/billing/services/subscriptionLifecycle
 export type CheckoutPlan = BillingPlan;
 
 type CheckoutPolicyDeniedCode =
+  | "GROWTH_CONTACT_SALES"
   | "SAME_PLAN_ACTIVE"
   | "DOWNGRADE_OR_LATERAL";
 
@@ -49,6 +50,14 @@ export async function assertCheckoutPolicy(params: {
   userId: string;
   requestedPlan: BillingPlan;
 }): Promise<CheckoutPolicyResult> {
+  if (params.requestedPlan === "growth") {
+    return {
+      ok: false,
+      code: "GROWTH_CONTACT_SALES",
+      message: "Growth Intelligence is available through sales only.",
+    };
+  }
+
   const subscription = await getSubscription(params.userId);
   if (!subscription) {
     return { ok: true, plan: params.requestedPlan };

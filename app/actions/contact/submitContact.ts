@@ -54,6 +54,10 @@ export async function submitContactAction(
     topic: String(formData.get("topic") || "other") as ContactRequestInput["topic"],
     company: String(formData.get("company") || ""),
     message: String(formData.get("message") || ""),
+    intent:
+      String(formData.get("intent") || "").trim().toLowerCase() === "growth"
+        ? "growth"
+        : undefined,
     honeypot: String(formData.get("website") || ""),
   };
 

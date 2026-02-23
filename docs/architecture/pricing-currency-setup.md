@@ -20,11 +20,10 @@ This document covers everything needed on your side to complete multi-currency p
 
 ## Required LemonSqueezy setup
 
-For each plan, create variants for each currency you want to charge:
+For each self-serve plan, create variants for each currency you want to charge:
 
 - `starter`: USD, EUR, GBP
 - `pro`: USD, EUR, GBP
-- `growth`: USD, EUR, GBP
 
 If you skip some currency variants, fallback logic uses the base plan variant ID.
 
@@ -36,7 +35,6 @@ If you skip some currency variants, fallback logic uses the base plan variant ID
 - `LEMONSQUEEZY_STORE_ID`
 - `LEMONSQUEEZY_STARTER_VARIANT_ID`
 - `LEMONSQUEEZY_PRO_VARIANT_ID`
-- `LEMONSQUEEZY_GROWTH_VARIANT_ID`
 
 Recommended: set base variant IDs to your default billing currency (typically EUR or USD).
 
@@ -46,8 +44,6 @@ Recommended: set base variant IDs to your default billing currency (typically EU
 - `LEMONSQUEEZY_STARTER_GBP_VARIANT_ID`
 - `LEMONSQUEEZY_PRO_USD_VARIANT_ID`
 - `LEMONSQUEEZY_PRO_GBP_VARIANT_ID`
-- `LEMONSQUEEZY_GROWTH_USD_VARIANT_ID`
-- `LEMONSQUEEZY_GROWTH_GBP_VARIANT_ID`
 
 Note:
 - EUR uses base variant IDs (`LEMONSQUEEZY_*_VARIANT_ID`), so there are no separate `*_EUR_*` keys.
@@ -60,16 +56,14 @@ Note:
 - Pro EUR -> `LEMONSQUEEZY_PRO_VARIANT_ID`
 - Pro USD -> `LEMONSQUEEZY_PRO_USD_VARIANT_ID`
 - Pro GBP -> `LEMONSQUEEZY_PRO_GBP_VARIANT_ID`
-- Growth EUR -> `LEMONSQUEEZY_GROWTH_VARIANT_ID`
-- Growth USD -> `LEMONSQUEEZY_GROWTH_USD_VARIANT_ID`
-- Growth GBP -> `LEMONSQUEEZY_GROWTH_GBP_VARIANT_ID`
 
 ## Deployment steps
 
-1. Create/confirm LemonSqueezy variants for each plan/currency.
+1. Create/confirm LemonSqueezy variants for Starter and Pro plan currencies.
 2. Add the env vars above in your hosting provider (and local `.env.local` if needed).
 3. Redeploy application.
 4. Confirm checkout starts successfully for each currency.
+5. Confirm Growth Intelligence routes to `/contact?intent=growth` instead of checkout.
 
 ## Verification checklist
 

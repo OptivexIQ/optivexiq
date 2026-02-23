@@ -29,6 +29,9 @@ function sanitizeReturnTo(value: string | undefined): string | null {
 }
 
 function getCheckoutErrorCopy(code: string) {
+  if (code === "GROWTH_CONTACT_SALES") {
+    return "Growth Intelligence uses custom pricing and is available through sales.";
+  }
   if (code === "SAME_PLAN_ACTIVE") {
     return "Your selected plan is already active.";
   }
@@ -93,14 +96,23 @@ export default async function CheckoutPage({
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">{message}</p>
           <div className="mt-6 flex flex-wrap items-center gap-4">
-            <Link
-              href={`/checkout?plan=${encodeURIComponent(parsedPlan.data)}&currency=${encodeURIComponent(currency)}${
-                returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""
-              }`}
-              className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Try again
-            </Link>
+            {checkout.code === "GROWTH_CONTACT_SALES" ? (
+              <Link
+                href="/contact?intent=growth"
+                className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Contact Sales
+              </Link>
+            ) : (
+              <Link
+                href={`/checkout?plan=${encodeURIComponent(parsedPlan.data)}&currency=${encodeURIComponent(currency)}${
+                  returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""
+                }`}
+                className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Try again
+              </Link>
+            )}
             <Link
               href={target}
               className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"

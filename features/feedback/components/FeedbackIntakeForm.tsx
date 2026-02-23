@@ -50,11 +50,14 @@ export function FeedbackIntakeForm() {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<FeedbackActionState>(INITIAL_STATE);
 
-  const [requestType, setRequestType] = useState<(typeof REQUEST_TYPES)[number]["value"]>("feature");
+  const [requestType, setRequestType] =
+    useState<(typeof REQUEST_TYPES)[number]["value"]>("feature");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [productArea, setProductArea] = useState<(typeof PRODUCT_AREAS)[number]["value"]>("dashboard");
-  const [impact, setImpact] = useState<(typeof IMPACT_LEVELS)[number]["value"]>("medium");
+  const [productArea, setProductArea] =
+    useState<(typeof PRODUCT_AREAS)[number]["value"]>("dashboard");
+  const [impact, setImpact] =
+    useState<(typeof IMPACT_LEVELS)[number]["value"]>("medium");
   const [pageUrl, setPageUrl] = useState("");
   const [reproductionSteps, setReproductionSteps] = useState("");
   const [expectedBehavior, setExpectedBehavior] = useState("");
@@ -65,7 +68,11 @@ export function FeedbackIntakeForm() {
 
   const isBug = requestType === "bug";
   const canSubmit = useMemo(() => {
-    if (title.trim().length < 6 || summary.trim().length < 30 || email.trim().length < 5) {
+    if (
+      title.trim().length < 6 ||
+      summary.trim().length < 30 ||
+      email.trim().length < 5
+    ) {
       return false;
     }
     if (!isBug) {
@@ -76,7 +83,15 @@ export function FeedbackIntakeForm() {
       expectedBehavior.trim().length >= 10 &&
       actualBehavior.trim().length >= 10
     );
-  }, [title, summary, email, isBug, reproductionSteps, expectedBehavior, actualBehavior]);
+  }, [
+    title,
+    summary,
+    email,
+    isBug,
+    reproductionSteps,
+    expectedBehavior,
+    actualBehavior,
+  ]);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,13 +135,29 @@ export function FeedbackIntakeForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur">
-      <input type="text" name="website" className="hidden" tabIndex={-1} autoComplete="off" />
+    <form
+      onSubmit={onSubmit}
+      className="space-y-5 rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm backdrop-blur"
+    >
+      <input
+        type="text"
+        name="website"
+        className="hidden"
+        tabIndex={-1}
+        autoComplete="off"
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Request type</span>
-          <Select value={requestType} onValueChange={(value) => setRequestType(value as (typeof REQUEST_TYPES)[number]["value"])}>
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Request type
+          </span>
+          <Select
+            value={requestType}
+            onValueChange={(value) =>
+              setRequestType(value as (typeof REQUEST_TYPES)[number]["value"])
+            }
+          >
             <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
@@ -140,8 +171,15 @@ export function FeedbackIntakeForm() {
           </Select>
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Product area</span>
-          <Select value={productArea} onValueChange={(value) => setProductArea(value as (typeof PRODUCT_AREAS)[number]["value"])}>
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Product area
+          </span>
+          <Select
+            value={productArea}
+            onValueChange={(value) =>
+              setProductArea(value as (typeof PRODUCT_AREAS)[number]["value"])
+            }
+          >
             <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
@@ -157,25 +195,46 @@ export function FeedbackIntakeForm() {
       </div>
 
       <label className="grid gap-2 text-sm">
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Title</span>
-        <Input className="h-11" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Short, specific summary" required />
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Title
+        </span>
+        <Input
+          className="h-11"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Short, specific summary"
+          required
+        />
       </label>
 
       <label className="grid gap-2 text-sm">
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Details</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Details
+        </span>
         <Textarea
-          className="min-h-[140px]"
+          className="min-h-35"
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
-          placeholder={isBug ? "Describe the issue and business impact." : "Describe the feature, use case, and expected business impact."}
+          placeholder={
+            isBug
+              ? "Describe the issue and business impact."
+              : "Describe the feature, use case, and expected business impact."
+          }
           required
         />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Impact</span>
-          <Select value={impact} onValueChange={(value) => setImpact(value as (typeof IMPACT_LEVELS)[number]["value"])}>
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Impact
+          </span>
+          <Select
+            value={impact}
+            onValueChange={(value) =>
+              setImpact(value as (typeof IMPACT_LEVELS)[number]["value"])
+            }
+          >
             <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
@@ -189,15 +248,24 @@ export function FeedbackIntakeForm() {
           </Select>
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Affected URL (optional)</span>
-          <Input className="h-11" value={pageUrl} onChange={(event) => setPageUrl(event.target.value)} placeholder="https://app.optivexiq.com/..." />
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Affected URL (optional)
+          </span>
+          <Input
+            className="h-11"
+            value={pageUrl}
+            onChange={(event) => setPageUrl(event.target.value)}
+            placeholder="https://app.optivexiq.com/..."
+          />
         </label>
       </div>
 
       {isBug ? (
         <div className="grid gap-4">
           <label className="grid gap-2 text-sm">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Reproduction steps</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Reproduction steps
+            </span>
             <Textarea
               value={reproductionSteps}
               onChange={(event) => setReproductionSteps(event.target.value)}
@@ -208,12 +276,26 @@ export function FeedbackIntakeForm() {
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Expected behavior</span>
-              <Textarea value={expectedBehavior} onChange={(event) => setExpectedBehavior(event.target.value)} rows={3} required />
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Expected behavior
+              </span>
+              <Textarea
+                value={expectedBehavior}
+                onChange={(event) => setExpectedBehavior(event.target.value)}
+                rows={3}
+                required
+              />
             </label>
             <label className="grid gap-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Actual behavior</span>
-              <Textarea value={actualBehavior} onChange={(event) => setActualBehavior(event.target.value)} rows={3} required />
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Actual behavior
+              </span>
+              <Textarea
+                value={actualBehavior}
+                onChange={(event) => setActualBehavior(event.target.value)}
+                rows={3}
+                required
+              />
             </label>
           </div>
         </div>
@@ -221,20 +303,45 @@ export function FeedbackIntakeForm() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Name (optional)</span>
-          <Input className="h-11" value={name} onChange={(event) => setName(event.target.value)} placeholder="Jane Doe" />
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Name (optional)
+          </span>
+          <Input
+            className="h-11"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Alice Watson"
+          />
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Work email</span>
-          <Input className="h-11" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="jane@company.com" required />
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Work email
+          </span>
+          <Input
+            className="h-11"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@company.com"
+            required
+          />
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Company (optional)</span>
-          <Input className="h-11" value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Company name" />
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Company (optional)
+          </span>
+          <Input
+            className="h-11"
+            value={company}
+            onChange={(event) => setCompany(event.target.value)}
+            placeholder="Company name"
+          />
         </label>
       </div>
 
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+      {state.error ? (
+        <p className="text-sm text-destructive">{state.error}</p>
+      ) : null}
       {state.success && !state.duplicate ? (
         <p className="text-sm text-emerald-600">
           We have received your submission and queued it for product triage.
@@ -254,10 +361,19 @@ export function FeedbackIntakeForm() {
 
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <p className="text-xs leading-relaxed text-muted-foreground">
-          We review all submissions in weekly product triage. Critical bug reports are prioritized first.
+          We review all submissions in weekly product triage. Critical bug
+          reports are prioritized first.
         </p>
-        <Button type="submit" className="h-11 px-5" disabled={!canSubmit || isPending}>
-          {isPending ? "Submitting..." : isBug ? "Submit Bug Report" : "Submit Feature Request"}
+        <Button
+          type="submit"
+          className="h-11 px-5"
+          disabled={!canSubmit || isPending}
+        >
+          {isPending
+            ? "Submitting..."
+            : isBug
+              ? "Submit Bug Report"
+              : "Submit Feature Request"}
         </Button>
       </div>
     </form>

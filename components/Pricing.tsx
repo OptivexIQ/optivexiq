@@ -16,8 +16,8 @@ type Plan = {
   badge?: string;
   highlightNote?: string;
 } & (
-  | { action: "checkout"; planKey: "starter" | "pro" | "growth" }
-  | { action: "contact"; planKey?: never }
+  | { action: "checkout"; planKey: "starter" | "pro" }
+  | { action: "contact"; href: string; planKey?: never }
 );
 
 function getButtonClass(highlighted: boolean) {
@@ -117,7 +117,6 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
       period: "/month",
       description:
         "Ongoing conversion intelligence and optimization for serious founders.",
-      highlightNote: "Best for mid-market + enterprise teams",
       features: [
         "No hard cap on homepage + pricing rewrites",
         "Competitor Gap Analysis (3/month)",
@@ -135,20 +134,21 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
     {
       name: "Growth Intelligence",
       prices: { USD: 179, EUR: 149, GBP: 135 },
-      period: "/month",
-      description: "Advanced competitive intelligence for scaling SaaS teams.",
+      period: "",
+      description: "Advanced capabilities available through custom engagement.",
+      highlightNote: "Designed for organizations with advanced requirements",
       features: [
         "Everything in Pro",
-        "Counter-positioning engine",
-        "Quarterly positioning refresh",
-        "Advanced competitive intelligence",
+        "Advanced capabilities for complex use cases",
+        "Custom engagement for high-volume teams",
+        "Strategic support aligned to operating requirements",
         "Team collaboration (up to 5)",
-        "Dedicated account manager",
+        "Custom implementation planning",
       ],
       highlighted: false,
-      cta: "Scale With Growth",
-      action: "checkout",
-      planKey: "growth",
+      cta: "Contact Sales",
+      action: "contact",
+      href: "/contact?intent=growth",
     },
   ];
 
@@ -205,7 +205,9 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
               className={`relative flex flex-col rounded-2xl transition-all duration-300 ${
                 plan.highlighted
                   ? "z-10 border border-primary/50 bg-card p-8 shadow-xl shadow-black/30 lg:-translate-y-3 lg:scale-110 lg:py-10"
-                  : "border border-border/60 bg-card p-8 hover:border-border"
+                  : plan.action === "contact"
+                    ? "border border-primary/30 bg-card p-8 shadow-sm shadow-primary/10"
+                    : "border border-border/60 bg-card p-8 hover:border-border"
               }`}
             >
               {plan.badge ? (
@@ -231,12 +233,20 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
               </div>
 
               <div className="mb-8 flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground">
-                  {formatPlanPrice(plan.prices[currency], locale, currency)}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {plan.period}
-                </span>
+                {plan.action === "contact" ? (
+                  <span className="text-sm tracking-tight text-foreground">
+                    Custom pricing
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold tracking-tight text-foreground">
+                      {formatPlanPrice(plan.prices[currency], locale, currency)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {plan.period}
+                    </span>
+                  </>
+                )}
               </div>
 
               {plan.action === "checkout" ? (
@@ -251,12 +261,12 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
                   activePlan={activePlan}
                 />
               ) : (
-                <a
-                  href="mailto:sales@optivexiq.com?subject=OptivexIQ%20Growth%20Plan"
+                <Link
+                  href={plan.href}
                   className={getButtonClass(plan.highlighted)}
                 >
                   {plan.cta}
-                </a>
+                </Link>
               )}
 
               <div className="border-t border-border/60 pt-6">

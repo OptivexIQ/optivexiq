@@ -31,7 +31,8 @@ Core objectives:
 Revenue model:
 
 - `starter`: one-time entitlement model.
-- `pro` and `growth`: recurring subscription model.
+- `pro`: recurring subscription model.
+- `growth`: custom sales-led tier (not self-serve checkout).
 - Compute-heavy capabilities are monetized through quota-gated usage enforcement.
 
 ## 2. System Architecture Overview

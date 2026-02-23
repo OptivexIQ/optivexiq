@@ -60,6 +60,16 @@ export function PricingPlanAction({
   isAuthenticated,
   activePlan,
 }: Props) {
+  if (plan === "growth") {
+    return (
+      <div className="mb-8">
+        <Link href="/contact?intent=growth" className={getButtonClass(highlighted)}>
+          Contact Sales
+        </Link>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     const checkoutIntent = getCheckoutIntentUrl(plan, returnTo, currency);
     return (

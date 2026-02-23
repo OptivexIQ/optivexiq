@@ -6,6 +6,7 @@ export const contactRequestSchema = z.object({
   topic: z.enum(["support", "sales", "legal", "security", "billing", "other"]),
   company: z.string().trim().max(160).optional().default(""),
   message: z.string().trim().min(20).max(4000),
+  intent: z.enum(["growth"]).optional(),
   honeypot: z.string().optional().default(""),
 });
 

@@ -30,6 +30,10 @@ function resolveTierActionLabel(
   currentPlanKey: BillingTier["planKey"],
   isCurrentTier: boolean,
 ) {
+  if (tier.planKey === "growth") {
+    return "Contact Sales";
+  }
+
   if (isCurrentTier) {
     return "Manage plan";
   }
@@ -215,16 +219,31 @@ export default async function BillingPage() {
                 ) : null}
               </div>
               <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-2xl font-semibold text-foreground">
-                  {formatTierPrice(tier.priceCents, tier.currency)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {tier.period}
-                </span>
+                {tier.planKey === "growth" ? (
+                  <span className="text-2xl font-semibold text-foreground">
+                    Custom pricing
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-2xl font-semibold text-foreground">
+                      {formatTierPrice(tier.priceCents, tier.currency)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {tier.period}
+                    </span>
+                  </>
+                )}
               </div>
               {isCurrentTier ? (
                 <form action={openBillingPortalAction} className="mt-4">
                   <Button className="w-full" type="submit">
+                    {actionLabel}
+                  </Button>
+                </form>
+              ) : tier.planKey === "growth" ? (
+                <form action="/contact" method="get" className="mt-4">
+                  <input type="hidden" name="intent" value="growth" />
+                  <Button className="w-full" type="submit" variant="outline">
                     {actionLabel}
                   </Button>
                 </form>

@@ -132,11 +132,11 @@ function withRuntimeTierFeatures(
         ...tier,
         features: [
           "Everything in Pro",
-          "Counter-positioning engine",
-          "Quarterly positioning refresh",
-          "Advanced competitive insights",
+          "Advanced capabilities for complex use cases",
+          "Custom engagement for high-volume teams",
+          "Strategic support aligned to operating requirements",
           buildTeamFeature(limits),
-          "Dedicated account manager",
+          "Custom implementation planning",
         ],
       };
     }
