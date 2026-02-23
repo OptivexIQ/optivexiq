@@ -135,7 +135,7 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
       name: "Growth Intelligence",
       prices: { USD: 179, EUR: 149, GBP: 135 },
       period: "",
-      description: "Advanced capabilities available through custom engagement.",
+      description: "",
       highlightNote: "Designed for organizations with advanced requirements",
       features: [
         "Everything in Pro",
