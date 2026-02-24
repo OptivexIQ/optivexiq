@@ -2,8 +2,17 @@ import { logger } from "@/lib/logger";
 import { runRateLimitStartupCheck } from "@/features/usage/services/rateLimitService";
 import { runReportCompletionStartupCheck } from "@/features/reports/services/reportCompletionContractService";
 import { runDbContractStartupCheck } from "@/features/db/services/dbContractStartupService";
+import { ENABLE_SUPABASE_STARTUP_CHECKS } from "@/lib/env";
 
 export async function register() {
+  if (!ENABLE_SUPABASE_STARTUP_CHECKS) {
+    logger.warn("Supabase startup checks are disabled via environment toggle.", {
+      component: "startup",
+      checks_disabled: true,
+    });
+    return;
+  }
+
   const [rateLimitOk, reportCompletionOk, dbContractOk] = await Promise.all([
     runRateLimitStartupCheck(),
     runReportCompletionStartupCheck(),

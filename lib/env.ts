@@ -28,6 +28,7 @@ const envSchema = z.object({
 
   // Application
   NODE_ENV: z.enum(["development", "production", "test"]).optional(),
+  ENABLE_SUPABASE_STARTUP_CHECKS: z.enum(["true", "false"]).optional(),
   NEXT_PUBLIC_SITE_URL: z
     .string()
     .url("Invalid NEXT_PUBLIC_SITE_URL")
@@ -79,6 +80,8 @@ export const FROM_EMAIL = env.FROM_EMAIL || "hello@optivexiq.com";
 export const ADMIN_EMAIL = env.ADMIN_EMAIL || "admin@optivexiq.com";
 export const OPENAI_API_KEY = env.OPENAI_API_KEY;
 export const NODE_ENV = env.NODE_ENV || "development";
+export const ENABLE_SUPABASE_STARTUP_CHECKS =
+  env.ENABLE_SUPABASE_STARTUP_CHECKS !== "false";
 export const NEXT_PUBLIC_SITE_URL = env.NEXT_PUBLIC_SITE_URL;
 export const CRON_SECRET = env.CRON_SECRET;
 export const LEMONSQUEEZY_API_KEY = env.LEMONSQUEEZY_API_KEY;
