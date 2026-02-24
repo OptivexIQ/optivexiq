@@ -132,9 +132,13 @@ export default function StatusPageClient() {
                 isRefreshing ? "Refreshing live status" : "Live status current"
               }
             >
+              <span
+                className={`absolute inset-0 rounded-full ${statusDotRingTone(payload.overall.status)} animate-[pulse_2.8s_cubic-bezier(0.4,0,0.2,1)_infinite]`}
+                aria-hidden="true"
+              />
               {isRefreshing ? (
                 <span
-                  className={`absolute inset-0 rounded-full ${statusDotRingTone(payload.overall.status)} animate-[pulse_2.2s_cubic-bezier(0.4,0,0.2,1)_infinite]`}
+                  className={`absolute -inset-1 rounded-full ${statusDotRingTone(payload.overall.status)} animate-[ping_1.15s_cubic-bezier(0,0,0.2,1)_infinite]`}
                   aria-hidden="true"
                 />
               ) : null}
