@@ -15,6 +15,7 @@ import { WhatHappensIfUnchanged } from "@/features/reports/components/WhatHappen
 import { ReportExportActions } from "@/features/reports/components/ReportExportActions";
 import { CompetitiveMatrixPreview } from "@/features/reports/components/execution/CompetitiveMatrixPreview";
 import { DifferentiationInsightsPanel } from "@/features/reports/components/execution/DifferentiationInsightsPanel";
+import { CompetitiveInsightsPanel } from "@/features/reports/components/execution/CompetitiveInsightsPanel";
 
 const PositioningMapPreview = dynamic(
   () =>
@@ -80,6 +81,7 @@ export function GapReportView({
         <div className="flex flex-col gap-6">
           <MessagingOverlap report={report} />
           <DifferentiationInsightsPanel report={report} />
+          <CompetitiveInsightsPanel report={report} />
           <RewriteRecommendations report={report} />
         </div>
         <div className="flex flex-col gap-6">
