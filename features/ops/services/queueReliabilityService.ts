@@ -51,6 +51,14 @@ export type QueueHealthSnapshot = {
     snapshot: number;
     overall: number;
   };
+  workerFailureRate: {
+    report: number;
+    snapshot: number;
+    overall: number;
+  };
+  dependencies: {
+    supabase: boolean;
+  };
   workerStatus: {
     report: {
       lastSeenAt: string | null;
@@ -74,30 +82,35 @@ export type QueueHealthSnapshot = {
 };
 
 const WORKER_STALE_SECONDS = 180;
-const ALERT_COOLDOWN_MINUTES = 15;
 const ALERT_THRESHOLDS = {
   oldestQueuedAgeSeconds: 600,
   averageProcessingDelaySeconds: 300,
-  failureRate: 0.35,
+  errorRate: 0.35,
+  workerFailureRate: 0.3,
 };
 const MIN_ACTIVE_JOBS_FOR_DELAY_ALERT = 3;
 const RECOVERY_THRESHOLDS = {
   oldestQueuedAgeSeconds: 300,
   averageProcessingDelaySeconds: 180,
-  failureRate: 0.2,
+  errorRate: 0.2,
+  workerFailureRate: 0.15,
 };
 
 const ALERT_MESSAGES = {
+  dependencyOutageTriggered: "Queue dependency outage detected.",
+  dependencyOutageResolved: "Queue dependency outage resolved.",
   workerReportTriggered: "Report worker heartbeat stale.",
   workerSnapshotTriggered: "Snapshot worker heartbeat stale.",
   queueLagTriggered: "Queue lag threshold exceeded.",
   processingDelayTriggered: "Average queue processing delay threshold exceeded.",
-  failureRateTriggered: "Queue failure rate threshold exceeded.",
+  errorRateTriggered: "Queue error rate threshold exceeded.",
+  workerFailureRateTriggered: "Worker failure rate threshold exceeded.",
   workerReportResolved: "Report worker heartbeat recovered.",
   workerSnapshotResolved: "Snapshot worker heartbeat recovered.",
   queueLagResolved: "Queue lag recovered.",
   processingDelayResolved: "Average queue processing delay recovered.",
-  failureRateResolved: "Queue failure rate recovered.",
+  errorRateResolved: "Queue error rate recovered.",
+  workerFailureRateResolved: "Worker failure rate recovered.",
 } as const;
 
 type OperationalAlertRow = {
@@ -131,10 +144,13 @@ function clampFailureRate(value: number): number {
 
 async function getQueueSize(queue: QueueName): Promise<number> {
   const admin = createSupabaseAdminClient("worker");
-  const { count } = await admin
+  const { count, error } = await admin
     .from(queue)
     .select("id", { count: "exact", head: true })
     .in("status", ["queued", "processing"]);
+  if (error) {
+    throw error;
+  }
   return count ?? 0;
 }
 
@@ -145,12 +161,15 @@ async function getQueueTimingMetrics(queue: QueueName): Promise<{
   const admin = createSupabaseAdminClient("worker");
   const nowMs = Date.now();
 
-  const { data: queued } = await admin
+  const { data: queued, error: queuedError } = await admin
     .from(queue)
     .select("created_at")
     .eq("status", "queued")
     .order("created_at", { ascending: true })
     .limit(1);
+  if (queuedError) {
+    throw queuedError;
+  }
 
   const oldestQueuedCreatedAt =
     Array.isArray(queued) && queued.length > 0 ? queued[0]?.created_at : null;
@@ -161,12 +180,15 @@ async function getQueueTimingMetrics(queue: QueueName): Promise<{
     ? Math.max(0, Math.floor((nowMs - oldestQueuedMs) / 1000))
     : 0;
 
-  const { data: recent } = await admin
+  const { data: recent, error: recentError } = await admin
     .from(queue)
     .select("created_at, locked_at, completed_at, status")
     .eq("status", "processing")
     .order("updated_at", { ascending: false })
     .limit(200);
+  if (recentError) {
+    throw recentError;
+  }
 
   const rows = (recent ?? []) as QueueAgeRow[];
   const delays = rows
@@ -199,11 +221,14 @@ async function getQueueTimingMetrics(queue: QueueName): Promise<{
 async function getQueueFailureRate(queue: QueueName): Promise<number> {
   const admin = createSupabaseAdminClient("worker");
   const sinceIso = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-  const { data } = await admin
+  const { data, error } = await admin
     .from(queue)
     .select("status")
     .gte("updated_at", sinceIso)
     .in("status", ["complete", "failed"]);
+  if (error) {
+    throw error;
+  }
 
   const rows = (data ?? []) as JobStatusRow[];
   if (rows.length === 0) {
@@ -265,12 +290,15 @@ export async function collectQueueHealthSnapshot(): Promise<QueueHealthSnapshot>
     ]);
 
   const admin = createSupabaseAdminClient("worker");
-  const { data: workerRows } = await admin
+  const { data: workerRows, error: workerError } = await admin
     .from("queue_worker_heartbeats")
     .select(
       "worker_name, queue_name, last_seen_at, last_failure_rate, last_claimed, last_completed, last_failed, last_requeued, last_poisoned, last_oldest_queued_age_seconds, last_average_processing_delay_seconds",
     )
     .in("worker_name", ["report_worker", "snapshot_worker"]);
+  if (workerError) {
+    throw workerError;
+  }
 
   const rows = (workerRows ?? []) as WorkerHeartbeatRow[];
   const reportWorker = rows.find((row) => row.worker_name === "report_worker") ?? null;
@@ -285,6 +313,10 @@ export async function collectQueueHealthSnapshot(): Promise<QueueHealthSnapshot>
     : false;
 
   const overallFailureRate = clampFailureRate((reportFailure + snapshotFailure) / 2);
+  const overallWorkerFailureRate = clampFailureRate(
+    ((reportWorker?.last_failure_rate ?? 0) + (snapshotWorker?.last_failure_rate ?? 0)) /
+      2,
+  );
   const overallOldest = Math.max(
     reportLag.oldestQueuedAgeSeconds,
     snapshotLag.oldestQueuedAgeSeconds,
@@ -316,6 +348,14 @@ export async function collectQueueHealthSnapshot(): Promise<QueueHealthSnapshot>
       snapshot: snapshotFailure,
       overall: overallFailureRate,
     },
+    workerFailureRate: {
+      report: clampFailureRate(reportWorker?.last_failure_rate ?? 0),
+      snapshot: clampFailureRate(snapshotWorker?.last_failure_rate ?? 0),
+      overall: overallWorkerFailureRate,
+    },
+    dependencies: {
+      supabase: true,
+    },
     workerStatus: {
       report: {
         lastSeenAt: reportWorker?.last_seen_at ?? null,
@@ -337,22 +377,6 @@ export async function collectQueueHealthSnapshot(): Promise<QueueHealthSnapshot>
       },
     },
   };
-}
-
-async function recentlyAlerted(source: string, message: string): Promise<boolean> {
-  const admin = createSupabaseAdminClient("worker");
-  const sinceIso = new Date(
-    Date.now() - ALERT_COOLDOWN_MINUTES * 60 * 1000,
-  ).toISOString();
-  const { data } = await admin
-    .from("operational_alerts")
-    .select("id")
-    .eq("source", source)
-    .eq("message", message)
-    .gte("created_at", sinceIso)
-    .limit(1);
-
-  return Array.isArray(data) && data.length > 0;
 }
 
 async function latestAlertForSource(source: string): Promise<OperationalAlertRow | null> {
@@ -383,16 +407,77 @@ function alertIsResolved(row: OperationalAlertRow | null): boolean {
   return typeof resolvedAt === "string" && resolvedAt.trim().length > 0;
 }
 
+function alertIsActive(row: OperationalAlertRow | null): boolean {
+  return !!row && !alertIsResolved(row);
+}
+
+type IncidentTransition = {
+  severity: "warning" | "high" | "critical";
+  source: string;
+  triggerMessage: string;
+  resolvedMessage: string;
+  breached: boolean;
+  triggerContext: Record<string, unknown>;
+  resolvedContext: Record<string, unknown>;
+};
+
+async function applyIncidentTransition(transition: IncidentTransition): Promise<void> {
+  const latest = await latestAlertForSource(transition.source);
+  const active = alertIsActive(latest);
+
+  if (transition.breached && !active) {
+    await emitOperationalAlert({
+      severity: transition.severity,
+      source: transition.source,
+      message: transition.triggerMessage,
+      context: {
+        incident_event: "start",
+        incident_state: "open",
+        started_at: new Date().toISOString(),
+        ...transition.triggerContext,
+      },
+    });
+    return;
+  }
+
+  if (!transition.breached && active) {
+    await emitOperationalAlert({
+      severity: "warning",
+      source: transition.source,
+      message: transition.resolvedMessage,
+      context: {
+        incident_event: "end",
+        incident_state: "resolved",
+        resolved_at: new Date().toISOString(),
+        ...transition.resolvedContext,
+      },
+    });
+  }
+}
+
+export async function evaluateQueueDependencyHealth(input: {
+  healthy: boolean;
+  errorMessage?: string;
+}): Promise<void> {
+  await applyIncidentTransition({
+    severity: "critical",
+    source: "queue.dependency.supabase",
+    triggerMessage: ALERT_MESSAGES.dependencyOutageTriggered,
+    resolvedMessage: ALERT_MESSAGES.dependencyOutageResolved,
+    breached: !input.healthy,
+    triggerContext: {
+      dependency: "supabase",
+      error: input.errorMessage ?? "dependency_unavailable",
+    },
+    resolvedContext: {
+      dependency: "supabase",
+    },
+  });
+}
+
 export async function evaluateQueueHealthAlerts(
   snapshot: QueueHealthSnapshot,
 ): Promise<void> {
-  const alerts: Array<{
-    severity: "warning" | "high" | "critical";
-    source: string;
-    message: string;
-    context: Record<string, unknown>;
-  }> = [];
-
   const reportWorkerRequired =
     snapshot.queueSize.report > 0 || snapshot.oldestQueuedAgeSeconds.report > 0;
   const snapshotWorkerRequired =
@@ -407,176 +492,147 @@ export async function evaluateQueueHealthAlerts(
     snapshot.queueSize.total >= MIN_ACTIVE_JOBS_FOR_DELAY_ALERT &&
     snapshot.averageProcessingDelaySeconds.overall >=
       ALERT_THRESHOLDS.averageProcessingDelaySeconds;
-  const failureRateBreached = snapshot.failureRate.overall >= ALERT_THRESHOLDS.failureRate;
+  const errorRateBreached = snapshot.failureRate.overall >= ALERT_THRESHOLDS.errorRate;
+  const workerFailureRateBreached =
+    snapshot.workerFailureRate.overall >= ALERT_THRESHOLDS.workerFailureRate;
 
-  if (reportWorkerBreached) {
-    alerts.push({
-      severity: "high",
-      source: "queue.worker.report",
-      message: ALERT_MESSAGES.workerReportTriggered,
-      context: {
-        worker: "report_worker",
-        last_seen_at: snapshot.workerStatus.report.lastSeenAt,
-      },
-    });
-  }
-
-  if (snapshotWorkerBreached) {
-    alerts.push({
-      severity: "high",
-      source: "queue.worker.snapshot",
-      message: ALERT_MESSAGES.workerSnapshotTriggered,
-      context: {
-        worker: "snapshot_worker",
-        last_seen_at: snapshot.workerStatus.snapshot.lastSeenAt,
-      },
-    });
-  }
-
-  if (queueLagBreached) {
-    alerts.push({
-      severity: "high",
-      source: "queue.lag",
-      message: ALERT_MESSAGES.queueLagTriggered,
-      context: {
-        oldest_queued_age_seconds: snapshot.oldestQueuedAgeSeconds.overall,
-        report_oldest_age_seconds: snapshot.oldestQueuedAgeSeconds.report,
-        snapshot_oldest_age_seconds: snapshot.oldestQueuedAgeSeconds.snapshot,
-      },
-    });
-  }
-
-  if (processingDelayBreached) {
-    alerts.push({
-      severity: "warning",
-        source: "queue.processing_delay",
-        message: ALERT_MESSAGES.processingDelayTriggered,
-        context: {
-          average_processing_delay_seconds:
-            snapshot.averageProcessingDelaySeconds.overall,
-          active_job_count: snapshot.queueSize.total,
-        },
-      });
-  }
-
-  if (failureRateBreached) {
-    alerts.push({
-      severity: "critical",
-      source: "queue.failure_rate",
-      message: ALERT_MESSAGES.failureRateTriggered,
-      context: {
-        overall_failure_rate: snapshot.failureRate.overall,
-        report_failure_rate: snapshot.failureRate.report,
-        snapshot_failure_rate: snapshot.failureRate.snapshot,
-      },
-    });
-  }
-
-  for (const alert of alerts) {
-    if (await recentlyAlerted(alert.source, alert.message)) {
-      continue;
-    }
-    await emitOperationalAlert({
-      severity: alert.severity,
-      source: alert.source,
-      message: alert.message,
-      context: alert.context,
-    });
-  }
-
-  const latestBySource = await Promise.all([
-    latestAlertForSource("queue.worker.report"),
-    latestAlertForSource("queue.worker.snapshot"),
-    latestAlertForSource("queue.lag"),
-    latestAlertForSource("queue.processing_delay"),
-    latestAlertForSource("queue.failure_rate"),
-  ]);
-
-  const [latestWorkerReport, latestWorkerSnapshot, latestQueueLag, latestDelay, latestFailure] =
-    latestBySource;
-
-  const recoveries: Array<{
-    active: boolean;
-    stillBreached: boolean;
-    source: string;
-    message: string;
-    context: Record<string, unknown>;
-  }> = [
-    {
-      active: !!latestWorkerReport && !alertIsResolved(latestWorkerReport),
-      stillBreached: reportWorkerBreached,
-      source: "queue.worker.report",
-      message: ALERT_MESSAGES.workerReportResolved,
-      context: {
-        worker: "report_worker",
-        resolved_at: new Date().toISOString(),
-        last_seen_at: snapshot.workerStatus.report.lastSeenAt,
-      },
+  await applyIncidentTransition({
+    severity: "high",
+    source: "queue.worker.report",
+    triggerMessage: ALERT_MESSAGES.workerReportTriggered,
+    resolvedMessage: ALERT_MESSAGES.workerReportResolved,
+    breached: reportWorkerBreached,
+    triggerContext: {
+      worker: "report_worker",
+      metric: "worker_heartbeat_stale",
+      metric_value_seconds_since_last_seen: secondsSince(
+        snapshot.workerStatus.report.lastSeenAt,
+      ),
+      threshold_seconds: WORKER_STALE_SECONDS,
+      last_seen_at: snapshot.workerStatus.report.lastSeenAt,
     },
-    {
-      active: !!latestWorkerSnapshot && !alertIsResolved(latestWorkerSnapshot),
-      stillBreached: snapshotWorkerBreached,
-      source: "queue.worker.snapshot",
-      message: ALERT_MESSAGES.workerSnapshotResolved,
-      context: {
-        worker: "snapshot_worker",
-        resolved_at: new Date().toISOString(),
-        last_seen_at: snapshot.workerStatus.snapshot.lastSeenAt,
-      },
+    resolvedContext: {
+      worker: "report_worker",
+      metric: "worker_heartbeat_stale",
+      metric_value_seconds_since_last_seen: secondsSince(
+        snapshot.workerStatus.report.lastSeenAt,
+      ),
+      threshold_seconds: WORKER_STALE_SECONDS,
+      last_seen_at: snapshot.workerStatus.report.lastSeenAt,
     },
-    {
-      active: !!latestQueueLag && !alertIsResolved(latestQueueLag),
-      stillBreached:
-        snapshot.oldestQueuedAgeSeconds.overall >= RECOVERY_THRESHOLDS.oldestQueuedAgeSeconds,
-      source: "queue.lag",
-      message: ALERT_MESSAGES.queueLagResolved,
-      context: {
-        resolved_at: new Date().toISOString(),
-        oldest_queued_age_seconds: snapshot.oldestQueuedAgeSeconds.overall,
-        report_oldest_age_seconds: snapshot.oldestQueuedAgeSeconds.report,
-        snapshot_oldest_age_seconds: snapshot.oldestQueuedAgeSeconds.snapshot,
-      },
-    },
-    {
-      active: !!latestDelay && !alertIsResolved(latestDelay),
-      stillBreached:
-        snapshot.queueSize.total >= MIN_ACTIVE_JOBS_FOR_DELAY_ALERT &&
-        snapshot.averageProcessingDelaySeconds.overall >=
-        RECOVERY_THRESHOLDS.averageProcessingDelaySeconds,
-      source: "queue.processing_delay",
-      message: ALERT_MESSAGES.processingDelayResolved,
-      context: {
-        resolved_at: new Date().toISOString(),
-        average_processing_delay_seconds: snapshot.averageProcessingDelaySeconds.overall,
-        active_job_count: snapshot.queueSize.total,
-      },
-    },
-    {
-      active: !!latestFailure && !alertIsResolved(latestFailure),
-      stillBreached: snapshot.failureRate.overall >= RECOVERY_THRESHOLDS.failureRate,
-      source: "queue.failure_rate",
-      message: ALERT_MESSAGES.failureRateResolved,
-      context: {
-        resolved_at: new Date().toISOString(),
-        overall_failure_rate: snapshot.failureRate.overall,
-        report_failure_rate: snapshot.failureRate.report,
-        snapshot_failure_rate: snapshot.failureRate.snapshot,
-      },
-    },
-  ];
+  });
 
-  for (const recovery of recoveries) {
-    if (!recovery.active || recovery.stillBreached) {
-      continue;
-    }
-    if (await recentlyAlerted(recovery.source, recovery.message)) {
-      continue;
-    }
-    await emitOperationalAlert({
-      severity: "warning",
-      source: recovery.source,
-      message: recovery.message,
-      context: recovery.context,
-    });
-  }
+  await applyIncidentTransition({
+    severity: "high",
+    source: "queue.worker.snapshot",
+    triggerMessage: ALERT_MESSAGES.workerSnapshotTriggered,
+    resolvedMessage: ALERT_MESSAGES.workerSnapshotResolved,
+    breached: snapshotWorkerBreached,
+    triggerContext: {
+      worker: "snapshot_worker",
+      metric: "worker_heartbeat_stale",
+      metric_value_seconds_since_last_seen: secondsSince(
+        snapshot.workerStatus.snapshot.lastSeenAt,
+      ),
+      threshold_seconds: WORKER_STALE_SECONDS,
+      last_seen_at: snapshot.workerStatus.snapshot.lastSeenAt,
+    },
+    resolvedContext: {
+      worker: "snapshot_worker",
+      metric: "worker_heartbeat_stale",
+      metric_value_seconds_since_last_seen: secondsSince(
+        snapshot.workerStatus.snapshot.lastSeenAt,
+      ),
+      threshold_seconds: WORKER_STALE_SECONDS,
+      last_seen_at: snapshot.workerStatus.snapshot.lastSeenAt,
+    },
+  });
+
+  await applyIncidentTransition({
+    severity: "high",
+    source: "queue.lag",
+    triggerMessage: ALERT_MESSAGES.queueLagTriggered,
+    resolvedMessage: ALERT_MESSAGES.queueLagResolved,
+    breached: queueLagBreached,
+    triggerContext: {
+      metric: "queue_lag_seconds",
+      metric_value: snapshot.oldestQueuedAgeSeconds.overall,
+      threshold: ALERT_THRESHOLDS.oldestQueuedAgeSeconds,
+      report_metric_value: snapshot.oldestQueuedAgeSeconds.report,
+      snapshot_metric_value: snapshot.oldestQueuedAgeSeconds.snapshot,
+    },
+    resolvedContext: {
+      metric: "queue_lag_seconds",
+      metric_value: snapshot.oldestQueuedAgeSeconds.overall,
+      threshold: RECOVERY_THRESHOLDS.oldestQueuedAgeSeconds,
+      report_metric_value: snapshot.oldestQueuedAgeSeconds.report,
+      snapshot_metric_value: snapshot.oldestQueuedAgeSeconds.snapshot,
+    },
+  });
+
+  await applyIncidentTransition({
+    severity: "warning",
+    source: "queue.processing_delay",
+    triggerMessage: ALERT_MESSAGES.processingDelayTriggered,
+    resolvedMessage: ALERT_MESSAGES.processingDelayResolved,
+    breached: processingDelayBreached,
+    triggerContext: {
+      metric: "processing_delay_seconds",
+      metric_value: snapshot.averageProcessingDelaySeconds.overall,
+      threshold: ALERT_THRESHOLDS.averageProcessingDelaySeconds,
+      active_job_count: snapshot.queueSize.total,
+      min_active_jobs_threshold: MIN_ACTIVE_JOBS_FOR_DELAY_ALERT,
+    },
+    resolvedContext: {
+      metric: "processing_delay_seconds",
+      metric_value: snapshot.averageProcessingDelaySeconds.overall,
+      threshold: RECOVERY_THRESHOLDS.averageProcessingDelaySeconds,
+      active_job_count: snapshot.queueSize.total,
+      min_active_jobs_threshold: MIN_ACTIVE_JOBS_FOR_DELAY_ALERT,
+    },
+  });
+
+  await applyIncidentTransition({
+    severity: "critical",
+    source: "queue.error_rate",
+    triggerMessage: ALERT_MESSAGES.errorRateTriggered,
+    resolvedMessage: ALERT_MESSAGES.errorRateResolved,
+    breached: errorRateBreached,
+    triggerContext: {
+      metric: "queue_error_rate",
+      metric_value: snapshot.failureRate.overall,
+      threshold: ALERT_THRESHOLDS.errorRate,
+      report_metric_value: snapshot.failureRate.report,
+      snapshot_metric_value: snapshot.failureRate.snapshot,
+    },
+    resolvedContext: {
+      metric: "queue_error_rate",
+      metric_value: snapshot.failureRate.overall,
+      threshold: RECOVERY_THRESHOLDS.errorRate,
+      report_metric_value: snapshot.failureRate.report,
+      snapshot_metric_value: snapshot.failureRate.snapshot,
+    },
+  });
+
+  await applyIncidentTransition({
+    severity: "high",
+    source: "queue.worker_failure_rate",
+    triggerMessage: ALERT_MESSAGES.workerFailureRateTriggered,
+    resolvedMessage: ALERT_MESSAGES.workerFailureRateResolved,
+    breached: workerFailureRateBreached,
+    triggerContext: {
+      metric: "worker_failure_rate",
+      metric_value: snapshot.workerFailureRate.overall,
+      threshold: ALERT_THRESHOLDS.workerFailureRate,
+      report_metric_value: snapshot.workerFailureRate.report,
+      snapshot_metric_value: snapshot.workerFailureRate.snapshot,
+    },
+    resolvedContext: {
+      metric: "worker_failure_rate",
+      metric_value: snapshot.workerFailureRate.overall,
+      threshold: RECOVERY_THRESHOLDS.workerFailureRate,
+      report_metric_value: snapshot.workerFailureRate.report,
+      snapshot_metric_value: snapshot.workerFailureRate.snapshot,
+    },
+  });
 }

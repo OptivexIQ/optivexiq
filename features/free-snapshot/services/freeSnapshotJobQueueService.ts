@@ -12,6 +12,7 @@ import {
 } from "@/features/free-snapshot/services/freeSnapshotRepository";
 import {
   collectQueueHealthSnapshot,
+  evaluateQueueDependencyHealth,
   evaluateQueueHealthAlerts,
   recordQueueWorkerHeartbeat,
 } from "@/features/ops/services/queueReliabilityService";
@@ -345,21 +346,33 @@ export async function runFreeSnapshotJobWorker(limit = 10) {
   }
 
   const failureRate = claimed > 0 ? Number((failed / claimed).toFixed(4)) : 0;
-  const health = await collectQueueHealthSnapshot();
-  await recordQueueWorkerHeartbeat({
-    workerName: "snapshot_worker",
-    queueName: "free_snapshot_jobs",
-    scanned: data.length,
-    claimed,
-    completed,
-    failed,
-    requeued: requeued + staleRequeued,
-    poisoned,
-    oldestQueuedAgeSeconds: health.oldestQueuedAgeSeconds.snapshot,
-    averageProcessingDelaySeconds: health.averageProcessingDelaySeconds.snapshot,
-    failureRate,
-  });
-  await evaluateQueueHealthAlerts(health);
+  try {
+    const health = await collectQueueHealthSnapshot();
+    await evaluateQueueDependencyHealth({ healthy: true });
+    await recordQueueWorkerHeartbeat({
+      workerName: "snapshot_worker",
+      queueName: "free_snapshot_jobs",
+      scanned: data.length,
+      claimed,
+      completed,
+      failed,
+      requeued: requeued + staleRequeued,
+      poisoned,
+      oldestQueuedAgeSeconds: health.oldestQueuedAgeSeconds.snapshot,
+      averageProcessingDelaySeconds: health.averageProcessingDelaySeconds.snapshot,
+      failureRate,
+    });
+    await evaluateQueueHealthAlerts(health);
+  } catch (error) {
+    await evaluateQueueDependencyHealth({
+      healthy: false,
+      errorMessage:
+        error instanceof Error && error.message
+          ? error.message
+          : "queue_dependency_unavailable",
+    });
+    throw error;
+  }
 
   logger.info("free_snapshot.worker_run_summary", {
     scanned: data.length,

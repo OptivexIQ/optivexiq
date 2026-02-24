@@ -62,8 +62,14 @@ function inferIncidentKey(alert: AlertRow): string {
   if (source === "queue.lag") {
     return "analysis_queue_lag";
   }
-  if (source === "queue.failure_rate") {
-    return "analysis_failure_rate";
+  if (source === "queue.error_rate" || source === "queue.failure_rate") {
+    return "analysis_error_rate";
+  }
+  if (source === "queue.worker_failure_rate") {
+    return "analysis_worker_failure_rate";
+  }
+  if (source === "queue.dependency.supabase") {
+    return "analysis_dependency_outage";
   }
   if (source === "queue.worker.report") {
     return "analysis_worker_report";
@@ -88,8 +94,14 @@ function humanizeUpdate(alert: AlertRow): string {
     if (source === "queue.lag") {
       return "Analysis queue backlog recovered to expected range.";
     }
-    if (source === "queue.failure_rate") {
-      return "Analysis failure rate recovered to expected range.";
+    if (source === "queue.error_rate" || source === "queue.failure_rate") {
+      return "Analysis error rate recovered to expected range.";
+    }
+    if (source === "queue.worker_failure_rate") {
+      return "Worker failure rate recovered to expected range.";
+    }
+    if (source === "queue.dependency.supabase") {
+      return "Queue dependency connectivity recovered.";
     }
     if (source === "queue.worker.report" || source === "queue.worker.snapshot") {
       return "Background analysis worker health recovered.";
@@ -103,8 +115,14 @@ function humanizeUpdate(alert: AlertRow): string {
   if (source === "queue.lag") {
     return "Queue backlog increased and may delay some report completions.";
   }
-  if (source === "queue.failure_rate") {
-    return "Analysis job failure rate increased; retry and recovery routines are active.";
+  if (source === "queue.error_rate" || source === "queue.failure_rate") {
+    return "Analysis error rate is elevated; retry and recovery routines are active.";
+  }
+  if (source === "queue.worker_failure_rate") {
+    return "Worker failure rate is elevated and may affect throughput reliability.";
+  }
+  if (source === "queue.dependency.supabase") {
+    return "Queue dependency outage detected; processing may be delayed or interrupted.";
   }
   if (source === "queue.worker.report" || source === "queue.worker.snapshot") {
     return "A background analysis worker became unhealthy and recovery is in progress.";
@@ -122,8 +140,14 @@ function buildIncidentTitle(key: string, component: ComponentKey): string {
   if (key === "analysis_queue_lag") {
     return "Analysis queue backlog";
   }
-  if (key === "analysis_failure_rate") {
+  if (key === "analysis_error_rate") {
     return "Analysis reliability degradation";
+  }
+  if (key === "analysis_worker_failure_rate") {
+    return "Analysis worker reliability degradation";
+  }
+  if (key === "analysis_dependency_outage") {
+    return "Analysis dependency outage";
   }
   if (key === "analysis_worker_report" || key === "analysis_worker_snapshot") {
     return "Analysis worker disruption";
@@ -144,8 +168,14 @@ function buildCustomerImpact(key: string, component: ComponentKey): string {
   if (key === "analysis_processing_delay" || key === "analysis_queue_lag") {
     return "Some snapshot and full report requests may complete slower than expected.";
   }
-  if (key === "analysis_failure_rate") {
+  if (key === "analysis_error_rate") {
     return "Some analysis jobs may fail and require automatic retry before completion.";
+  }
+  if (key === "analysis_worker_failure_rate") {
+    return "Some analysis requests may retry or complete slower while worker errors are elevated.";
+  }
+  if (key === "analysis_dependency_outage") {
+    return "Snapshot and full report processing may be interrupted while dependency connectivity is degraded.";
   }
   if (key === "analysis_worker_report" || key === "analysis_worker_snapshot") {
     return "Some analysis requests may be delayed while worker recovery is in progress.";
@@ -167,25 +197,20 @@ function resolveIncidentStatus(alert: AlertRow): StatusIncident["status"] {
     alert.context && typeof alert.context === "object" && !Array.isArray(alert.context)
       ? (alert.context as Record<string, unknown>)
       : null;
+  const incidentState = context?.incident_state;
+  if (incidentState === "resolved") {
+    return "resolved";
+  }
+  if (incidentState === "open") {
+    return alert.severity === "critical" ? "investigating" : "identified";
+  }
+
   const resolvedAt = context?.resolved_at;
   if (typeof resolvedAt === "string" && resolvedAt.trim().length > 0) {
     return "resolved";
   }
 
-  const ageMinutes = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(alert.created_at).getTime()) / 60_000),
-  );
-  if (ageMinutes < 15) {
-    return "investigating";
-  }
-  if (ageMinutes < 60) {
-    return "identified";
-  }
-  if (ageMinutes < 180) {
-    return "monitoring";
-  }
-  return "monitoring";
+  return alert.severity === "critical" ? "investigating" : "identified";
 }
 
 export function buildIncidentFromAlert(alert: AlertRow): StatusIncident {

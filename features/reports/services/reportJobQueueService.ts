@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { processQueuedReportJob } from "@/features/reports/services/reportCreateService";
 import {
   collectQueueHealthSnapshot,
+  evaluateQueueDependencyHealth,
   evaluateQueueHealthAlerts,
   recordQueueWorkerHeartbeat,
 } from "@/features/ops/services/queueReliabilityService";
@@ -283,21 +284,33 @@ export async function runReportJobWorker(limit = 20): Promise<{
   };
   const failureRate =
     claimed > 0 ? Number((failed / Math.max(claimed, 1)).toFixed(4)) : 0;
-  const health = await collectQueueHealthSnapshot();
-  await recordQueueWorkerHeartbeat({
-    workerName: "report_worker",
-    queueName: "report_jobs",
-    scanned: result.scanned,
-    claimed: result.claimed,
-    completed: result.completed,
-    failed: result.failed,
-    requeued: result.requeued + staleRequeued + staleExecutionRequeued,
-    poisoned: result.poisoned,
-    oldestQueuedAgeSeconds: health.oldestQueuedAgeSeconds.report,
-    averageProcessingDelaySeconds: health.averageProcessingDelaySeconds.report,
-    failureRate,
-  });
-  await evaluateQueueHealthAlerts(health);
+  try {
+    const health = await collectQueueHealthSnapshot();
+    await evaluateQueueDependencyHealth({ healthy: true });
+    await recordQueueWorkerHeartbeat({
+      workerName: "report_worker",
+      queueName: "report_jobs",
+      scanned: result.scanned,
+      claimed: result.claimed,
+      completed: result.completed,
+      failed: result.failed,
+      requeued: result.requeued + staleRequeued + staleExecutionRequeued,
+      poisoned: result.poisoned,
+      oldestQueuedAgeSeconds: health.oldestQueuedAgeSeconds.report,
+      averageProcessingDelaySeconds: health.averageProcessingDelaySeconds.report,
+      failureRate,
+    });
+    await evaluateQueueHealthAlerts(health);
+  } catch (error) {
+    await evaluateQueueDependencyHealth({
+      healthy: false,
+      errorMessage:
+        error instanceof Error && error.message
+          ? error.message
+          : "queue_dependency_unavailable",
+    });
+    throw error;
+  }
 
   return result;
 }

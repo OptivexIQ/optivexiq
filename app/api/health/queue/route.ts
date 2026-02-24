@@ -6,6 +6,7 @@ import { collectQueueHealthSnapshot } from "@/features/ops/services/queueReliabi
 const MAX_OLDEST_QUEUED_AGE_SECONDS = 600;
 const MAX_AVERAGE_DELAY_SECONDS = 300;
 const MAX_FAILURE_RATE = 0.35;
+const MAX_WORKER_FAILURE_RATE = 0.3;
 
 export async function GET() {
   const requestId = randomUUID();
@@ -27,7 +28,15 @@ export async function GET() {
     snapshot.oldestQueuedAgeSeconds.overall <= MAX_OLDEST_QUEUED_AGE_SECONDS &&
     snapshot.averageProcessingDelaySeconds.overall <= MAX_AVERAGE_DELAY_SECONDS;
   const failureHealthy = snapshot.failureRate.overall <= MAX_FAILURE_RATE;
-  const healthy = workersHealthy && lagHealthy && failureHealthy;
+  const workerFailureHealthy =
+    snapshot.workerFailureRate.overall <= MAX_WORKER_FAILURE_RATE;
+  const dependencyHealthy = snapshot.dependencies.supabase;
+  const healthy =
+    workersHealthy &&
+    lagHealthy &&
+    failureHealthy &&
+    workerFailureHealthy &&
+    dependencyHealthy;
 
   return NextResponse.json(
     {
@@ -36,11 +45,14 @@ export async function GET() {
       oldestQueuedAgeSeconds: snapshot.oldestQueuedAgeSeconds,
       averageProcessingDelaySeconds: snapshot.averageProcessingDelaySeconds,
       failureRate: snapshot.failureRate,
+      workerFailureRate: snapshot.workerFailureRate,
+      dependencies: snapshot.dependencies,
       workerStatus: snapshot.workerStatus,
       thresholds: {
         oldestQueuedAgeSeconds: MAX_OLDEST_QUEUED_AGE_SECONDS,
         averageProcessingDelaySeconds: MAX_AVERAGE_DELAY_SECONDS,
         failureRate: MAX_FAILURE_RATE,
+        workerFailureRate: MAX_WORKER_FAILURE_RATE,
       },
       generatedAt: snapshot.generatedAt,
     },
