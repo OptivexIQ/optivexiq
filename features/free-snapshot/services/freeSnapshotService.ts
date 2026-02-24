@@ -17,8 +17,10 @@ type GenerateParams = {
 type SnapshotGenerationResult = {
   snapshot: FreeConversionSnapshot;
   usage: {
-    inputTokens: number;
-    outputTokens: number;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    model: string;
   };
 };
 
@@ -142,8 +144,10 @@ export async function analyzeFreeSnapshotFromInput(params: {
   return {
     snapshot: parseSnapshot(response.content),
     usage: {
-      inputTokens: response.inputTokens,
-      outputTokens: response.outputTokens,
+      promptTokens: response.promptTokens,
+      completionTokens: response.completionTokens,
+      totalTokens: response.totalTokens,
+      model: response.model,
     },
   };
 }

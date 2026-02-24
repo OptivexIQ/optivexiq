@@ -203,8 +203,10 @@ async function processSnapshot(snapshotId: string) {
   logger.info("Free snapshot completed.", {
     snapshot_id: snapshotId,
     duration_ms: Date.now() - started,
-    input_tokens: generated.usage.inputTokens,
-    output_tokens: generated.usage.outputTokens,
+    prompt_tokens: generated.usage.promptTokens,
+    completion_tokens: generated.usage.completionTokens,
+    total_tokens: generated.usage.totalTokens,
+    model: generated.usage.model,
   });
 }
 

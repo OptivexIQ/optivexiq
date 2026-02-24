@@ -7,8 +7,10 @@ import { logger } from "@/lib/logger";
 import type { ZodType } from "zod";
 
 export type ModuleUsage = {
-  inputTokens: number;
-  outputTokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  model: string;
 };
 
 export type ModuleResult<T> = {
@@ -23,13 +25,14 @@ export async function runValidatedModule<T>(moduleData: {
   schema: ZodType<T>;
   schemaExample?: unknown;
 }): Promise<ModuleResult<T>> {
+  const model = "gpt-4o-mini";
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   const maxAttempts = 2;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const response = await runChatCompletion({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",
@@ -60,8 +63,8 @@ export async function runValidatedModule<T>(moduleData: {
       ],
     });
 
-    totalInputTokens += response.inputTokens;
-    totalOutputTokens += response.outputTokens;
+    totalInputTokens += response.promptTokens;
+    totalOutputTokens += response.completionTokens;
 
     const strictParsed = parseJsonStrict<unknown>(response.content);
     const extracted = extractJsonObject(response.content);
@@ -82,8 +85,10 @@ export async function runValidatedModule<T>(moduleData: {
         return {
           data: validated.data,
           usage: {
-            inputTokens: totalInputTokens,
-            outputTokens: totalOutputTokens,
+            promptTokens: totalInputTokens,
+            completionTokens: totalOutputTokens,
+            totalTokens: totalInputTokens + totalOutputTokens,
+            model,
           },
         };
       }

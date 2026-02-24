@@ -17,8 +17,10 @@ export type OpenAIRequest = {
 
 export type OpenAIResponse = {
   content: string;
-  inputTokens: number;
-  outputTokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  model: string;
   estimatedCostUsd: number;
 };
 
@@ -64,15 +66,23 @@ export async function runChatCompletion(
   );
 
   const content = response.choices[0]?.message?.content ?? "";
-  const inputTokens = response.usage?.prompt_tokens ?? estimateTokens(request);
-  const outputTokens = response.usage?.completion_tokens ?? estimateTokens(content);
+  const promptTokens = response.usage?.prompt_tokens ?? estimateTokens(request);
+  const completionTokens =
+    response.usage?.completion_tokens ?? estimateTokens(content);
   const estimatedCostUsd = estimateCost({
     model,
-    inputTokens,
-    outputTokens,
+    inputTokens: promptTokens,
+    outputTokens: completionTokens,
   });
 
-  return { content, inputTokens, outputTokens, estimatedCostUsd };
+  return {
+    content,
+    promptTokens,
+    completionTokens,
+    totalTokens: promptTokens + completionTokens,
+    model,
+    estimatedCostUsd,
+  };
 }
 
 export async function streamChatCompletion(request: OpenAIRequest) {

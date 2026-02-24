@@ -52,14 +52,22 @@ export async function analyzeCompetitors(
 
   const usage = analyzed.reduce(
     (acc, item) => ({
-      inputTokens: acc.inputTokens + item.usage.inputTokens,
-      outputTokens: acc.outputTokens + item.usage.outputTokens,
+      promptTokens: acc.promptTokens + item.usage.promptTokens,
+      completionTokens: acc.completionTokens + item.usage.completionTokens,
+      totalTokens: acc.totalTokens + item.usage.totalTokens,
     }),
-    { inputTokens: 0, outputTokens: 0 },
+    {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    },
   );
 
   return {
     competitors: analyzed.map((item) => item.competitor),
-    usage,
+    usage: {
+      ...usage,
+      model: "gpt-4o-mini",
+    },
   };
 }

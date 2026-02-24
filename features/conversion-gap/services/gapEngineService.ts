@@ -33,13 +33,18 @@ import { synthesizeCompetitorIntelligence } from "@/features/conversion-gap/serv
 import { scrapePage } from "@/features/conversion-gap/scraping/scraper";
 import { extractContent } from "@/features/conversion-gap/scraping/contentExtractor";
 import {
+  buildUsageTotals,
+  type UsageTotals,
+} from "@/features/usage/services/usageTotals";
+import { logger } from "@/lib/logger";
+import {
   AI_INPUT_TOKEN_RATE_CENTS,
   AI_OUTPUT_TOKEN_RATE_CENTS,
 } from "@/lib/constants/limits";
 
 export type UsageSummary = ModuleUsage & {
-  totalTokens: number;
   costCents: number;
+  usageTotals: UsageTotals;
 };
 
 export function estimateCostCents(inputTokens: number, outputTokens: number) {
@@ -66,7 +71,7 @@ export type GapEngineResults = {
   competitiveCounter: CompetitiveCounterOutput;
   competitorSynthesis: Awaited<
     ReturnType<typeof synthesizeCompetitorIntelligence>
-  >;
+  >["data"];
 };
 
 export function deriveCompetitorUrls(value: unknown): string[] {
@@ -98,6 +103,7 @@ export async function scrapeAndExtract(
 export async function runGapEngine(
   context: GapEngineContext,
 ): Promise<{ results: GapEngineResults; usage: UsageSummary }> {
+  const startedAt = Date.now();
   const promptProfile = buildPromptProfileContext(
     context.profile,
     context.currency ?? "USD",
@@ -214,21 +220,36 @@ export async function runGapEngine(
     pricingAnalysis: pricing.data,
   });
 
-  const inputTokens =
-    gapAnalysis.usage.inputTokens +
-    hero.usage.inputTokens +
-    pricing.usage.inputTokens +
-    objections.usage.inputTokens +
-    differentiation.usage.inputTokens +
-    competitiveCounter.usage.inputTokens;
-  const outputTokens =
-    gapAnalysis.usage.outputTokens +
-    hero.usage.outputTokens +
-    pricing.usage.outputTokens +
-    objections.usage.outputTokens +
-    differentiation.usage.outputTokens +
-    competitiveCounter.usage.outputTokens;
-  const totalTokens = inputTokens + outputTokens;
+  const usageTotals = buildUsageTotals([
+    { name: "gapAnalysis", usage: gapAnalysis.usage },
+    { name: "hero", usage: hero.usage },
+    { name: "pricing", usage: pricing.usage },
+    { name: "objections", usage: objections.usage },
+    { name: "differentiation", usage: differentiation.usage },
+    { name: "competitiveCounter", usage: competitiveCounter.usage },
+    { name: "competitorSynthesis", usage: competitorSynthesis.usage },
+  ]);
+
+  const promptTokens = usageTotals.promptTokens;
+  const completionTokens = usageTotals.completionTokens;
+  const totalTokens = usageTotals.totalTokens;
+
+  logger.info("Gap engine usage totals computed.", {
+    module: "gapEngine",
+    total_tokens: totalTokens,
+    prompt_tokens: promptTokens,
+    completion_tokens: completionTokens,
+    estimated_cost_cents: usageTotals.estimatedCostCents,
+    execution_ms: Date.now() - startedAt,
+    modules: usageTotals.modules.map((item) => ({
+      name: item.name,
+      model: item.model,
+      tokens: item.totalTokens,
+      prompt_tokens: item.promptTokens,
+      completion_tokens: item.completionTokens,
+      estimated_cost_cents: item.estimatedCostCents,
+    })),
+  });
 
   return {
     results: {
@@ -238,13 +259,15 @@ export async function runGapEngine(
       objections: objections.data,
       differentiation: differentiation.data,
       competitiveCounter: competitiveCounter.data,
-      competitorSynthesis,
+      competitorSynthesis: competitorSynthesis.data,
     },
     usage: {
-      inputTokens,
-      outputTokens,
+      promptTokens,
+      completionTokens,
       totalTokens,
-      costCents: estimateCostCents(inputTokens, outputTokens),
+      model: "gpt-4o-mini",
+      costCents: usageTotals.estimatedCostCents,
+      usageTotals,
     },
   };
 }

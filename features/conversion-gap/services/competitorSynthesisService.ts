@@ -12,6 +12,7 @@ import type {
   PricingOutput,
 } from "@/features/conversion-gap/types/gap.types";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import type { ModuleUsage } from "@/features/conversion-gap/services/moduleRuntimeService";
 
 const competitorSynthesisSchema = z.object({
   coreDifferentiationTension: z.string().min(1),
@@ -55,7 +56,8 @@ function compactContent(content: ExtractedPageContent | null) {
 
 export async function synthesizeCompetitorIntelligence(
   input: CompetitorSynthesisInput,
-): Promise<CompetitorSynthesisOutput> {
+): Promise<{ data: CompetitorSynthesisOutput; usage: ModuleUsage }> {
+  const model = "gpt-4o-mini";
   const schemaShape = {
     coreDifferentiationTension: "string",
     messagingOverlapRisk: {
@@ -68,9 +70,11 @@ export async function synthesizeCompetitorIntelligence(
   };
 
   const maxAttempts = 2;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const response = await runChatCompletion({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",
@@ -111,6 +115,8 @@ export async function synthesizeCompetitorIntelligence(
         },
       ],
     });
+    totalInputTokens += response.promptTokens;
+    totalOutputTokens += response.completionTokens;
 
     const strict = parseJsonStrict<unknown>(response.content);
     const candidate =
@@ -131,9 +137,19 @@ export async function synthesizeCompetitorIntelligence(
         module: "competitorSynthesis",
         attempts_used: attempt,
         max_attempts: maxAttempts,
+        input_tokens: totalInputTokens,
+        output_tokens: totalOutputTokens,
         status: "success",
       });
-      return parsed.data;
+      return {
+        data: parsed.data,
+        usage: {
+          promptTokens: totalInputTokens,
+          completionTokens: totalOutputTokens,
+          totalTokens: totalInputTokens + totalOutputTokens,
+          model,
+        },
+      };
     }
 
     logger.error("Competitor synthesis returned schema-invalid JSON.", {
@@ -151,6 +167,8 @@ export async function synthesizeCompetitorIntelligence(
     module: "competitorSynthesis",
     attempts_used: maxAttempts,
     max_attempts: maxAttempts,
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
     status: "failed",
   });
 

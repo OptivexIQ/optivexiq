@@ -59,6 +59,11 @@ import {
   buildDifferentiationPositioningMap,
   toCanonicalPositioningMapData,
 } from "@/features/differentiation-builder/services/positioningMapGenerationService";
+import {
+  buildUsageTotals,
+  validateUsageTotals,
+  type UsageTotals,
+} from "@/features/usage/services/usageTotals";
 
 export type ReportCreatePayload = {
   homepage_url: string;
@@ -334,6 +339,36 @@ function normalizeReportStatus(value: string | null): ReportStatus {
 const RUNNING_REPORT_STALE_MS = 15 * 60 * 1000;
 const SNAPSHOT_TOKEN_RESERVE = 12_000;
 const GAP_TOKEN_RESERVE = 80_000;
+
+function assertUsageTotalsIntegrity(params: {
+  reportId: string;
+  userId: string;
+  usageTotals: UsageTotals;
+  context: "snapshot" | "full_report";
+}): void {
+  const validation = validateUsageTotals(params.usageTotals);
+  if (validation.ok) {
+    return;
+  }
+
+  logger.error("Usage accounting integrity check failed; finalization blocked.", {
+    report_id: params.reportId,
+    user_id: params.userId,
+    context: params.context,
+    reason: validation.reason,
+    expected_total_tokens: validation.expectedTotalTokens,
+    actual_total_tokens: validation.actualTotalTokens,
+    modules: params.usageTotals.modules.map((module) => ({
+      name: module.name,
+      model: module.model,
+      tokens: module.totalTokens,
+      prompt_tokens: module.promptTokens,
+      completion_tokens: module.completionTokens,
+    })),
+  });
+
+  throw new Error("usage_totals_validation_failed");
+}
 
 function deriveCompanyName(url: string): string {
   try {
@@ -890,6 +925,28 @@ async function processSnapshotReport(
     await updateExecutionState(reportId, "finalizing", 92);
 
     const snapshotResult = buildSnapshotResult(results.gapAnalysis, results.hero);
+    logger.info("Snapshot usage totals assembled.", {
+      report_id: reportId,
+      user_id: userId,
+      total_tokens: usage.totalTokens,
+      prompt_tokens: usage.promptTokens,
+      completion_tokens: usage.completionTokens,
+      estimated_cost_cents: usage.costCents,
+      modules: usage.usageTotals.modules.map((module) => ({
+        name: module.name,
+        model: module.model,
+        tokens: module.totalTokens,
+        prompt_tokens: module.promptTokens,
+        completion_tokens: module.completionTokens,
+        estimated_cost_cents: module.estimatedCostCents,
+      })),
+    });
+    assertUsageTotalsIntegrity({
+      reportId,
+      userId,
+      usageTotals: usage.usageTotals,
+      context: "snapshot",
+    });
     const finalizedReservation = await finalizeReservationExact({
       userId,
       reservationKey,
@@ -920,8 +977,8 @@ async function processSnapshotReport(
     await logUsageEvent({
       user_id: userId,
       action: "snapshot",
-      tokens_input: usage.inputTokens,
-      tokens_output: usage.outputTokens,
+      tokens_input: usage.promptTokens,
+      tokens_output: usage.completionTokens,
       tokens_total: usage.totalTokens,
       cost_cents: usage.costCents,
       metadata: { report_id: reportId },
@@ -1105,17 +1162,17 @@ async function processGapReport(
       }),
     );
     const totalInputTokens =
-      usage.inputTokens +
-      competitorAnalysis.usage.inputTokens +
-      objectionAnalysis.usage.inputTokens +
-      differentiationInsights.usage.inputTokens +
-      competitiveMatrixOverride.usage.inputTokens;
+      usage.promptTokens +
+      competitorAnalysis.usage.promptTokens +
+      objectionAnalysis.usage.promptTokens +
+      differentiationInsights.usage.promptTokens +
+      competitiveMatrixOverride.usage.promptTokens;
     const totalOutputTokens =
-      usage.outputTokens +
-      competitorAnalysis.usage.outputTokens +
-      objectionAnalysis.usage.outputTokens +
-      differentiationInsights.usage.outputTokens +
-      competitiveMatrixOverride.usage.outputTokens;
+      usage.completionTokens +
+      competitorAnalysis.usage.completionTokens +
+      objectionAnalysis.usage.completionTokens +
+      differentiationInsights.usage.completionTokens +
+      competitiveMatrixOverride.usage.completionTokens;
     const totalTokens = totalInputTokens + totalOutputTokens;
     const totalCostCents = estimateCostCents(totalInputTokens, totalOutputTokens);
 
@@ -1156,6 +1213,46 @@ async function processGapReport(
     if (!validateGapReport(canonicalReport)) {
       throw new Error("invalid_report_data");
     }
+    const fullReportUsageTotals = buildUsageTotals([
+      ...usage.usageTotals.modules.map((module) => ({
+        name: module.name,
+        usage: {
+          promptTokens: module.promptTokens,
+          completionTokens: module.completionTokens,
+          totalTokens: module.totalTokens,
+          model: module.model,
+        },
+      })),
+      { name: "competitorEvidenceExtraction", usage: competitorAnalysis.usage },
+      { name: "objectionAnalysis", usage: objectionAnalysis.usage },
+      { name: "differentiationBuilder", usage: differentiationInsights.usage },
+      { name: "competitiveMatrixSynthesis", usage: competitiveMatrixOverride.usage },
+    ]);
+    logger.info("Full report usage totals assembled.", {
+      report_id: reportId,
+      user_id: userId,
+      total_tokens: totalInputTokens + totalOutputTokens,
+      prompt_tokens: totalInputTokens,
+      completion_tokens: totalOutputTokens,
+      estimated_cost_cents: fullReportUsageTotals.estimatedCostCents,
+      modules: fullReportUsageTotals.modules.map((module) => ({
+        name: module.name,
+        model: module.model,
+        tokens: module.totalTokens,
+        prompt_tokens: module.promptTokens,
+        completion_tokens: module.completionTokens,
+        estimated_cost_cents: module.estimatedCostCents,
+      })),
+    });
+    assertUsageTotalsIntegrity({
+      reportId,
+      userId,
+      usageTotals: {
+        ...fullReportUsageTotals,
+        totalTokens: totalInputTokens + totalOutputTokens,
+      },
+      context: "full_report",
+    });
     const finalizedTokens = await finalizeReservationExact({
       userId,
       reservationKey: tokenReservationKey,
