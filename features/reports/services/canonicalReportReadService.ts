@@ -114,6 +114,25 @@ function extractFailureMessage(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function secondsSince(iso: string | null): number {
+  if (!iso) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const value = new Date(iso).getTime();
+  if (!Number.isFinite(value)) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.max(0, Math.floor((Date.now() - value) / 1000));
+}
+
+function dispatchReportWorker(reason: string) {
+  void import("@/features/reports/services/reportJobQueueService")
+    .then((module) => module.runReportJobWorker(1))
+    .catch((error) => {
+      logger.error("report.worker_dispatch_failed", error, { reason });
+    });
+}
+
 async function resolveRetentionDays(userId: string): Promise<number> {
   const settingsResult = await getUserSettings(userId);
   if (!settingsResult.ok) {
@@ -248,6 +267,9 @@ export async function getCanonicalGapReportExecutionForUser(
     };
 
     if (status === "queued" || status === "running" || status === "retrying") {
+      if (secondsSince(baseExecution.updatedAt) >= 15) {
+        dispatchReportWorker("status_probe_stale_report_execution");
+      }
       return {
         status: "ok",
         rawReportData: null,

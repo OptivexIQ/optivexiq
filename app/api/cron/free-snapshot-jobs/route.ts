@@ -15,6 +15,8 @@ async function run(request: NextRequest) {
     claimed: result.claimed,
     completed: result.completed,
     failed: result.failed,
+    requeued: result.requeued,
+    poisoned: result.poisoned,
     failure_rate: result.failureRate,
   });
   return NextResponse.json({ ok: true, ...result });

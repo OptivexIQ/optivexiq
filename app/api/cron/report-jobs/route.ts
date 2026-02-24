@@ -10,6 +10,14 @@ async function run(request: NextRequest) {
   }
 
   const result = await runReportJobWorker();
+  logger.info("cron.report_jobs_completed", {
+    scanned: result.scanned,
+    claimed: result.claimed,
+    completed: result.completed,
+    failed: result.failed,
+    requeued: result.requeued,
+    poisoned: result.poisoned,
+  });
   return NextResponse.json({ ok: true, ...result });
 }
 

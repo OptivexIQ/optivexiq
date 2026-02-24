@@ -1,4 +1,4 @@
-﻿import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger";
 import { createSupabaseAdminClient } from "@/services/supabase/admin";
 import {
   analyzeFreeSnapshotFromInput,
@@ -10,6 +10,11 @@ import {
   setFreeSnapshotFailure,
   updateFreeSnapshotStatus,
 } from "@/features/free-snapshot/services/freeSnapshotRepository";
+import {
+  collectQueueHealthSnapshot,
+  evaluateQueueHealthAlerts,
+  recordQueueWorkerHeartbeat,
+} from "@/features/ops/services/queueReliabilityService";
 
 type FreeSnapshotJobStatus = "queued" | "processing" | "failed" | "complete";
 
@@ -22,6 +27,7 @@ type FreeSnapshotJobRow = {
 };
 
 const PROCESSING_LOCK_TIMEOUT_MS = 10 * 60 * 1000;
+const MAX_FREE_SNAPSHOT_JOB_ATTEMPTS = 5;
 
 function lockExpired(lockedAt: string | null) {
   if (!lockedAt) {
@@ -100,6 +106,8 @@ async function markJob(input: {
   jobId: string;
   status: FreeSnapshotJobStatus;
   errorMessage?: string;
+  poisonReason?: string;
+  poisonedAt?: string | null;
 }) {
   const admin = createSupabaseAdminClient("worker");
   const nowIso = new Date().toISOString();
@@ -111,6 +119,12 @@ async function markJob(input: {
   };
   if (input.status === "complete") {
     payload.completed_at = nowIso;
+  }
+  if (input.poisonReason !== undefined) {
+    payload.poison_reason = input.poisonReason;
+  }
+  if (input.poisonedAt !== undefined) {
+    payload.poisoned_at = input.poisonedAt;
   }
 
   await admin.from("free_snapshot_jobs").update(payload).eq("id", input.jobId);
@@ -194,7 +208,48 @@ async function processSnapshot(snapshotId: string) {
   });
 }
 
+async function recoverStaleProcessingJobs(): Promise<number> {
+  const admin = createSupabaseAdminClient("worker");
+  const staleBeforeIso = new Date(
+    Date.now() - PROCESSING_LOCK_TIMEOUT_MS,
+  ).toISOString();
+  const { data } = await admin
+    .from("free_snapshot_jobs")
+    .select("id, attempts, snapshot_id")
+    .eq("status", "processing")
+    .lt("locked_at", staleBeforeIso)
+    .limit(100);
+
+  const rows =
+    (data ?? []) as Array<{ id: string; attempts: number; snapshot_id: string }>;
+  let requeued = 0;
+
+  for (const row of rows) {
+    if (row.attempts >= MAX_FREE_SNAPSHOT_JOB_ATTEMPTS) {
+      const poisonReason = "free_snapshot_job_poisoned_stale_lock_cap";
+      await setFreeSnapshotFailure({ snapshotId: row.snapshot_id, message: poisonReason });
+      await markJob({
+        jobId: row.id,
+        status: "failed",
+        errorMessage: poisonReason,
+        poisonReason,
+        poisonedAt: new Date().toISOString(),
+      });
+      continue;
+    }
+    await markJob({ jobId: row.id, status: "queued" });
+    requeued += 1;
+  }
+
+  return requeued;
+}
+
 export async function runFreeSnapshotJobWorker(limit = 10) {
+  const staleRequeued = await recoverStaleProcessingJobs();
+  if (staleRequeued > 0) {
+    logger.warn("free_snapshot_jobs.stale_requeued", { count: staleRequeued });
+  }
+
   const admin = createSupabaseAdminClient("worker");
   const { data, error } = await admin
     .from("free_snapshot_jobs")
@@ -205,12 +260,22 @@ export async function runFreeSnapshotJobWorker(limit = 10) {
 
   if (error || !Array.isArray(data)) {
     logger.error("Failed to load free conversion audit jobs.", error);
-    return { scanned: 0, claimed: 0, completed: 0, failed: 0 };
+    return {
+      scanned: 0,
+      claimed: 0,
+      completed: 0,
+      failed: 0,
+      requeued: 0,
+      poisoned: 0,
+      failureRate: 0,
+    };
   }
 
   let claimed = 0;
   let completed = 0;
   let failed = 0;
+  let requeued = 0;
+  let poisoned = 0;
 
   for (const raw of data as FreeSnapshotJobRow[]) {
     if (claimed >= limit) {
@@ -226,6 +291,21 @@ export async function runFreeSnapshotJobWorker(limit = 10) {
     }
     claimed += 1;
 
+    if (job.attempts > MAX_FREE_SNAPSHOT_JOB_ATTEMPTS) {
+      const poisonReason = "free_snapshot_job_poisoned_max_attempts_exceeded";
+      await setFreeSnapshotFailure({ snapshotId: job.snapshot_id, message: poisonReason });
+      await markJob({
+        jobId: job.id,
+        status: "failed",
+        errorMessage: poisonReason,
+        poisonReason,
+        poisonedAt: new Date().toISOString(),
+      });
+      failed += 1;
+      poisoned += 1;
+      continue;
+    }
+
     try {
       await processSnapshot(job.snapshot_id);
       await markJob({ jobId: job.id, status: "complete" });
@@ -239,20 +319,63 @@ export async function runFreeSnapshotJobWorker(limit = 10) {
         job_id: job.id,
         snapshot_id: job.snapshot_id,
       });
-      await setFreeSnapshotFailure({ snapshotId: job.snapshot_id, message });
-      await markJob({ jobId: job.id, status: "failed", errorMessage: message });
-      failed += 1;
+
+      if (job.attempts >= MAX_FREE_SNAPSHOT_JOB_ATTEMPTS) {
+        const poisonReason = "free_snapshot_job_poisoned_retry_cap_reached";
+        await setFreeSnapshotFailure({
+          snapshotId: job.snapshot_id,
+          message: poisonReason,
+        });
+        await markJob({
+          jobId: job.id,
+          status: "failed",
+          errorMessage: message,
+          poisonReason,
+          poisonedAt: new Date().toISOString(),
+        });
+        failed += 1;
+        poisoned += 1;
+      } else {
+        await markJob({ jobId: job.id, status: "queued", errorMessage: message });
+        requeued += 1;
+      }
     }
   }
 
   const failureRate = claimed > 0 ? Number((failed / claimed).toFixed(4)) : 0;
+  const health = await collectQueueHealthSnapshot();
+  await recordQueueWorkerHeartbeat({
+    workerName: "snapshot_worker",
+    queueName: "free_snapshot_jobs",
+    scanned: data.length,
+    claimed,
+    completed,
+    failed,
+    requeued: requeued + staleRequeued,
+    poisoned,
+    oldestQueuedAgeSeconds: health.oldestQueuedAgeSeconds.snapshot,
+    averageProcessingDelaySeconds: health.averageProcessingDelaySeconds.snapshot,
+    failureRate,
+  });
+  await evaluateQueueHealthAlerts(health);
+
   logger.info("free_snapshot.worker_run_summary", {
     scanned: data.length,
     claimed,
     completed,
     failed,
+    requeued,
+    poisoned,
     failure_rate: failureRate,
   });
 
-  return { scanned: data.length, claimed, completed, failed, failureRate };
+  return {
+    scanned: data.length,
+    claimed,
+    completed,
+    failed,
+    requeued,
+    poisoned,
+    failureRate,
+  };
 }

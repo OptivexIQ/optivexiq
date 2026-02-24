@@ -3,34 +3,15 @@ import type {
   StatusComponent,
   SystemStatusLevel,
 } from "@/features/status/types/status.types";
+import { collectQueueHealthSnapshot } from "@/features/ops/services/queueReliabilityService";
 
 function sinceIso(minutes: number) {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
 export async function getAnalysisComponent(updatedAt: string): Promise<StatusComponent> {
-  const admin = createSupabaseAdminClient("worker");
-  const windowIso = sinceIso(30);
-
-  const [reportJobs, snapshotJobs] = await Promise.all([
-    admin
-      .from("report_jobs")
-      .select("status")
-      .in("status", ["queued", "processing", "failed"])
-      .gte("updated_at", windowIso),
-    admin
-      .from("free_snapshot_jobs")
-      .select("status")
-      .in("status", ["queued", "processing", "failed"])
-      .gte("updated_at", windowIso),
-  ]);
-
-  if (
-    reportJobs.error ||
-    snapshotJobs.error ||
-    !Array.isArray(reportJobs.data) ||
-    !Array.isArray(snapshotJobs.data)
-  ) {
+  const queueHealth = await collectQueueHealthSnapshot().catch(() => null);
+  if (!queueHealth) {
     return {
       key: "analysis",
       name: "Analysis Engine (Snapshot + Full Reports)",
@@ -41,21 +22,24 @@ export async function getAnalysisComponent(updatedAt: string): Promise<StatusCom
     };
   }
 
-  const combined = [...reportJobs.data, ...snapshotJobs.data] as Array<{ status: string }>;
-  const pending = combined.filter(
-    (job) => job.status === "queued" || job.status === "processing",
-  ).length;
-  const failed = combined.filter((job) => job.status === "failed").length;
-
   let status: SystemStatusLevel = "operational";
   let detail: string | undefined;
 
-  if (failed >= 8) {
+  const workersHealthy =
+    queueHealth.workerStatus.report.alive && queueHealth.workerStatus.snapshot.alive;
+  const queueLagSevere = queueHealth.oldestQueuedAgeSeconds.overall >= 900;
+  const queueLagDegraded = queueHealth.oldestQueuedAgeSeconds.overall >= 480;
+  const failureSevere = queueHealth.failureRate.overall >= 0.4;
+  const failureDegraded = queueHealth.failureRate.overall >= 0.25;
+
+  if (!workersHealthy || queueLagSevere || failureSevere) {
     status = "partial_outage";
-    detail = "Some analyses are currently failing. The team is actively mitigating this.";
-  } else if (failed >= 3 || pending >= 25) {
+    detail =
+      "Background analysis workers are experiencing reliability issues. Recovery is in progress.";
+  } else if (queueLagDegraded || failureDegraded) {
     status = "degraded";
-    detail = "Analysis processing is slower than normal for some requests.";
+    detail =
+      "Analysis processing reliability is degraded; some requests may complete slower than normal.";
   }
 
   return {
