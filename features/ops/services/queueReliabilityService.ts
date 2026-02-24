@@ -340,7 +340,12 @@ export async function evaluateQueueHealthAlerts(
     context: Record<string, unknown>;
   }> = [];
 
-  if (!snapshot.workerStatus.report.alive) {
+  const reportWorkerRequired =
+    snapshot.queueSize.report > 0 || snapshot.oldestQueuedAgeSeconds.report > 0;
+  const snapshotWorkerRequired =
+    snapshot.queueSize.snapshot > 0 || snapshot.oldestQueuedAgeSeconds.snapshot > 0;
+
+  if (reportWorkerRequired && !snapshot.workerStatus.report.alive) {
     alerts.push({
       severity: "high",
       source: "queue.worker.report",
@@ -352,7 +357,7 @@ export async function evaluateQueueHealthAlerts(
     });
   }
 
-  if (!snapshot.workerStatus.snapshot.alive) {
+  if (snapshotWorkerRequired && !snapshot.workerStatus.snapshot.alive) {
     alerts.push({
       severity: "high",
       source: "queue.worker.snapshot",

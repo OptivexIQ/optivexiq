@@ -16,8 +16,13 @@ export async function GET() {
   }
 
   const snapshot = await collectQueueHealthSnapshot();
+  const reportWorkerRequired =
+    snapshot.queueSize.report > 0 || snapshot.oldestQueuedAgeSeconds.report > 0;
+  const snapshotWorkerRequired =
+    snapshot.queueSize.snapshot > 0 || snapshot.oldestQueuedAgeSeconds.snapshot > 0;
   const workersHealthy =
-    snapshot.workerStatus.report.alive && snapshot.workerStatus.snapshot.alive;
+    (!reportWorkerRequired || snapshot.workerStatus.report.alive) &&
+    (!snapshotWorkerRequired || snapshot.workerStatus.snapshot.alive);
   const lagHealthy =
     snapshot.oldestQueuedAgeSeconds.overall <= MAX_OLDEST_QUEUED_AGE_SECONDS &&
     snapshot.averageProcessingDelaySeconds.overall <= MAX_AVERAGE_DELAY_SECONDS;

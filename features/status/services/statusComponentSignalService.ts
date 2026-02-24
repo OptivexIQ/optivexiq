@@ -25,8 +25,15 @@ export async function getAnalysisComponent(updatedAt: string): Promise<StatusCom
   let status: SystemStatusLevel = "operational";
   let detail: string | undefined;
 
-  const workersHealthy =
-    queueHealth.workerStatus.report.alive && queueHealth.workerStatus.snapshot.alive;
+  const reportWorkerRequired =
+    queueHealth.queueSize.report > 0 || queueHealth.oldestQueuedAgeSeconds.report > 0;
+  const snapshotWorkerRequired =
+    queueHealth.queueSize.snapshot > 0 || queueHealth.oldestQueuedAgeSeconds.snapshot > 0;
+  const reportWorkerHealthy =
+    !reportWorkerRequired || queueHealth.workerStatus.report.alive;
+  const snapshotWorkerHealthy =
+    !snapshotWorkerRequired || queueHealth.workerStatus.snapshot.alive;
+  const workersHealthy = reportWorkerHealthy && snapshotWorkerHealthy;
   const queueLagSevere = queueHealth.oldestQueuedAgeSeconds.overall >= 900;
   const queueLagDegraded = queueHealth.oldestQueuedAgeSeconds.overall >= 480;
   const failureSevere = queueHealth.failureRate.overall >= 0.4;
