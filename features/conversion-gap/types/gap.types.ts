@@ -18,6 +18,19 @@ export type CompetitorInsight = {
   strengths?: string[];
   weaknesses?: string[];
   positioning?: string[];
+  extraction?: {
+    coreValuePropositions: string[];
+    positioningClaims: string[];
+    differentiators: string[];
+    pricingSignals: string[];
+    targetAudienceCues: string[];
+    objectionFraming: string[];
+    proofElements: string[];
+    evidenceSnippets: Array<{
+      topic: string;
+      snippet: string;
+    }>;
+  };
   extracted?: ExtractedPageContent;
 };
 

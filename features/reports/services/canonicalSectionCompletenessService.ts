@@ -103,6 +103,28 @@ function hasMeaningfulDifferentiationInsights(
   );
 }
 
+function hasMeaningfulCompetitiveInsights(
+  value: ConversionGapReport["competitiveInsights"],
+): boolean {
+  if (value.length === 0) {
+    return false;
+  }
+
+  return value.some(
+    (item) =>
+      hasMeaningfulText(item.claim) &&
+      hasMeaningfulText(item.reasoning) &&
+      Number.isFinite(item.confidence) &&
+      item.confidence >= 0 &&
+      item.confidence <= 1 &&
+      item.evidence.some(
+        (evidence) =>
+          hasMeaningfulText(evidence.competitor) &&
+          hasMeaningfulText(evidence.snippet),
+      ),
+  );
+}
+
 export function assertCanonicalSectionCompleteness(
   report: ConversionGapReport,
 ): CompletenessResult {
@@ -143,6 +165,10 @@ export function assertCanonicalSectionCompleteness(
 
   if (!hasMeaningfulDifferentiationInsights(report.differentiationInsights)) {
     return { ok: false, reason: "missing_differentiation_insights_section" };
+  }
+
+  if (!hasMeaningfulCompetitiveInsights(report.competitiveInsights)) {
+    return { ok: false, reason: "missing_competitive_insights_section" };
   }
 
   if (!hasMeaningfulCompetitiveMatrix(report.competitiveMatrix)) {

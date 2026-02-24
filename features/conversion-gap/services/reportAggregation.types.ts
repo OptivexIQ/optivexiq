@@ -11,7 +11,7 @@ import type { SaasProfileFormValues } from "@/features/saas-profile/types/profil
 import type { ConversionGapReport } from "@/features/conversion-gap/types/conversionGapReport.types";
 import type { CompetitorSynthesisOutput } from "@/features/conversion-gap/services/competitorSynthesisService";
 import type { ObjectionAnalysisOutput } from "@/features/objection-engine/ai/objectionAnalysisModule";
-import type { PositioningAnalysisOutput } from "@/features/differentiation-builder/ai/positioningAnalysisModule";
+import type { DifferentiationBuilderOutput } from "@/features/differentiation-builder/services/differentiationBuilderService";
 import type { CompetitiveMatrixOutput } from "@/features/differentiation-builder/services/competitiveMatrixService";
 import type { PositioningMapData } from "@/features/positioning-map/types/positioningMap.types";
 
@@ -37,7 +37,7 @@ export type BuildConversionGapReportInput = {
   };
   competitorSynthesis?: CompetitorSynthesisOutput;
   objectionAnalysis?: ObjectionAnalysisOutput;
-  positioningAnalysis?: PositioningAnalysisOutput;
+  positioningAnalysis?: DifferentiationBuilderOutput;
   competitiveMatrixOverride?: CompetitiveMatrixOutput;
   positioningMapOverride?: PositioningMapData;
   profile: SaasProfileFormValues;

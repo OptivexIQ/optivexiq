@@ -101,6 +101,20 @@ function toCanonicalReport(
         (value) => value.trim().length > 0,
       ),
     },
+    competitiveInsights: [
+      {
+        claim: `Primary competitive risk: ${snapshot.topMessagingGap}`,
+        evidence: [
+          {
+            competitor: "snapshot_signal",
+            snippet: snapshot.riskEstimate,
+          },
+        ],
+        reasoning:
+          "Snapshot mode stores limited competitor context, so this insight reflects top captured risk wording only.",
+        confidence: 0.45,
+      },
+    ],
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},

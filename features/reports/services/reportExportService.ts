@@ -116,6 +116,18 @@ function toTextLines(report: ConversionGapReport): string[] {
       }
     }
   }
+  if (report.competitiveInsights.length > 0) {
+    lines.push("");
+    lines.push("Competitive Insights");
+    for (const insight of report.competitiveInsights.slice(0, 5)) {
+      lines.push(`- Claim: ${insight.claim}`);
+      lines.push(`  Confidence: ${Math.round(insight.confidence * 100)}%`);
+      lines.push(`  Reasoning: ${insight.reasoning}`);
+      for (const evidence of insight.evidence.slice(0, 2)) {
+        lines.push(`  Evidence (${evidence.competitor}): ${evidence.snippet}`);
+      }
+    }
+  }
   return lines;
 }
 

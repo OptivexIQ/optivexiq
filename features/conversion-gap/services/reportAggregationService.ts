@@ -214,6 +214,9 @@ export function buildConversionGapReport(
           parityRisks: input.positioningAnalysis.highRiskParityZones,
         }
       : undefined,
+    competitiveInsights: input.positioningAnalysis
+      ? input.positioningAnalysis.competitiveInsights
+      : [],
     competitiveMatrix: normalizedCompetitiveMatrix,
     positioningMap: positioningMap as unknown as Record<string, unknown>,
     rewrites: input.rewrites as unknown as Record<string, unknown>,

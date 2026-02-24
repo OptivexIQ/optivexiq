@@ -1,10 +1,8 @@
-import type {
-  CompetitorInsight,
-  ExtractedPageContent,
-  GapAnalysisOutput,
-} from "@/features/conversion-gap/types/gap.types";
-import type { PositioningAnalysisOutput } from "@/features/differentiation-builder/ai/positioningAnalysisModule";
-import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
+import type { CompetitorInsight } from "@/features/conversion-gap/types/gap.types";
+import type { ModuleUsage } from "@/features/conversion-gap/services/moduleRuntimeService";
+import { runValidatedModule } from "@/features/conversion-gap/services/moduleRuntimeService";
+import type { DifferentiationBuilderOutput } from "@/features/differentiation-builder/services/differentiationBuilderService";
+import { z } from "zod";
 
 export type CompetitiveMatrixDimension = {
   dimension: string;
@@ -21,162 +19,138 @@ export type CompetitiveMatrixOutput = {
 };
 
 type CompetitiveMatrixInput = {
-  companyContent: ExtractedPageContent;
-  pricingContent: ExtractedPageContent | null;
   competitors: CompetitorInsight[];
-  profile: SaasProfileFormValues;
-  gapAnalysis: GapAnalysisOutput;
-  positioning: PositioningAnalysisOutput;
+  differentiation: DifferentiationBuilderOutput;
 };
 
-function normalize(text: string): string {
-  return text.trim().toLowerCase();
+const matrixCellSchema = z.object({
+  name: z.string().trim().min(1),
+  value: z.enum(["Low", "Medium", "High"]),
+  evidence: z.string().trim().min(20),
+});
+
+const matrixOutputSchema = z.object({
+  rows: z
+    .array(
+      z.object({
+        dimension: z.string().trim().min(1),
+        you: z.enum(["Low", "Medium", "High"]),
+        competitors: z.array(matrixCellSchema),
+      }),
+    )
+    .min(3),
+});
+
+function compactCompetitor(competitor: CompetitorInsight) {
+  return {
+    name: competitor.name,
+    url: competitor.url ?? null,
+    extraction: competitor.extraction ?? null,
+    summary: competitor.summary ?? null,
+  };
 }
 
-function containsAny(text: string, keywords: string[]): boolean {
-  const normalized = normalize(text);
-  return keywords.some((keyword) => normalized.includes(keyword));
+function hasEvidenceSpecificity(output: CompetitiveMatrixOutput) {
+  return output.rows.every((row) =>
+    row.competitors.every((cell) => cell.evidence.trim().length >= 20),
+  );
 }
 
-function buildCompetitorText(competitor: CompetitorInsight): string {
-  return [
-    competitor.summary ?? "",
-    ...(competitor.strengths ?? []),
-    ...(competitor.weaknesses ?? []),
-    ...(competitor.positioning ?? []),
-  ].join(" ");
-}
+export async function buildCompetitiveMatrixFromPositioning(
+  input: CompetitiveMatrixInput,
+): Promise<{ data: CompetitiveMatrixOutput; usage: ModuleUsage }> {
+  const dimensions = [
+    "Complexity",
+    "Price positioning",
+    "Time-to-value",
+    "Target segment",
+    "Deployment model",
+    "Differentiation narrative",
+    "Proof signals",
+  ] as const;
 
-function firstEvidence(text: string, keywords: string[], fallback: string): string {
-  const raw = text.trim();
-  if (!raw) {
-    return fallback;
-  }
+  const schemaExample: CompetitiveMatrixOutput = {
+    rows: [
+      {
+        dimension: "Time-to-value",
+        you: "High",
+        competitors: [
+          {
+            name: "example-competitor.com",
+            value: "Medium",
+            evidence:
+              "Mentions implementation support and migration setup before value realization.",
+          },
+        ],
+      },
+      {
+        dimension: "Differentiation narrative",
+        you: "High",
+        competitors: [
+          {
+            name: "example-competitor.com",
+            value: "Medium",
+            evidence:
+              "Positions on optimization language without decision infrastructure framing.",
+          },
+        ],
+      },
+      {
+        dimension: "Proof signals",
+        you: "Medium",
+        competitors: [
+          {
+            name: "example-competitor.com",
+            value: "High",
+            evidence:
+              "Includes explicit customer evidence and quantified performance outcomes.",
+          },
+        ],
+      },
+    ],
+  };
 
-  const normalized = normalize(raw);
-  for (const keyword of keywords) {
-    const index = normalized.indexOf(keyword);
-    if (index === -1) {
-      continue;
-    }
-    const start = Math.max(0, index - 42);
-    const end = Math.min(raw.length, index + keyword.length + 72);
-    const snippet = raw.slice(start, end).replace(/\s+/g, " ").trim();
-    if (snippet.length > 0) {
-      return snippet;
-    }
-  }
+  const system = [
+    "You are a SaaS competitive intelligence analyst.",
+    "Build an evidence-backed competitive matrix from source-derived competitor extracts.",
+    "Do not guess. If evidence is absent, lower confidence and keep evidence explicit.",
+    "Return strict JSON only; no markdown or additional keys.",
+  ].join("\n");
 
-  const compact = raw.replace(/\s+/g, " ").trim();
-  return compact.length > 0 ? compact.slice(0, 120) : fallback;
-}
-
-function dimensionFromSignals(input: {
-  dimension: string;
-  youKeywords: string[];
-  competitorKeywords: string[];
-  companyText: string;
-  pricingText: string;
-  competitor: CompetitorInsight;
-}): { you: string; competitorValue: string; evidence: string } {
-  const competitorText = buildCompetitorText(input.competitor);
-  const youStrong =
-    containsAny(input.companyText, input.youKeywords) ||
-    containsAny(input.pricingText, input.youKeywords);
-  const competitorStrong = containsAny(competitorText, input.competitorKeywords);
-
-  const you = youStrong ? "High" : "Medium";
-  const competitorValue = competitorStrong ? "High" : "Medium";
-
-  const evidence = firstEvidence(
-    competitorText,
-    input.competitorKeywords,
-    `No explicit ${input.dimension.toLowerCase()} evidence surfaced from competitor text.`,
+  const user = JSON.stringify(
+    {
+      task: "Generate a competitive matrix for decision-making.",
+      dimensions,
+      differentiationInsights: input.differentiation.competitiveInsights,
+      competitors: input.competitors.map(compactCompetitor),
+      outputContract: schemaExample,
+    },
+    null,
+    2,
   );
 
-  return { you, competitorValue, evidence };
-}
-
-export function buildCompetitiveMatrixFromPositioning(
-  input: CompetitiveMatrixInput,
-): CompetitiveMatrixOutput {
-  const companyText = input.companyContent.rawText;
-  const pricingText = input.pricingContent?.rawText ?? "";
-  const paritySignals = input.positioning.highRiskParityZones.map((item) => normalize(item));
-
-  const dimensions = [
-    {
-      name: "Complexity",
-      youKeywords: ["implementation", "onboarding", "time to value", "simple"],
-      competitorKeywords: ["enterprise", "platform", "workflow", "implementation"],
-    },
-    {
-      name: "Price positioning",
-      youKeywords: ["pricing", "transparent", "roi", "payback", "value metric"],
-      competitorKeywords: ["pricing", "enterprise pricing", "contact sales", "plans"],
-    },
-    {
-      name: "Time-to-value",
-      youKeywords: ["fast", "quick", "days", "weeks", "launch"],
-      competitorKeywords: ["migration", "setup", "deployment", "rollout"],
-    },
-    {
-      name: "Target segment",
-      youKeywords: [normalize(input.profile.icpRole), normalize(input.profile.salesMotion)],
-      competitorKeywords: ["enterprise", "mid-market", "startup", "plg", "sales-led"],
-    },
-    {
-      name: "Deployment model",
-      youKeywords: ["self-serve", "sales-led", "guided onboarding", "api"],
-      competitorKeywords: ["self-serve", "managed", "implementation", "consulting"],
-    },
-    {
-      name: "Differentiation narrative",
-      youKeywords: ["differentiation", "decision", "intelligence", "positioning"],
-      competitorKeywords: ["ai rewrite", "optimization", "conversion", "copy"],
-    },
-    {
-      name: "Proof signals",
-      youKeywords: ["case study", "proof", "metrics", "results", "testimonials"],
-      competitorKeywords: ["case study", "testimonial", "proof", "customer stories"],
-    },
-  ];
-
-  const rows = dimensions.map((dimension) => {
-    const normalizedName = normalize(dimension.name);
-    const parityHit = paritySignals.some((signal) => signal.includes(normalizedName));
-
-    const competitors = input.competitors.map((competitor) => {
-      const derived = dimensionFromSignals({
-        dimension: dimension.name,
-        youKeywords: dimension.youKeywords.filter((value) => value.length > 0),
-        competitorKeywords: dimension.competitorKeywords,
-        companyText,
-        pricingText,
-        competitor,
-      });
-
-      return {
-        name: competitor.name,
-        value: parityHit ? "High" : derived.competitorValue,
-        evidence: derived.evidence,
-      };
-    });
-
-    const youHighBecauseStrength =
-      input.positioning.uniqueStrengthSignals.some((signal) =>
-        containsAny(signal, [normalizedName]),
-      ) ||
-      input.positioning.enterpriseDifferentiators.some((signal) =>
-        containsAny(signal, [normalizedName]),
-      );
-
-    return {
-      dimension: dimension.name,
-      you: youHighBecauseStrength ? "High" : competitors.length > 0 ? "Medium" : "Low",
-      competitors,
-    };
+  const result = await runValidatedModule<CompetitiveMatrixOutput>({
+    moduleName: "competitiveMatrixSynthesis",
+    schema: matrixOutputSchema,
+    schemaExample,
+    system,
+    user,
   });
 
-  return { rows };
+  const competitorNames = new Set(
+    input.competitors.map((competitor) => competitor.name.trim().toLowerCase()),
+  );
+  for (const row of result.data.rows) {
+    for (const cell of row.competitors) {
+      if (!competitorNames.has(cell.name.trim().toLowerCase())) {
+        throw new Error("competitive_matrix_unknown_competitor");
+      }
+    }
+  }
+
+  if (!hasEvidenceSpecificity(result.data)) {
+    throw new Error("competitive_matrix_not_specific");
+  }
+
+  return { data: result.data, usage: result.usage };
 }

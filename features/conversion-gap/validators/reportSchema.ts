@@ -78,6 +78,19 @@ export const conversionGapReportSchema = z.object({
       parityRisks: z.array(z.string()),
     })
     .optional(),
+  competitiveInsights: z.array(
+    z.object({
+      claim: z.string().trim().min(1),
+      evidence: z.array(
+        z.object({
+          competitor: z.string().trim().min(1),
+          snippet: z.string().trim().min(20),
+        }),
+      ),
+      reasoning: z.string().trim().min(20),
+      confidence: z.number().min(0).max(1),
+    }),
+  ),
   competitiveMatrix: z
     .object({
       profileMatrix: z.array(

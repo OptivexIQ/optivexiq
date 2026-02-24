@@ -1,5 +1,5 @@
 import type { CompetitorInsight } from "@/features/conversion-gap/types/gap.types";
-import type { PositioningAnalysisOutput } from "@/features/differentiation-builder/ai/positioningAnalysisModule";
+import type { DifferentiationBuilderOutput } from "@/features/differentiation-builder/services/differentiationBuilderService";
 import type { CompetitiveMatrixOutput } from "@/features/differentiation-builder/services/competitiveMatrixService";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
 import type { PositioningMapData } from "@/features/positioning-map/types/positioningMap.types";
@@ -24,7 +24,7 @@ type PositioningMapGenerationInput = {
   companyName: string;
   profile: SaasProfileFormValues;
   competitors: CompetitorInsight[];
-  positioning: PositioningAnalysisOutput;
+  positioning: DifferentiationBuilderOutput;
   matrix: CompetitiveMatrixOutput;
 };
 

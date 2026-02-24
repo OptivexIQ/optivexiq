@@ -182,6 +182,21 @@ function buildVerificationReport(): ConversionGapReport {
       ],
       dimensionScores: { trust: 42 },
     },
+    competitiveInsights: [
+      {
+        claim: "Verification report includes evidence-backed competitive insight structure.",
+        evidence: [
+          {
+            competitor: "verification-signal",
+            snippet:
+              "Overlap risk requires tighter differentiation and stronger proof-led positioning.",
+          },
+        ],
+        reasoning:
+          "Synthetic verification payload validates rendering of competitive insight evidence fields.",
+        confidence: 0.5,
+      },
+    ],
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},

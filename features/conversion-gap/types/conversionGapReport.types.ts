@@ -108,6 +108,16 @@ export type DifferentiationInsights = {
   parityRisks: string[];
 };
 
+export type CompetitiveInsight = {
+  claim: string;
+  evidence: Array<{
+    competitor: string;
+    snippet: string;
+  }>;
+  reasoning: string;
+  confidence: number;
+};
+
 export type ConversionGapReport = {
   id: string;
   company: string;
@@ -134,6 +144,7 @@ export type ConversionGapReport = {
   messagingOverlap: MessagingOverlap;
   objectionCoverage: ObjectionCoverage;
   differentiationInsights?: DifferentiationInsights;
+  competitiveInsights: CompetitiveInsight[];
   competitiveMatrix: CompetitiveMatrix;
   positioningMap: Record<string, unknown>;
   rewrites: Record<string, unknown>;

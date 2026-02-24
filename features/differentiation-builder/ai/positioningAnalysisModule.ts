@@ -10,7 +10,6 @@ import {
   runValidatedModule,
   type ModuleUsage,
 } from "@/features/conversion-gap/services/moduleRuntimeService";
-import type { DifferentiationBuilderOutput } from "@/features/differentiation-builder/services/differentiationBuilderService";
 
 const difficultySchema = z.enum(["low", "medium", "high"]);
 const impactSchema = z.enum(["low", "medium", "high"]);
@@ -57,7 +56,7 @@ const positioningDimensions = [
   "Proof and credibility positioning",
 ] as const;
 
-const schemaExample: DifferentiationBuilderOutput = {
+const schemaExample: PositioningAnalysisOutput = {
   narrativeSimilarityScore: 72,
   overlapAreas: [
     "Category claim parity around conversion optimization",
