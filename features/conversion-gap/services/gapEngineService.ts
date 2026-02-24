@@ -83,7 +83,7 @@ export async function scrapeAndExtract(
   url: string,
 ): Promise<ExtractedPageContent> {
   const html = await scrapePage(url);
-  const extracted = extractContent(html);
+  const extracted = extractContent(html, url);
 
   return {
     url,

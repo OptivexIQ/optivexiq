@@ -2,12 +2,20 @@ import {
   normalizeText,
   truncateText,
 } from "@/features/conversion-gap/scraping/normalization";
+import { sanitizeScrapedText } from "@/features/conversion-gap/scraping/contentSecuritySanitizer";
 
 function stripTags(html: string) {
   return normalizeText(
     html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+      .replace(/<template[\s\S]*?<\/template>/gi, " ")
+      .replace(/<iframe[\s\S]*?<\/iframe>/gi, " ")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+      .replace(/<head[\s\S]*?<\/head>/gi, " ")
+      .replace(/<meta[^>]*>/gi, " ")
+      .replace(/<link[^>]*>/gi, " ")
       .replace(/<!--([\s\S]*?)-->/g, " ")
       .replace(/<[^>]*>/g, " ")
       .replace(/&nbsp;/gi, " ")
@@ -69,18 +77,45 @@ function extractFaqBlocks(html: string) {
     );
 }
 
-export function extractContent(html: string) {
-  const headline = extractFirstTagText(html, "h1");
-  const subheadline = extractFirstTagText(html, "h2");
-  const pricingTableText = extractTables(html);
+export function extractContent(html: string, sourceUrl = "unknown") {
+  const headline = sanitizeScrapedText({
+    value: extractFirstTagText(html, "h1"),
+    sourceUrl,
+    field: "headline",
+    maxLength: 600,
+  });
+  const subheadline = sanitizeScrapedText({
+    value: extractFirstTagText(html, "h2"),
+    sourceUrl,
+    field: "subheadline",
+    maxLength: 600,
+  });
+  const pricingTableText = sanitizeScrapedText({
+    value: extractTables(html),
+    sourceUrl,
+    field: "pricing_table_text",
+    maxLength: 2000,
+  });
   const faqBlocks = extractFaqBlocks(html);
-  const rawText = truncateText(stripTags(html), 4000);
+  const rawText = sanitizeScrapedText({
+    value: stripTags(html),
+    sourceUrl,
+    field: "raw_text",
+    maxLength: 4000,
+  });
 
   return {
     headline,
     subheadline,
-    pricingTableText: truncateText(pricingTableText, 2000),
-    faqBlocks: faqBlocks.map((block) => truncateText(block, 800)),
+    pricingTableText,
+    faqBlocks: faqBlocks.map((block) =>
+      sanitizeScrapedText({
+        value: block,
+        sourceUrl,
+        field: "faq_block",
+        maxLength: 800,
+      }),
+    ),
     rawText,
   };
 }
