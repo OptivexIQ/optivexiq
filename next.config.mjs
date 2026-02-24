@@ -7,6 +7,7 @@ const nextConfig = {
   },
   images: {
     // Enable image optimization for production
+    qualities: [25, 50, 75, 100],
     unoptimized: process.env.NODE_ENV === "development",
     formats: ["image/avif", "image/webp"],
     remotePatterns: [

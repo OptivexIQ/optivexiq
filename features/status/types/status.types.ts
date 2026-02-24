@@ -36,6 +36,7 @@ export type StatusPayload = {
   meta: {
     refreshSeconds: number;
     dataSourceNote: string;
+    signalDegraded?: boolean;
     support: {
       contactUrl: string;
       email: string;

@@ -4,7 +4,7 @@ import type {
   SystemStatusLevel,
 } from "@/features/status/types/status.types";
 import {
-  buildIncidentFromAlert,
+  buildIncidentsFromAlerts,
   fetchRecentAlerts,
   inferAlertComponent,
   levelFromAlert,
@@ -130,10 +130,11 @@ export async function getLiveStatusPayload(): Promise<StatusPayload> {
       updatedAt,
     },
     components,
-    incidents: (alerts ?? []).map(buildIncidentFromAlert),
+    incidents: buildIncidentsFromAlerts(alerts ?? []),
     meta: {
       refreshSeconds: REFRESH_SECONDS,
       dataSourceNote: "Derived from internal health checks and operational monitoring.",
+      signalDegraded: alerts === null,
       support: {
         contactUrl: "/contact",
         email: "support@optivexiq.com",

@@ -59,6 +59,7 @@ function buildSafeDegradedStatus(updatedAt: string): StatusPayload {
     meta: {
       refreshSeconds: 60,
       dataSourceNote: "Derived from internal health checks and operational monitoring.",
+      signalDegraded: true,
       support: {
         contactUrl: "/contact",
         email: "support@optivexiq.com",
@@ -98,7 +99,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(buildSafeDegradedStatus(new Date().toISOString()), {
       status: 200,
-      headers: { "x-request-id": requestId },
+      headers: {
+        "x-request-id": requestId,
+        "x-status-signal": "degraded",
+      },
     });
   }
 }

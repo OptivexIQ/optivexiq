@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,12 @@ import {
 } from "@/features/status/components/statusViewUtils";
 
 export default function StatusPageClient() {
+  const INCIDENTS_PAGE_PARAM = "incidentsPage";
+  const INCIDENTS_PER_PAGE = 5;
   const fallbackRefreshSeconds = 60;
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [payload, setPayload] = useState<StatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -26,6 +32,10 @@ export default function StatusPageClient() {
   const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(
     fallbackRefreshSeconds,
   );
+  const [incidentPage, setIncidentPage] = useState(() => {
+    const raw = Number(searchParams.get(INCIDENTS_PAGE_PARAM) ?? "1");
+    return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
+  });
 
   const loadStatus = useCallback(async () => {
     setIsRefreshing(true);
@@ -45,6 +55,12 @@ export default function StatusPageClient() {
   useEffect(() => {
     void loadStatus();
   }, [loadStatus]);
+
+  useEffect(() => {
+    const raw = Number(searchParams.get(INCIDENTS_PAGE_PARAM) ?? "1");
+    const parsed = Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
+    setIncidentPage(parsed);
+  }, [searchParams]);
 
   useEffect(() => {
     const refreshWindow =
@@ -77,7 +93,7 @@ export default function StatusPageClient() {
     );
   }
 
-  if (error || !payload) {
+  if (!payload) {
     return (
       <section className="mx-auto max-w-6xl px-6 py-16">
         <Card className="border-border/70">
@@ -101,6 +117,35 @@ export default function StatusPageClient() {
     );
   }
 
+  const totalIncidents = payload.incidents.length;
+  const totalIncidentPages = Math.max(
+    1,
+    Math.ceil(totalIncidents / INCIDENTS_PER_PAGE),
+  );
+  const currentIncidentPage = Math.min(incidentPage, totalIncidentPages);
+  const incidentStartIndex = (currentIncidentPage - 1) * INCIDENTS_PER_PAGE;
+  const visibleIncidents = payload.incidents.slice(
+    incidentStartIndex,
+    incidentStartIndex + INCIDENTS_PER_PAGE,
+  );
+  const setIncidentPageInUrl = (nextPage: number) => {
+    const normalized = Math.max(1, Math.min(totalIncidentPages, nextPage));
+    const params = new URLSearchParams(searchParams.toString());
+    if (normalized <= 1) {
+      params.delete(INCIDENTS_PAGE_PARAM);
+    } else {
+      params.set(INCIDENTS_PAGE_PARAM, String(normalized));
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+  const formatIncidentStatus = (value: string) =>
+    value
+      .split(/[_\s]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+
   return (
     <section className="relative mx-auto max-w-6xl px-6 py-42">
       <div
@@ -121,6 +166,17 @@ export default function StatusPageClient() {
         <p className="text-sm text-muted-foreground">
           Current service availability and recent customer-impacting updates.
         </p>
+        {error ? (
+          <p className="text-sm text-amber-500">
+            Live refresh is temporarily unavailable. Displaying last known
+            status.
+          </p>
+        ) : null}
+        {payload.meta.signalDegraded ? (
+          <p className="text-sm text-amber-500">
+            Monitoring signal quality is degraded. Status indicators may lag.
+          </p>
+        ) : null}
       </header>
 
       <Card className="mt-8 border-border/70 bg-linear-to-r from-background to-muted/30">
@@ -263,12 +319,12 @@ export default function StatusPageClient() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {payload.incidents.length === 0 ? (
+          {totalIncidents === 0 ? (
             <p className="text-sm text-muted-foreground">
               No incidents in the last 30 days.
             </p>
           ) : (
-            payload.incidents.map((incident) => {
+            visibleIncidents.map((incident) => {
               const latest = latestIncidentUpdate(incident);
               return (
                 <div
@@ -279,7 +335,9 @@ export default function StatusPageClient() {
                     <p className="text-sm font-medium text-foreground">
                       {incident.title}
                     </p>
-                    <Badge variant="outline">{incident.status}</Badge>
+                    <Badge variant="outline">
+                      {formatIncidentStatus(incident.status)}
+                    </Badge>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {incident.customerImpact}
@@ -303,6 +361,41 @@ export default function StatusPageClient() {
               );
             })
           )}
+          {totalIncidents > INCIDENTS_PER_PAGE ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {incidentStartIndex + 1}-
+                {Math.min(
+                  incidentStartIndex + INCIDENTS_PER_PAGE,
+                  totalIncidents,
+                )}{" "}
+                of {totalIncidents}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentPageInUrl(currentIncidentPage - 1)}
+                  disabled={currentIncidentPage <= 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentIncidentPage} of {totalIncidentPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentPageInUrl(currentIncidentPage + 1)}
+                  disabled={currentIncidentPage >= totalIncidentPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </section>
