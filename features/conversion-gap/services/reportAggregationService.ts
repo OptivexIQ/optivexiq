@@ -25,6 +25,27 @@ import type { BuildConversionGapReportInput } from "@/features/conversion-gap/se
 import type { CompetitiveMatrix } from "@/features/conversion-gap/types/conversionGapReport.types";
 import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 
+function assertCompletedReportInputs(
+  input: BuildConversionGapReportInput,
+  status: ConversionGapReport["status"],
+): void {
+  if (status !== "completed") {
+    return;
+  }
+
+  if (!input.objectionAnalysis) {
+    throw new Error("missing_objection_analysis_for_completed_report");
+  }
+
+  if (!input.positioningAnalysis) {
+    throw new Error("missing_positioning_analysis_for_completed_report");
+  }
+
+  if (!input.competitorSynthesis) {
+    throw new Error("missing_competitor_synthesis_for_completed_report");
+  }
+}
+
 function applyCompetitiveMatrixOverride(
   base: CompetitiveMatrix,
   override?: BuildConversionGapReportInput["competitiveMatrixOverride"],
@@ -76,8 +97,8 @@ function applyCompetitiveMatrixOverride(
 export function buildConversionGapReport(
   input: BuildConversionGapReportInput,
 ): ConversionGapReport {
-  const insufficientEvidence =
-    "insufficient data: legacy record missing structured evidence for this field.";
+  const reportStatus = input.status ?? "completed";
+  assertCompletedReportInputs(input, reportStatus);
   const company = normalizeCompanyName(input.company, input.websiteUrl);
   const scores = computeScores(input.gapAnalysis);
   const competitors = Array.isArray(input.competitorData.competitors)
@@ -122,7 +143,7 @@ export function buildConversionGapReport(
         missing: [],
         risks: [],
         guidance: [],
-      };
+    };
   const baseCompetitiveMatrix = buildCompetitiveMatrix({
     profile: input.profile,
     competitors,
@@ -181,7 +202,7 @@ export function buildConversionGapReport(
     id: input.reportId,
     company,
     segment: input.segment,
-    status: input.status ?? "completed",
+    status: reportStatus,
     createdAt: input.createdAt ?? new Date().toISOString(),
     conversionScore: scores.conversionScore,
     funnelRisk: scores.funnelRisk,
@@ -228,59 +249,14 @@ export function buildConversionGapReport(
         }
       : {
           similarityScore: 0,
-          overlapAreas: ["insufficient data"],
-          opportunities: [
-            {
-              theme: "insufficient data",
-              rationale: "insufficient data",
-              implementationDifficulty: "medium",
-              expectedImpact: "low",
-            },
-          ],
-          strategyRecommendations: ["insufficient data"],
-          parityRisks: ["insufficient data"],
-          strategicNarrativeDifferences: [
-            {
-              difference: "insufficient data",
-              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
-              confidence: 0,
-              actionPriority: "P2",
-            },
-          ],
-          underservedPositioningTerritories: [
-            {
-              territory: "insufficient data",
-              rationale: "insufficient data",
-              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
-              confidence: 0,
-              actionPriority: "P2",
-            },
-          ],
-          credibleDifferentiationAxes: [
-            {
-              axis: "insufficient data",
-              rationale: "insufficient data",
-              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
-              confidence: 0,
-              actionPriority: "P2",
-            },
-          ],
-          marketPerceptionRisks: [
-            {
-              risk: "insufficient data",
-              whyItMatters: "insufficient data",
-              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
-              confidence: 0,
-              actionPriority: "P2",
-            },
-          ],
-          recommendedPositioningDirection: {
-            direction: "insufficient data",
-            rationale: "insufficient data",
-            supportingEvidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
-            confidence: 0,
-            actionPriority: "P2",
-          },
+          overlapAreas: [],
+          opportunities: [],
+          strategyRecommendations: [],
+          parityRisks: [],
+          strategicNarrativeDifferences: [],
+          underservedPositioningTerritories: [],
+          credibleDifferentiationAxes: [],
+          marketPerceptionRisks: [],
         },
     competitiveInsights: input.positioningAnalysis
       ? input.positioningAnalysis.competitiveInsights
@@ -290,14 +266,14 @@ export function buildConversionGapReport(
     rewrites: input.rewrites as unknown as Record<string, unknown>,
     rewriteRecommendations,
     competitor_synthesis: input.competitorSynthesis ?? {
-      coreDifferentiationTension: "insufficient data",
+      coreDifferentiationTension: "",
       messagingOverlapRisk: {
         level: "moderate",
-        explanation: "insufficient data",
+        explanation: "",
       },
-      substitutionRiskNarrative: "insufficient data",
-      counterPositioningVector: "insufficient data",
-      pricingDefenseNarrative: "insufficient data",
+      substitutionRiskNarrative: "",
+      counterPositioningVector: "",
+      pricingDefenseNarrative: "",
     },
     revenueImpact: {
       pipelineAtRisk: revenue.pipelineAtRisk,

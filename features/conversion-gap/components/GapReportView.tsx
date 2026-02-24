@@ -43,14 +43,17 @@ export function GapReportView({
   exportRestricted,
 }: GapReportViewProps) {
   if (report.status !== "completed") {
+    const isFailed = report.status === "failed";
     return (
       <div className="flex w-full flex-col gap-6">
         <div className="rounded-xl border border-border/60 bg-card p-6">
           <p className="text-sm font-semibold text-foreground/85">
-            Analysis in progress
+            {isFailed ? "Analysis failed" : "Analysis in progress"}
           </p>
           <p className="mt-2 text-sm text-foreground">
-            We are processing your conversion gap report. Check back soon.
+            {isFailed
+              ? "This report did not complete. Start a new run to generate decision-grade results."
+              : "We are processing your conversion gap report. Check back soon."}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
             Status: {report.status}
