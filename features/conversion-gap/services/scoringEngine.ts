@@ -4,6 +4,7 @@ import {
   CANONICAL_SCORING_MODEL_VERSION,
   type ScoringModel,
 } from "@/features/conversion-gap/services/scoringModelRegistry";
+import { extractObjectionCoverageScore } from "@/features/conversion-gap/services/objectionCoverageService";
 
 type ThreatLevel = "low" | "medium" | "high";
 
@@ -44,7 +45,9 @@ export function calculateScore(
   scoringModelVersion: string;
   scoringBreakdown: ConversionGapReport["scoringBreakdown"];
 } {
-  const objectionAverage = clampScore(average(Object.values(report.objectionCoverage)));
+  const objectionAverage = clampScore(
+    extractObjectionCoverageScore(report.objectionCoverage),
+  );
   const overlapAverage = clampScore(
     average(report.messagingOverlap.items.map((item) => item.competitors)),
   );

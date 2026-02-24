@@ -8,8 +8,6 @@ type ReconciliationRow = {
   user_id: string;
   exact_tokens: number;
   exact_cost_cents: number;
-  fallback_tokens: number;
-  fallback_cost_cents: number;
   attempts: number;
   route: string;
 };
@@ -27,8 +25,6 @@ export async function enqueueUsageFinalizationReconciliation(input: {
   route: string;
   exactTokens: number;
   exactCostCents: number;
-  fallbackTokens: number;
-  fallbackCostCents: number;
   errorMessage: string;
 }): Promise<void> {
   const admin = createSupabaseAdminClient("worker");
@@ -39,8 +35,6 @@ export async function enqueueUsageFinalizationReconciliation(input: {
     route: input.route,
     exact_tokens: Math.max(0, Math.floor(input.exactTokens)),
     exact_cost_cents: Math.max(0, Math.floor(input.exactCostCents)),
-    fallback_tokens: Math.max(0, Math.floor(input.fallbackTokens)),
-    fallback_cost_cents: Math.max(0, Math.floor(input.fallbackCostCents)),
     attempts: 0,
     last_error: input.errorMessage,
     next_retry_at: new Date().toISOString(),
@@ -72,8 +66,6 @@ export async function enqueueUsageFinalizationReconciliation(input: {
       route: input.route,
       exact_tokens: payload.exact_tokens,
       exact_cost_cents: payload.exact_cost_cents,
-      fallback_tokens: payload.fallback_tokens,
-      fallback_cost_cents: payload.fallback_cost_cents,
       last_error: payload.last_error,
       next_retry_at: payload.next_retry_at,
       resolved_at: null,
@@ -115,7 +107,7 @@ export async function reconcilePendingUsageFinalizations(limit = 50): Promise<{
   const { data, error } = await admin
     .from("usage_finalization_reconciliation")
     .select(
-      "reservation_key, user_id, exact_tokens, exact_cost_cents, fallback_tokens, fallback_cost_cents, attempts, route",
+      "reservation_key, user_id, exact_tokens, exact_cost_cents, attempts, route",
     )
     .is("resolved_at", null)
     .lte("next_retry_at", nowIso)
@@ -139,18 +131,7 @@ export async function reconcilePendingUsageFinalizations(limit = 50): Promise<{
       actualCostCents: job.exact_cost_cents,
     });
 
-    const finalized = exact.ok
-      ? true
-      : (
-          await finalizeGenerateUsage({
-            userId: job.user_id,
-            reservationKey: job.reservation_key,
-            actualTokens: job.fallback_tokens,
-            actualCostCents: job.fallback_cost_cents,
-          })
-        ).ok;
-
-    if (finalized) {
+    if (exact.ok) {
       resolved += 1;
       await markUsageFinalizationReconciled(job.reservation_key);
       continue;

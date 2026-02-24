@@ -110,9 +110,9 @@ function deriveCompetitorCoverageCount(row: GapReportRow | null): number {
   return overlapItems;
 }
 
-function normalizeLimit(limit: number, fallback: number, used: number) {
+function normalizeLimit(limit: number) {
   if (!Number.isFinite(limit)) {
-    return Math.max(used, fallback, 1);
+    throw new Error("invalid_usage_limit");
   }
 
   return Math.max(1, Math.round(limit));
@@ -187,9 +187,10 @@ async function fetchDashboardOverview(): Promise<DashboardOverviewResult> {
     }
 
     const settingsResult = await getUserSettings(authData.user.id);
-    const retentionDays = settingsResult.ok
-      ? settingsResult.settings.report_retention_days
-      : 180;
+    if (!settingsResult.ok) {
+      return { ok: false, error: "Settings unavailable" };
+    }
+    const retentionDays = settingsResult.settings.report_retention_days;
     const retentionCutoff = retentionCutoffIso(retentionDays);
 
     let reportQuery = supabase
@@ -254,7 +255,7 @@ async function fetchDashboardOverview(): Promise<DashboardOverviewResult> {
     const usageLimit = hasSubscription
       ? planLimit === null
         ? Math.max(usageUsed, 1)
-        : normalizeLimit(planLimit, 1, usageUsed)
+        : normalizeLimit(planLimit)
       : 0;
     const coverageLimitLabel = hasSubscription
       ? planLimit === null

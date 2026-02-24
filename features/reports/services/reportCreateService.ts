@@ -34,9 +34,9 @@ import type {
   GapAnalysisOutput,
   GapReportStatus,
   HeroOutput,
+  ObjectionOutput,
 } from "@/features/conversion-gap/types/gap.types";
 import type { SnapshotResult } from "@/features/conversion-gap/types/snapshot.types";
-import { defaultSaasProfileValues } from "@/features/saas-profile/types/profile.types";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
 import {
   normalizeAcvRangeValue,
@@ -48,6 +48,10 @@ import { validateGapReport } from "@/features/reports/services/reportService";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
 import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
 import { assertCanonicalSectionCompleteness } from "@/features/reports/services/canonicalSectionCompletenessService";
+import {
+  runObjectionAnalysisModule,
+  type ObjectionAnalysisOutput,
+} from "@/features/objection-engine/ai/objectionAnalysisModule";
 
 export type ReportCreatePayload = {
   homepage_url: string;
@@ -358,7 +362,7 @@ function deriveSegment(profile: SaasProfileFormValues): string {
 function buildFailedReportData(
   reportId: string,
   message: string,
-): Record<string, unknown> {
+): unknown {
   const now = new Date().toISOString();
   const safeMessage = message.trim() || "Report generation failed.";
   const failedReport: ConversionGapReport = {
@@ -400,7 +404,14 @@ function buildFailedReportData(
       insight: "",
       ctaLabel: "",
     },
-    objectionCoverage: {},
+    objectionCoverage: {
+      score: 0,
+      identified: [],
+      missing: [],
+      risks: [],
+      guidance: [],
+      dimensionScores: {},
+    },
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},
@@ -420,7 +431,7 @@ function buildFailedReportData(
     priorityIndex: [],
   };
 
-  return failedReport as unknown as Record<string, unknown>;
+  return failedReport;
 }
 
 async function fetchProfileForUser(
@@ -442,20 +453,34 @@ async function fetchProfileForUser(
     return null;
   }
 
+  const acvRange = normalizeAcvRangeValue(data.acv_range);
+  const revenueStage = normalizeRevenueStageValue(data.revenue_stage);
+  const conversionGoal = normalizeConversionGoalValue(data.conversion_goal);
+  if (!acvRange || !revenueStage || !conversionGoal) {
+    logger.error("SaaS profile has invalid enum values.", {
+      user_id: userId,
+      acv_range: data.acv_range,
+      revenue_stage: data.revenue_stage,
+      conversion_goal: data.conversion_goal,
+    });
+    return null;
+  }
+  if (!Array.isArray(data.differentiation_matrix)) {
+    logger.error("SaaS profile differentiation matrix missing.", {
+      user_id: userId,
+    });
+    return null;
+  }
+
   return {
     icpRole: sanitizeProfileText(data.icp_role ?? ""),
     primaryPain: sanitizeProfileText(data.primary_pain ?? ""),
     buyingTrigger: sanitizeProfileText(data.buying_trigger ?? ""),
     websiteUrl: sanitizeProfileText(data.website_url ?? ""),
-    acvRange:
-      normalizeAcvRangeValue(data.acv_range) ?? defaultSaasProfileValues.acvRange,
-    revenueStage:
-      normalizeRevenueStageValue(data.revenue_stage) ??
-      defaultSaasProfileValues.revenueStage,
+    acvRange,
+    revenueStage,
     salesMotion: sanitizeProfileText(data.sales_motion ?? ""),
-    conversionGoal:
-      normalizeConversionGoalValue(data.conversion_goal) ??
-      defaultSaasProfileValues.conversionGoal,
+    conversionGoal,
     pricingModel: sanitizeProfileText(data.pricing_model ?? ""),
     keyObjections: Array.isArray(data.key_objections)
       ? data.key_objections.map((value: string) => ({
@@ -467,9 +492,7 @@ async function fetchProfileForUser(
           value: sanitizeProfileText(value),
         }))
       : [{ value: "" }],
-    differentiationMatrix: Array.isArray(data.differentiation_matrix)
-      ? data.differentiation_matrix
-      : defaultSaasProfileValues.differentiationMatrix,
+    differentiationMatrix: data.differentiation_matrix,
     onboardingProgress: data.onboarding_progress ?? 0,
     onboardingCompleted: data.onboarding_completed ?? false,
     updatedAt: null,
@@ -489,10 +512,13 @@ async function fetchUserCurrencyForPrompts(userId: string) {
     logger.error("Failed to load user currency for prompt context.", error, {
       user_id: userId,
     });
-    return "USD" as const;
+    throw new Error("user_currency_missing");
   }
-
-  return parseCheckoutCurrency(data?.currency) ?? "USD";
+  const currency = parseCheckoutCurrency(data?.currency);
+  if (!currency) {
+    throw new Error("user_currency_invalid");
+  }
+  return currency;
 }
 
 async function updateReportStatus(
@@ -544,47 +570,33 @@ async function updateExecutionState(
   }
 }
 
-async function finalizeReservationWithFallback(params: {
+async function finalizeReservationExact(params: {
   userId: string;
   reservationKey: string;
   actualTokens: number;
   actualCostCents: number;
-  fallbackTokens: number;
-  fallbackCostCents: number;
 }): Promise<boolean> {
-  const exact = await finalizeGenerateUsage({
-    userId: params.userId,
-    reservationKey: params.reservationKey,
-    actualTokens: params.actualTokens,
-    actualCostCents: params.actualCostCents,
-  });
-  if (exact.ok) {
-    return true;
-  }
-
-  logger.error("Exact usage finalization failed; falling back to reservation.", {
-    user_id: params.userId,
-    reservation_key: params.reservationKey,
-    error: exact.error,
-  });
-
-  const fallback = await finalizeGenerateUsage({
-    userId: params.userId,
-    reservationKey: params.reservationKey,
-    actualTokens: params.fallbackTokens,
-    actualCostCents: params.fallbackCostCents,
-  });
-
-  if (!fallback.ok) {
-    logger.error("Fallback usage finalization failed.", {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const exact = await finalizeGenerateUsage({
+      userId: params.userId,
+      reservationKey: params.reservationKey,
+      actualTokens: params.actualTokens,
+      actualCostCents: params.actualCostCents,
+    });
+    if (exact.ok) {
+      return true;
+    }
+    logger.error("Exact usage finalization attempt failed.", {
       user_id: params.userId,
       reservation_key: params.reservationKey,
-      error: fallback.error,
+      attempt,
+      max_attempts: maxAttempts,
+      error: exact.error,
     });
-    return false;
   }
 
-  return true;
+  return false;
 }
 
 async function claimQueuedReport(
@@ -708,6 +720,47 @@ function buildSnapshotResult(
   };
 }
 
+function mergeMissingObjections(
+  fromGap: string[],
+  fromObjectionEngine: string[],
+): string[] {
+  const merged: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of [...fromGap, ...fromObjectionEngine]) {
+    const normalized = item.trim();
+    if (!normalized) {
+      continue;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(normalized);
+  }
+
+  return merged;
+}
+
+function buildObjectionRewriteFromAnalysis(
+  fallback: ObjectionOutput,
+  analysis: ObjectionAnalysisOutput,
+): ObjectionOutput {
+  if (analysis.mitigationGuidance.length === 0) {
+    return fallback;
+  }
+
+  const mapped = analysis.mitigationGuidance
+    .map((item) => ({
+      objection: item.objection.trim(),
+      response: item.recommendedStrategy.trim(),
+    }))
+    .filter((item) => item.objection.length > 0 && item.response.length > 0);
+
+  return mapped.length > 0 ? { objections: mapped } : fallback;
+}
+
 async function processSnapshotReport(
   reportId: string,
   userId: string,
@@ -763,13 +816,11 @@ async function processSnapshotReport(
     await updateExecutionState(reportId, "finalizing", 92);
 
     const snapshotResult = buildSnapshotResult(results.gapAnalysis, results.hero);
-    const finalizedReservation = await finalizeReservationWithFallback({
+    const finalizedReservation = await finalizeReservationExact({
       userId,
       reservationKey,
       actualTokens: usage.totalTokens,
       actualCostCents: usage.costCents,
-      fallbackTokens: SNAPSHOT_TOKEN_RESERVE,
-      fallbackCostCents: reservedCostCents,
     });
     if (!finalizedReservation) {
       throw new Error("Unable to finalize snapshot reservation.");
@@ -939,6 +990,31 @@ async function processGapReport(
       pricingContent,
       competitors,
     });
+    const objectionAnalysis = await runObjectionAnalysisModule({
+      profile,
+      companyContent,
+      pricingContent,
+      competitors,
+      gapAnalysis: results.gapAnalysis,
+      pricingContext: results.pricing,
+    });
+    const mergedGapAnalysis: GapAnalysisOutput = {
+      ...results.gapAnalysis,
+      missingObjections: mergeMissingObjections(
+        results.gapAnalysis.missingObjections,
+        objectionAnalysis.data.missingObjections.map((item) => item.objection),
+      ),
+    };
+    const mergedObjectionRewrites = buildObjectionRewriteFromAnalysis(
+      results.objections,
+      objectionAnalysis.data,
+    );
+    const totalInputTokens = usage.inputTokens + objectionAnalysis.usage.inputTokens;
+    const totalOutputTokens =
+      usage.outputTokens + objectionAnalysis.usage.outputTokens;
+    const totalTokens = totalInputTokens + totalOutputTokens;
+    const totalCostCents = estimateCostCents(totalInputTokens, totalOutputTokens);
+
     await updateExecutionState(reportId, "competitor_synthesis", 72);
     await updateExecutionState(reportId, "scoring", 82);
     await updateExecutionState(reportId, "rewrite_generation", 90);
@@ -948,11 +1024,11 @@ async function processGapReport(
       company: deriveCompanyName(report.homepage_url),
       websiteUrl: report.homepage_url,
       segment: deriveSegment(profile),
-      gapAnalysis: results.gapAnalysis,
+      gapAnalysis: mergedGapAnalysis,
       rewrites: {
         hero: results.hero,
         pricing: results.pricing,
-        objections: results.objections,
+        objections: mergedObjectionRewrites,
         differentiation: results.differentiation,
         competitiveCounter: results.competitiveCounter,
       },
@@ -962,6 +1038,7 @@ async function processGapReport(
         competitors,
       },
       competitorSynthesis: results.competitorSynthesis,
+      objectionAnalysis: objectionAnalysis.data,
       profile,
       status: "completed",
     });
@@ -972,13 +1049,11 @@ async function processGapReport(
     if (!validateGapReport(canonicalReport)) {
       throw new Error("invalid_report_data");
     }
-    const finalizedTokens = await finalizeReservationWithFallback({
+    const finalizedTokens = await finalizeReservationExact({
       userId,
       reservationKey: tokenReservationKey,
-      actualTokens: usage.totalTokens,
-      actualCostCents: usage.costCents,
-      fallbackTokens: GAP_TOKEN_RESERVE,
-      fallbackCostCents: gapReservedCostCents,
+      actualTokens: totalTokens,
+      actualCostCents: totalCostCents,
     });
     if (!finalizedTokens) {
       throw new Error("Unable to finalize gap token reservation.");
@@ -988,7 +1063,7 @@ async function processGapReport(
       userId,
       reportId,
       reservationKey,
-      reportData: canonicalReport as unknown as Record<string, unknown>,
+      reportData: canonicalReport,
       competitorData: {
         homepage: companyContent,
         pricing: pricingContent,
@@ -1011,15 +1086,22 @@ async function processGapReport(
     await logUsageEvent({
       user_id: userId,
       action: "gap_engine",
-      tokens_input: usage.inputTokens,
-      tokens_output: usage.outputTokens,
-      tokens_total: usage.totalTokens,
-      cost_cents: usage.costCents,
-      metadata: { report_id: reportId },
+      tokens_input: totalInputTokens,
+      tokens_output: totalOutputTokens,
+      tokens_total: totalTokens,
+      cost_cents: totalCostCents,
+      metadata: {
+        report_id: reportId,
+        objection_engine: {
+          coverage_score: objectionAnalysis.data.objectionCoverageScore,
+          missing_count: objectionAnalysis.data.missingObjections.length,
+          critical_risk_count: objectionAnalysis.data.criticalRisks.length,
+        },
+      },
     });
 
-    const overlapCount = Array.isArray(results.gapAnalysis.messagingOverlap)
-      ? results.gapAnalysis.messagingOverlap.length
+    const overlapCount = Array.isArray(mergedGapAnalysis.messagingOverlap)
+      ? mergedGapAnalysis.messagingOverlap.length
       : 0;
 
     await sendReportCompletionAlert({ userId, reportId });

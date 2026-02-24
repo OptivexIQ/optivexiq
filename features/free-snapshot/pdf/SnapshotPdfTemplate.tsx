@@ -18,6 +18,8 @@ export function SnapshotPdfTemplate({
 }: SnapshotPdfProps) {
   const topGaps = report.priorityIssues.slice(0, 3);
   const quickWins = report.rewriteRecommendations.slice(0, 5);
+  const missingObjections = report.objectionCoverage.missing.slice(0, 3);
+  const mitigationGuidance = report.objectionCoverage.guidance.slice(0, 3);
 
   return (
     <article className="snapshot-pdf mx-auto max-w-200 bg-white text-slate-900">
@@ -92,7 +94,7 @@ export function SnapshotPdfTemplate({
                 Objection Coverage
               </p>
               <p className="mt-1 text-xl font-semibold">
-                {report.confidenceScore}/100
+                {report.objectionCoverage.score}/100
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -128,6 +130,49 @@ export function SnapshotPdfTemplate({
                 </p>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Objection Findings</h2>
+          <div className="space-y-3">
+            <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                Missing objections
+              </p>
+              {missingObjections.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {missingObjections.map((item) => (
+                    <li key={`${item.objection}-${item.severity}`}>
+                      {item.objection} ({item.severity})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-slate-700">
+                  No missing objections were detected.
+                </p>
+              )}
+            </article>
+
+            <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                Mitigation guidance
+              </p>
+              {mitigationGuidance.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {mitigationGuidance.map((item) => (
+                    <li key={`${item.objection}-${item.recommendedStrategy}`}>
+                      {item.objection}: {item.recommendedStrategy}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-slate-700">
+                  Guidance is not available for this snapshot.
+                </p>
+              )}
+            </article>
           </div>
         </section>
 

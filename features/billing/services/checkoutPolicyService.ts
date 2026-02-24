@@ -4,14 +4,13 @@ import type {
   BillingPlan,
 } from "@/features/billing/types/billing.types";
 import { BILLING_CURRENCIES } from "@/features/billing/types/billing.types";
-import { BILLING_PLANS } from "@/lib/constants/plans";
 import { getPlanLimits } from "@/features/billing/services/planLimitsService";
 import { hasPaidAccess } from "@/features/billing/services/subscriptionLifecycleService";
 
-export type CheckoutPlan = BillingPlan;
+export type CheckoutPlan = "starter" | "pro";
 
 type CheckoutPolicyDeniedCode =
-  | "GROWTH_CONTACT_SALES"
+  | "PLAN_LIMITS_UNAVAILABLE"
   | "SAME_PLAN_ACTIVE"
   | "DOWNGRADE_OR_LATERAL";
 
@@ -25,14 +24,12 @@ const PLAN_RANK: Record<BillingPlan, number> = {
   growth: 3,
 };
 
-export function parseCheckoutPlan(value: unknown): BillingPlan | null {
+export function parseCheckoutPlan(value: unknown): CheckoutPlan | null {
   if (typeof value !== "string") {
     return null;
   }
 
-  return (BILLING_PLANS as readonly string[]).includes(value)
-    ? (value as BillingPlan)
-    : null;
+  return value === "starter" || value === "pro" ? value : null;
 }
 
 export function parseCheckoutCurrency(value: unknown): BillingCurrency | null {
@@ -48,16 +45,8 @@ export function parseCheckoutCurrency(value: unknown): BillingCurrency | null {
 
 export async function assertCheckoutPolicy(params: {
   userId: string;
-  requestedPlan: BillingPlan;
+  requestedPlan: CheckoutPlan;
 }): Promise<CheckoutPolicyResult> {
-  if (params.requestedPlan === "growth") {
-    return {
-      ok: false,
-      code: "GROWTH_CONTACT_SALES",
-      message: "Growth Intelligence is available through sales only.",
-    };
-  }
-
   const subscription = await getSubscription(params.userId);
   if (!subscription) {
     return { ok: true, plan: params.requestedPlan };
@@ -65,7 +54,11 @@ export async function assertCheckoutPolicy(params: {
 
   const limits = await getPlanLimits(subscription.plan);
   if (!limits) {
-    return { ok: true, plan: params.requestedPlan };
+    return {
+      ok: false,
+      code: "PLAN_LIMITS_UNAVAILABLE",
+      message: "Plan limits are unavailable. Try again shortly.",
+    };
   }
 
   const hasPaidAccessNow = hasPaidAccess(subscription, limits.billing, {

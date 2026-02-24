@@ -167,7 +167,7 @@ export function buildObjectionCoverage(input: {
   );
   const missing = new Set(input.missingObjections.map((item) => item.toLowerCase()));
 
-  return Object.fromEntries(
+  const dimensionScores = Object.fromEntries(
     resolvedKeys.map((key) => {
       const lower = key.toLowerCase();
       const hasDirect = responses.some((value) => value.includes(lower));
@@ -177,4 +177,43 @@ export function buildObjectionCoverage(input: {
       return [key, score];
     }),
   );
+
+  const coverageValues = Object.values(dimensionScores);
+  const score =
+    coverageValues.length > 0
+      ? clampScore(
+          Math.round(
+            coverageValues.reduce((sum, value) => sum + value, 0) /
+              coverageValues.length,
+          ),
+        )
+      : 0;
+
+  const identified = input.objections.objections.map((item) => ({
+    objection: item.objection,
+    severity: "medium" as const,
+    evidence: item.response,
+  }));
+
+  const missingItems = input.missingObjections.map((item) => ({
+    objection: item,
+    severity: "high" as const,
+    impact:
+      "This objection is currently under-addressed in decision-stage messaging.",
+  }));
+
+  const risks = missingItems.slice(0, 3).map((item) => item.objection);
+  const guidance = input.objections.objections.map((item) => ({
+    objection: item.objection,
+    recommendedStrategy: item.response,
+  }));
+
+  return {
+    score,
+    identified,
+    missing: missingItems,
+    risks,
+    guidance,
+    dimensionScores,
+  };
 }

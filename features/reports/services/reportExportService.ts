@@ -54,6 +54,35 @@ function toTextLines(report: ConversionGapReport): string[] {
   lines.push(
     report.messagingOverlap.insight || "No overlap insight available.",
   );
+  lines.push("");
+  lines.push(`Objection Coverage`);
+  lines.push(`- Coverage Score: ${report.objectionCoverage.score}/100`);
+
+  const missing = report.objectionCoverage.missing.slice(0, 5);
+  if (missing.length === 0) {
+    lines.push("- Missing objections: none detected");
+  } else {
+    lines.push("- Missing objections:");
+    for (const item of missing) {
+      const impact = item.impact?.trim();
+      lines.push(
+        `  - ${item.objection} (severity: ${item.severity})${impact ? ` -- ${impact}` : ""}`,
+      );
+    }
+  }
+
+  const risks = report.objectionCoverage.risks.slice(0, 5);
+  if (risks.length > 0) {
+    lines.push(`- Critical risks: ${risks.join("; ")}`);
+  }
+
+  const guidance = report.objectionCoverage.guidance.slice(0, 5);
+  if (guidance.length > 0) {
+    lines.push("- Mitigation guidance:");
+    for (const item of guidance) {
+      lines.push(`  - ${item.objection}: ${item.recommendedStrategy}`);
+    }
+  }
   return lines;
 }
 

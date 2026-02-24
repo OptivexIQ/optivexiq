@@ -78,6 +78,17 @@ function hasMeaningfulRewriteValues(value: Record<string, unknown>): boolean {
   });
 }
 
+function hasMeaningfulObjectionCoverage(
+  value: ConversionGapReport["objectionCoverage"],
+): boolean {
+  return (
+    value.identified.length > 0 ||
+    value.missing.length > 0 ||
+    value.risks.length > 0 ||
+    value.guidance.length > 0
+  );
+}
+
 export function assertCanonicalSectionCompleteness(
   report: ConversionGapReport,
 ): CompletenessResult {
@@ -112,7 +123,7 @@ export function assertCanonicalSectionCompleteness(
     return { ok: false, reason: "missing_messaging_overlap_section" };
   }
 
-  if (!hasKeys(report.objectionCoverage)) {
+  if (!hasMeaningfulObjectionCoverage(report.objectionCoverage)) {
     return { ok: false, reason: "missing_objection_coverage_section" };
   }
 

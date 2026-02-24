@@ -102,10 +102,8 @@ async function finalizeGenerateUsageWithRetry(params: {
   reservationKey: string;
   actualTokens: number;
   actualCostCents: number;
-  fallbackTokens: number;
-  fallbackCostCents: number;
   requestId: string;
-}): Promise<{ ok: true; mode: "exact" | "fallback" } | { ok: false }> {
+}): Promise<{ ok: true; mode: "exact" } | { ok: false }> {
   for (let attempt = 1; attempt <= FINALIZATION_MAX_ATTEMPTS; attempt += 1) {
     const exact = await finalizeGenerateUsage({
       userId: params.userId,
@@ -122,25 +120,6 @@ async function finalizeGenerateUsageWithRetry(params: {
       attempt,
       max_attempts: FINALIZATION_MAX_ATTEMPTS,
       error: exact.error,
-    });
-  }
-
-  for (let attempt = 1; attempt <= FINALIZATION_MAX_ATTEMPTS; attempt += 1) {
-    const fallback = await finalizeGenerateUsage({
-      userId: params.userId,
-      reservationKey: params.reservationKey,
-      actualTokens: params.fallbackTokens,
-      actualCostCents: params.fallbackCostCents,
-    });
-    if (fallback.ok) {
-      return { ok: true, mode: "fallback" };
-    }
-    logger.error("Generate usage fallback finalization attempt failed.", {
-      request_id: params.requestId,
-      reservation_key: params.reservationKey,
-      attempt,
-      max_attempts: FINALIZATION_MAX_ATTEMPTS,
-      error: fallback.error,
     });
   }
 
@@ -329,48 +308,34 @@ export async function handleGenerateStream(params: {
                 actualCostCents,
               });
               if (!abortedFinalization.ok) {
-                const fallback = await finalizeGenerateUsage({
-                  userId,
+                const errorMessage =
+                  abortedFinalization.error ?? "aborted_stream_finalization_failed";
+                await enqueueUsageFinalizationReconciliation({
                   reservationKey: requestId,
-                  actualTokens: reservedTokens,
-                  actualCostCents: reservedCostCents,
+                  userId,
+                  route: "/api/generate",
+                  exactTokens: actualTokens,
+                  exactCostCents: actualCostCents,
+                  errorMessage,
                 });
-                if (!fallback.ok) {
-                  const errorMessage =
-                    fallback.error ??
-                    abortedFinalization.error ??
-                    "aborted_stream_finalization_failed";
-                  await enqueueUsageFinalizationReconciliation({
-                    reservationKey: requestId,
-                    userId,
+                logger.error("Failed to finalize usage for aborted stream.", {
+                  requestId,
+                  error: errorMessage,
+                  charge_state: "reservation_retained",
+                });
+                await emitOperationalAlert({
+                  severity: "critical",
+                  source: "generate_stream_finalization",
+                  message: "Aborted stream finalization failed; reservation retained.",
+                  context: {
+                    reservation_key: requestId,
+                    user_id: userId,
                     route: "/api/generate",
-                    exactTokens: actualTokens,
-                    exactCostCents: actualCostCents,
-                    fallbackTokens: reservedTokens,
-                    fallbackCostCents: reservedCostCents,
-                    errorMessage,
-                  });
-                  logger.error("Failed to finalize usage for aborted stream.", {
-                    requestId,
+                    exact_tokens: actualTokens,
+                    exact_cost_cents: actualCostCents,
                     error: errorMessage,
-                    charge_state: "reservation_retained",
-                  });
-                  await emitOperationalAlert({
-                    severity: "critical",
-                    source: "generate_stream_finalization",
-                    message: "Aborted stream finalization failed; reservation retained.",
-                    context: {
-                      reservation_key: requestId,
-                      user_id: userId,
-                      route: "/api/generate",
-                      exact_tokens: actualTokens,
-                      exact_cost_cents: actualCostCents,
-                      fallback_tokens: reservedTokens,
-                      fallback_cost_cents: reservedCostCents,
-                      error: errorMessage,
-                    },
-                  });
-                }
+                  },
+                });
               }
               return;
             }
@@ -394,8 +359,6 @@ export async function handleGenerateStream(params: {
             reservationKey: requestId,
             actualTokens: finalizedTokens,
             actualCostCents: finalizedCostCents,
-            fallbackTokens: reservedTokens,
-            fallbackCostCents: reservedCostCents,
             requestId,
           });
 
@@ -406,8 +369,6 @@ export async function handleGenerateStream(params: {
               route: "/api/generate",
               exactTokens: finalizedTokens,
               exactCostCents: finalizedCostCents,
-              fallbackTokens: reservedTokens,
-              fallbackCostCents: reservedCostCents,
               errorMessage: "finalization_failed_after_retries",
             });
             logger.error("AI usage finalization failed after retries.", {
@@ -431,8 +392,6 @@ export async function handleGenerateStream(params: {
                 route: "/api/generate",
                 exact_tokens: finalizedTokens,
                 exact_cost_cents: finalizedCostCents,
-                fallback_tokens: reservedTokens,
-                fallback_cost_cents: reservedCostCents,
                 error: "finalization_failed_after_retries",
               },
             });

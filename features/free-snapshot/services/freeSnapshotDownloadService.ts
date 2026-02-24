@@ -55,7 +55,32 @@ function toCanonicalReport(
       ctaLabel: "Upgrade for full overlap analysis",
     },
     objectionCoverage: {
-      "primary-objection": Math.max(0, 100 - Math.round((snapshot.positioningScore + snapshot.clarityScore) / 2)),
+      score: Math.max(
+        0,
+        100 - Math.round((snapshot.positioningScore + snapshot.clarityScore) / 2),
+      ),
+      identified: [],
+      missing: [
+        {
+          objection: gapB,
+          severity: "medium",
+          impact: snapshot.riskEstimate,
+        },
+      ],
+      risks: [gapB],
+      guidance: [
+        {
+          objection: gapB,
+          recommendedStrategy:
+            snapshot.quickWins[0] ?? "Address this objection with outcome-backed proof.",
+        },
+      ],
+      dimensionScores: {
+        "primary-objection": Math.max(
+          0,
+          100 - Math.round((snapshot.positioningScore + snapshot.clarityScore) / 2),
+        ),
+      },
     },
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},

@@ -3,6 +3,7 @@ import { parseStoredReportData } from "@/features/reports/services/canonicalRepo
 import { getUserSettings } from "@/features/settings/services/userSettingsService";
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import { logger } from "@/lib/logger";
+import { extractObjectionCoverageScores } from "@/features/conversion-gap/services/objectionCoverageService";
 
 type ReportRow = {
   id: string;
@@ -140,6 +141,13 @@ function buildDiffPayload(
   current: ConversionGapReport,
   baseline: ConversionGapReport,
 ): ReportDiffPayload {
+  const currentObjectionCoverage = extractObjectionCoverageScores(
+    current.objectionCoverage,
+  );
+  const baselineObjectionCoverage = extractObjectionCoverageScores(
+    baseline.objectionCoverage,
+  );
+
   return {
     reportId: current.id,
     baselineReportId: baseline.id,
@@ -174,8 +182,8 @@ function buildDiffPayload(
         current.messagingOverlap.items.length - baseline.messagingOverlap.items.length,
     },
     objectionCoverage: diffObjectionCoverage(
-      current.objectionCoverage,
-      baseline.objectionCoverage,
+      currentObjectionCoverage,
+      baselineObjectionCoverage,
     ),
     competitiveMatrix: {
       competitorRows: toDelta(
@@ -225,23 +233,7 @@ async function findPreviousRow(input: {
       return byHomepageResult.data as ReportRow;
     }
   }
-
-  let fallback = supabase
-    .from("conversion_gap_reports")
-    .select(select)
-    .eq("report_type", "full")
-    .eq("user_id", input.userId)
-    .neq("id", input.reportId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (input.retentionCutoff) {
-    fallback = fallback.gte("created_at", input.retentionCutoff);
-  }
-  const fallbackResult = await fallback.maybeSingle();
-  if (fallbackResult.error) {
-    throw fallbackResult.error;
-  }
-  return fallbackResult.data ? (fallbackResult.data as ReportRow) : null;
+  return null;
 }
 
 export async function getReportDiffForUser(input: {

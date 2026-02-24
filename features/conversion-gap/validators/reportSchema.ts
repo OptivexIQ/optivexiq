@@ -35,7 +35,33 @@ export const conversionGapReportSchema = z.object({
     insight: z.string(),
     ctaLabel: z.string(),
   }),
-  objectionCoverage: z.record(z.number()),
+  objectionCoverage: z.object({
+    score: z.number().min(0).max(100),
+    identified: z.array(
+      z.object({
+        objection: z.string(),
+        severity: z.enum(["low", "medium", "high", "critical"]),
+        evidence: z.string().optional(),
+        impact: z.string().optional(),
+      }),
+    ),
+    missing: z.array(
+      z.object({
+        objection: z.string(),
+        severity: z.enum(["low", "medium", "high", "critical"]),
+        evidence: z.string().optional(),
+        impact: z.string().optional(),
+      }),
+    ),
+    risks: z.array(z.string()),
+    guidance: z.array(
+      z.object({
+        objection: z.string(),
+        recommendedStrategy: z.string(),
+      }),
+    ),
+    dimensionScores: z.record(z.number()).optional(),
+  }),
   competitiveMatrix: z
     .object({
       profileMatrix: z.array(

@@ -22,4 +22,5 @@ export type RewriteStreamResult = {
 export type RewriteStudioInitialData = {
   defaultWebsiteUrl: string;
   planLabel: string;
+  defaultRewriteRequest?: Partial<RewriteGenerateRequest>;
 };

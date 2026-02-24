@@ -187,7 +187,7 @@ export async function completeGapReportAndCharge(params: {
   userId: string;
   reportId: string;
   reservationKey: string;
-  reportData: Record<string, unknown>;
+  reportData: unknown;
   competitorData?: Record<string, unknown> | null;
   gapAnalysis?: Record<string, unknown> | null;
   rewrites?: Record<string, unknown> | null;

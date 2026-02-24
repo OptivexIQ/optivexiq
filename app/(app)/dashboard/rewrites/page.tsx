@@ -7,9 +7,67 @@ import { isProfileComplete } from "@/features/saas-profile/validators/profileSch
 import { PLAN_LABELS } from "@/lib/constants/plans";
 import { getSubscription } from "@/features/billing/services/planValidationService";
 import { RewriteStudioView } from "@/features/rewrites/components/RewriteStudioView";
+import type { RewriteGenerateRequest } from "@/features/rewrites/types/rewrites.types";
 
-export default async function RewritesPage() {
+type RewritesPageProps = {
+  searchParams?:
+    | {
+        rewriteType?: string;
+        websiteUrl?: string;
+        objection?: string;
+        impact?: string;
+        strategy?: string;
+        reportId?: string;
+      }
+    | Promise<{
+        rewriteType?: string;
+        websiteUrl?: string;
+        objection?: string;
+        impact?: string;
+        strategy?: string;
+        reportId?: string;
+      }>;
+};
+
+function sanitizeQueryValue(value: string | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolvePrefillRequest(
+  value: Awaited<RewritesPageProps["searchParams"]>,
+): Partial<RewriteGenerateRequest> {
+  const rewriteType =
+    value?.rewriteType === "pricing" || value?.rewriteType === "homepage"
+      ? value.rewriteType
+      : "homepage";
+
+  const websiteUrl = sanitizeQueryValue(value?.websiteUrl);
+  const objection = sanitizeQueryValue(value?.objection);
+  const impact = sanitizeQueryValue(value?.impact);
+  const strategy = sanitizeQueryValue(value?.strategy);
+  const reportId = sanitizeQueryValue(value?.reportId);
+
+  const noteSections = [
+    objection ? `Address objection: ${objection}` : null,
+    impact ? `Impact context: ${impact}` : null,
+    strategy ? `Recommended strategy: ${strategy}` : null,
+    reportId ? `Source report: ${reportId}` : null,
+  ].filter((item): item is string => Boolean(item));
+
+  return {
+    rewriteType,
+    ...(websiteUrl ? { websiteUrl } : {}),
+    ...(noteSections.length > 0 ? { notes: noteSections.join("\n\n") } : {}),
+  };
+}
+
+export default async function RewritesPage({ searchParams }: RewritesPageProps) {
   const user = await requireUser();
+  const resolvedSearchParams = await Promise.resolve(searchParams);
   const profileResult = await getProfile();
 
   if (!profileResult.ok) {
@@ -45,6 +103,7 @@ export default async function RewritesPage() {
         initialData={{
           defaultWebsiteUrl: profileResult.data.websiteUrl,
           planLabel,
+          defaultRewriteRequest: resolvePrefillRequest(resolvedSearchParams),
         }}
       />
 

@@ -5,6 +5,7 @@ import type {
 import type { GapAnalysisOutput } from "@/features/conversion-gap/types/gap.types";
 import type { GapRewrites } from "@/features/conversion-gap/services/reportAggregation.types";
 import type { PriorityInput } from "@/features/conversion-gap/types/priority.types";
+import { extractObjectionCoverageScore } from "@/features/conversion-gap/services/objectionCoverageService";
 import { rankPriorityIssues } from "@/features/reports/services/priorityScoringService";
 
 export function buildRewriteRecommendations(input: {
@@ -64,13 +65,9 @@ export function buildRewriteRecommendations(input: {
 export function buildPriorityIndex(input: {
   gapAnalysis: GapAnalysisOutput;
   messagingOverlap: ConversionGapReport["messagingOverlap"];
-  objectionCoverage: Record<string, number>;
+  objectionCoverage: ConversionGapReport["objectionCoverage"];
 }) {
-  const coverageValues = Object.values(input.objectionCoverage);
-  const avgCoverage =
-    coverageValues.length > 0
-      ? coverageValues.reduce((sum, value) => sum + value, 0) / coverageValues.length
-      : 0;
+  const avgCoverage = extractObjectionCoverageScore(input.objectionCoverage);
   const overlapPenalty = input.messagingOverlap.items.filter(
     (item) => item.risk === "high",
   ).length;
@@ -110,4 +107,3 @@ export function buildPriorityIndex(input: {
 
   return rankPriorityIssues(issues);
 }
-

@@ -49,6 +49,27 @@ export type RewriteRecommendation = {
   iconName?: "home" | "pricing" | "trust" | "objection" | "default";
 };
 
+export type ObjectionCoverageItem = {
+  objection: string;
+  severity: "low" | "medium" | "high" | "critical";
+  evidence?: string;
+  impact?: string;
+};
+
+export type ObjectionCoverageGuidance = {
+  objection: string;
+  recommendedStrategy: string;
+};
+
+export type ObjectionCoverage = {
+  score: number;
+  identified: ObjectionCoverageItem[];
+  missing: ObjectionCoverageItem[];
+  risks: string[];
+  guidance: ObjectionCoverageGuidance[];
+  dimensionScores?: Record<string, number>;
+};
+
 export type CompetitiveMatrixProfileRow = {
   competitor: string;
   ourAdvantage: string;
@@ -98,7 +119,7 @@ export type ConversionGapReport = {
   diagnosis: Diagnosis;
 
   messagingOverlap: MessagingOverlap;
-  objectionCoverage: Record<string, number>;
+  objectionCoverage: ObjectionCoverage;
   competitiveMatrix: CompetitiveMatrix;
   positioningMap: Record<string, unknown>;
   rewrites: Record<string, unknown>;

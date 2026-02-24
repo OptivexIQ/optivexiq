@@ -1,5 +1,6 @@
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
 import { TrendingUp } from "lucide-react";
+import { extractObjectionCoverageScore } from "@/features/conversion-gap/services/objectionCoverageService";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -24,12 +25,9 @@ function buildForecast(report: ConversionGapReport) {
   const highRiskOverlapCount = report.messagingOverlap.items.filter(
     (item) => item.risk === "high",
   ).length;
-  const coverageValues = Object.values(report.objectionCoverage ?? {}).map(
-    (value) => Number(value),
-  );
-  const objectionCoverageAverage = averageCoverage(
-    coverageValues.filter((value) => Number.isFinite(value)),
-  );
+  const objectionCoverageAverage = averageCoverage([
+    extractObjectionCoverageScore(report.objectionCoverage),
+  ]);
   const matrixSignalCount = Object.keys(report.competitiveMatrix ?? {}).length;
   const recovery = Math.max(
     0,

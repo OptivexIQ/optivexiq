@@ -19,6 +19,8 @@ function renderSnapshotBodyHtml(props: SnapshotPdfProps): string {
   const { report, brand, generatedAt } = props;
   const topGaps = report.priorityIssues.slice(0, 3);
   const quickWins = report.rewriteRecommendations.slice(0, 5);
+  const missingObjections = report.objectionCoverage.missing.slice(0, 3);
+  const mitigationGuidance = report.objectionCoverage.guidance.slice(0, 3);
 
   const topGapsHtml = topGaps
     .map(
@@ -44,6 +46,34 @@ function renderSnapshotBodyHtml(props: SnapshotPdfProps): string {
             </li>`,
     )
     .join("");
+
+  const missingObjectionsHtml =
+    missingObjections.length > 0
+      ? `<ul class="mt-2 space-y-1 text-sm text-slate-700">
+${missingObjections
+  .map(
+    (item) =>
+      `  <li>${escapeHtml(item.objection)} (${escapeHtml(item.severity)})</li>`,
+  )
+  .join("\n")}
+              </ul>`
+      : `<p class="mt-2 text-sm text-slate-700">
+                No missing objections were detected.
+              </p>`;
+
+  const mitigationGuidanceHtml =
+    mitigationGuidance.length > 0
+      ? `<ul class="mt-2 space-y-1 text-sm text-slate-700">
+${mitigationGuidance
+  .map(
+    (item) =>
+      `  <li>${escapeHtml(item.objection)}: ${escapeHtml(item.recommendedStrategy)}</li>`,
+  )
+  .join("\n")}
+              </ul>`
+      : `<p class="mt-2 text-sm text-slate-700">
+                Guidance is not available for this snapshot.
+              </p>`;
 
   return `<article class="snapshot-pdf mx-auto max-w-200 bg-white text-slate-900">
       <style>
@@ -113,7 +143,7 @@ function renderSnapshotBodyHtml(props: SnapshotPdfProps): string {
               <p class="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
                 Objection Coverage
               </p>
-              <p class="mt-1 text-xl font-semibold">${report.confidenceScore}/100</p>
+              <p class="mt-1 text-xl font-semibold">${report.objectionCoverage.score}/100</p>
             </div>
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p class="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
@@ -134,6 +164,25 @@ function renderSnapshotBodyHtml(props: SnapshotPdfProps): string {
           <h2 class="text-lg font-semibold">Top Gaps</h2>
           <div class="space-y-3">
 ${topGapsHtml}
+          </div>
+        </section>
+
+        <section class="space-y-4">
+          <h2 class="text-lg font-semibold">Objection Findings</h2>
+          <div class="space-y-3">
+            <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                Missing objections
+              </p>
+              ${missingObjectionsHtml}
+            </article>
+
+            <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                Mitigation guidance
+              </p>
+              ${mitigationGuidanceHtml}
+            </article>
           </div>
         </section>
 

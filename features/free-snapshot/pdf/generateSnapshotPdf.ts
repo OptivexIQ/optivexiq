@@ -163,7 +163,25 @@ function buildVerificationReport(): ConversionGapReport {
       insight: "Overlap risk requires tighter differentiation.",
       ctaLabel: "Upgrade for full overlap analysis",
     },
-    objectionCoverage: { trust: 42 },
+    objectionCoverage: {
+      score: 42,
+      identified: [
+        {
+          objection: "Trust",
+          severity: "medium",
+          evidence: "Social proof and validation are limited.",
+        },
+      ],
+      missing: [],
+      risks: ["Trust"],
+      guidance: [
+        {
+          objection: "Trust",
+          recommendedStrategy: "Add stronger proof points and case evidence.",
+        },
+      ],
+      dimensionScores: { trust: 42 },
+    },
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},

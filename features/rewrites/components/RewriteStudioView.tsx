@@ -78,6 +78,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     websiteUrl: initialData.defaultWebsiteUrl,
     content: "",
     notes: "",
+    ...(initialData.defaultRewriteRequest ?? {}),
   });
   const [output, setOutput] = useState("");
   const [error, setError] = useState<string | null>(null);

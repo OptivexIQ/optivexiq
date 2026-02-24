@@ -116,7 +116,10 @@ function extractFailureMessage(value: unknown): string | null {
 
 async function resolveRetentionDays(userId: string): Promise<number> {
   const settingsResult = await getUserSettings(userId);
-  return settingsResult.ok ? settingsResult.settings.report_retention_days : 180;
+  if (!settingsResult.ok) {
+    throw new Error("settings_unavailable");
+  }
+  return settingsResult.settings.report_retention_days;
 }
 
 export async function getCanonicalGapReportForUser(
@@ -151,9 +154,14 @@ export async function getCanonicalGapReportForUser(
     }
 
     const settingsResult = await getUserSettings(userId);
-    const retentionDays = settingsResult.ok
-      ? settingsResult.settings.report_retention_days
-      : 180;
+    if (!settingsResult.ok) {
+      logger.error("Failed to load user settings for canonical report read.", {
+        report_id: reportId,
+        user_id: userId,
+      });
+      return { status: "error", message: "Settings unavailable." };
+    }
+    const retentionDays = settingsResult.settings.report_retention_days;
 
     if (isReportExpired(row.created_at, retentionDays)) {
       return { status: "not-found" };

@@ -47,11 +47,10 @@ function buildRenewalLabel(
   return `Renews ${renewalDate}`;
 }
 
-function normalizeLimit(limit: number | null, fallback: number, used: number) {
+function normalizeLimit(limit: number | null) {
   if (limit === null || !Number.isFinite(limit)) {
-    return Math.max(used, fallback, 1);
+    throw new Error("Invalid numeric limit.");
   }
-
   return Math.max(1, Math.round(limit));
 }
 
@@ -277,7 +276,7 @@ async function fetchBillingData(): Promise<BillingDataResult> {
     const reportsUnlimited = limits.competitor_gap_limit === null;
     const reportsLimit = reportsUnlimited
       ? Math.max(reportsUsed, 1)
-      : normalizeLimit(limits.competitor_gap_limit, 1, reportsUsed);
+      : normalizeLimit(limits.competitor_gap_limit);
     const reportsLimitLabel = resolveLimitLabel(limits.competitor_gap_limit);
     const reportsPercent = resolvePercent(
       reportsUsed,

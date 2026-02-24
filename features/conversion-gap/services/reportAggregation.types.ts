@@ -10,6 +10,7 @@ import type {
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
 import type { ConversionGapReport } from "@/features/conversion-gap/types/conversionGapReport.types";
 import type { CompetitorSynthesisOutput } from "@/features/conversion-gap/services/competitorSynthesisService";
+import type { ObjectionAnalysisOutput } from "@/features/objection-engine/ai/objectionAnalysisModule";
 
 export type GapRewrites = {
   hero: HeroOutput;
@@ -32,8 +33,8 @@ export type BuildConversionGapReportInput = {
     competitors?: CompetitorInsight[];
   };
   competitorSynthesis?: CompetitorSynthesisOutput;
+  objectionAnalysis?: ObjectionAnalysisOutput;
   profile: SaasProfileFormValues;
   status?: ConversionGapReport["status"];
   createdAt?: string;
 };
-

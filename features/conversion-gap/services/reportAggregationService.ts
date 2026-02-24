@@ -11,7 +11,6 @@ import {
   buildExecutiveNarrative,
   buildMessagingOverlap,
   buildMessagingOverlapFromSynthesis,
-  buildObjectionCoverage,
 } from "@/features/conversion-gap/services/reportAggregationNarrative";
 import {
   buildCompetitiveMatrix,
@@ -46,11 +45,32 @@ export function buildConversionGapReport(
       })
     : defaultMessagingOverlap;
 
-  const objectionCoverage = buildObjectionCoverage({
-    profile: input.profile,
-    objections: input.rewrites.objections,
-    missingObjections: input.gapAnalysis.missingObjections,
-  });
+  const objectionCoverage = input.objectionAnalysis
+    ? {
+        score: input.objectionAnalysis.objectionCoverageScore,
+        identified: input.objectionAnalysis.identifiedObjections.map((item) => ({
+          objection: item.objection,
+          severity: item.severity,
+          evidence: item.evidence,
+        })),
+        missing: input.objectionAnalysis.missingObjections.map((item) => ({
+          objection: item.objection,
+          severity: item.severity,
+          impact: item.impact,
+        })),
+        risks: [...input.objectionAnalysis.criticalRisks],
+        guidance: input.objectionAnalysis.mitigationGuidance.map((item) => ({
+          objection: item.objection,
+          recommendedStrategy: item.recommendedStrategy,
+        })),
+      }
+    : {
+        score: 0,
+        identified: [],
+        missing: [],
+        risks: [],
+        guidance: [],
+      };
   const baseCompetitiveMatrix = buildCompetitiveMatrix({
     profile: input.profile,
     competitors,
