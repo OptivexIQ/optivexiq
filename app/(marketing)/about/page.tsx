@@ -109,7 +109,8 @@ export default function AboutPage() {
           Most teams can see pipeline outcomes but cannot clearly explain why
           messaging performs or where positioning breaks down. OptivexIQ closes
           that gap with structured analysis teams can use to make faster, more
-          confident decisions.
+          confident decisions. Explainability depth is highest in full reports
+          and exports.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
           OptivexIQ is a SaaS platform that analyzes website messaging and

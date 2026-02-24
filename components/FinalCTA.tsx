@@ -34,8 +34,9 @@ export function FinalCTA() {
               </h2>
 
               <p className="mx-auto mt-5 max-w-lg text-pretty text-base leading-relaxed text-muted-foreground">
-                Stop guessing why your homepage isn{"'"}t converting. Get a
-                data-backed analysis and strategic rewrite in minutes.
+                Stop guessing why your homepage isn&apos;t converting. Get a
+                rapid directional analysis and prioritized rewrite guidance in
+                minutes.
               </p>
 
               <div className="mt-10">

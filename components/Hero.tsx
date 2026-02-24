@@ -45,7 +45,7 @@ export function Hero() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg md:leading-relaxed">
-            OptivexIQ benchmarks your homepage and pricing against top
+            OptivexIQ benchmarks your homepage and pricing against your selected
             competitors, flags the gaps stalling pipeline, and ships strategic
             rewrites your revenue team can deploy in days.
           </p>

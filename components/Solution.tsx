@@ -16,7 +16,7 @@ export function Solution() {
       number: "03",
       title: "Get Strategic Rewrite with Rationale",
       description:
-        "Receive conversion-optimized copy backed by competitive intelligence, positioning frameworks, and objection analysis.",
+        "Receive conversion-optimized copy backed by competitive and objection analysis, with full report depth based on your plan and workflow.",
     },
     {
       number: "04",
