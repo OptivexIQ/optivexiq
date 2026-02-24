@@ -10,7 +10,6 @@ import {
   runValidatedModule,
   type ModuleUsage,
 } from "@/features/conversion-gap/services/moduleRuntimeService";
-import type { ObjectionEngineOutput } from "@/features/objection-engine/services/objectionEngineService";
 
 const objectionSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 
@@ -64,7 +63,7 @@ const objectionDimensions = [
   "Internal buy-in difficulty",
 ] as const;
 
-const schemaExample: ObjectionEngineOutput = {
+const schemaExample: ObjectionAnalysisOutput = {
   identifiedObjections: [
     {
       objection: "Security and compliance review risk",

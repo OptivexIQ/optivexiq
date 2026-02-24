@@ -25,3 +25,9 @@ jobs:
 
       - name: Run encoding verification
         run: npm run verify:encoding
+
+      - name: Verify deterministic boundary
+        run: npm run verify:no-deterministic-services
+
+      - name: Verify decision infra invariants
+        run: npm run verify:decision-infra

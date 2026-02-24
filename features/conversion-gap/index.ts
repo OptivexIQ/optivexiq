@@ -3,7 +3,6 @@ export * from "@/features/conversion-gap/components/GapReportView";
 export * from "@/features/conversion-gap/components/GapScoreCard";
 export * from "@/features/conversion-gap/components/CompetitiveMatrix";
 export * from "@/features/conversion-gap/services/gapEngineService";
-export * from "@/features/conversion-gap/services/gapDetectionService";
 export * from "@/features/conversion-gap/services/competitorAnalysisService";
 export * from "@/features/conversion-gap/services/revenueModelingService";
 export * from "@/features/conversion-gap/prompts/composeConversionRewrite";

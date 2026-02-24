@@ -1,0 +1,19 @@
+# Core execution path boundaries
+/features/reports/services/reportCreateService.ts @ghyor
+/features/reports/services/reportJobQueueService.ts @ghyor
+/features/conversion-gap/services/gapEngineService.ts @ghyor
+/features/conversion-gap/services/moduleRuntimeService.ts @ghyor
+/features/differentiation-builder/ai/competitiveInsightsSynthesisModule.ts @ghyor
+/features/objection-engine/ai/objectionAnalysisModule.ts @ghyor
+
+# Canonical contract boundaries
+/features/conversion-gap/types/conversionGapReport.types.ts @ghyor
+/features/conversion-gap/validators/reportSchema.ts @ghyor
+/features/reports/services/canonicalSectionCompletenessService.ts @ghyor
+/features/reports/contracts/canonicalReportContract.ts @ghyor
+
+# Queue and reliability boundaries
+/features/ops/services/queueReliabilityService.ts @ghyor
+/app/api/health/queue/route.ts @ghyor
+/scripts/057_queue_reliability_guardrails.sql @ghyor
+/scripts/058_backfill_canonical_required_sections.sql @ghyor

@@ -11,6 +11,7 @@
     "verify:db-contract": "node scripts/verify-db-contract.mjs",
     "verify:admin-client-usage": "node scripts/verify-admin-client-usage.mjs",
     "verify:decision-infra": "node scripts/verify-decision-infra.mjs",
+    "verify:no-deterministic-services": "node scripts/verify-no-deterministic-services.mjs",
     "qstash:sync-schedules": "node scripts/sync-qstash-schedules.mjs",
     "preview-email": "email dev -p 3030"
   },
