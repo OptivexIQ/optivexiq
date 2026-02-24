@@ -154,6 +154,7 @@ export type CompetitiveInsight = {
 };
 
 export type ConversionGapReport = {
+  canonicalSchemaVersion: string;
   id: string;
   company: string;
   segment: string;
@@ -178,13 +179,13 @@ export type ConversionGapReport = {
 
   messagingOverlap: MessagingOverlap;
   objectionCoverage: ObjectionCoverage;
-  differentiationInsights?: DifferentiationInsights;
+  differentiationInsights: DifferentiationInsights;
   competitiveInsights: CompetitiveInsight[];
   competitiveMatrix: CompetitiveMatrix;
   positioningMap: Record<string, unknown>;
   rewrites: Record<string, unknown>;
   rewriteRecommendations: RewriteRecommendation[];
-  competitor_synthesis?: {
+  competitor_synthesis: {
     coreDifferentiationTension: string;
     messagingOverlapRisk: {
       level: "low" | "moderate" | "high";

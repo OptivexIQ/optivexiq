@@ -5,6 +5,7 @@ import {
 import type { SnapshotPdfProps } from "@/features/free-snapshot/pdf/SnapshotPdfTemplate";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
 import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
+import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 
 type PuppeteerBrowser = {
   newPage: () => Promise<{
@@ -124,7 +125,10 @@ function buildVerificationReport(): ConversionGapReport {
   const verbose = "This snapshot verifies render and PDF generation integrity. ".repeat(
     120,
   );
+  const insufficientEvidence =
+    "insufficient data: legacy record missing structured evidence for this field.";
   return {
+    canonicalSchemaVersion: CANONICAL_REPORT_SCHEMA_VERSION,
     id: "00000000-0000-0000-0000-000000000001",
     company: "verification.optivexiq.com",
     segment: "SaaS",
@@ -182,6 +186,62 @@ function buildVerificationReport(): ConversionGapReport {
       ],
       dimensionScores: { trust: 42 },
     },
+    differentiationInsights: {
+      similarityScore: 61,
+      overlapAreas: ["insufficient data"],
+      opportunities: [
+        {
+          theme: "insufficient data",
+          rationale: "insufficient data",
+          implementationDifficulty: "medium",
+          expectedImpact: "low",
+        },
+      ],
+      strategyRecommendations: ["insufficient data"],
+      parityRisks: ["insufficient data"],
+      strategicNarrativeDifferences: [
+        {
+          difference: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      underservedPositioningTerritories: [
+        {
+          territory: "insufficient data",
+          rationale: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      credibleDifferentiationAxes: [
+        {
+          axis: "insufficient data",
+          rationale: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      marketPerceptionRisks: [
+        {
+          risk: "insufficient data",
+          whyItMatters: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      recommendedPositioningDirection: {
+        direction: "insufficient data",
+        rationale: "insufficient data",
+        supportingEvidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+        confidence: 0,
+        actionPriority: "P2",
+      },
+    },
     competitiveInsights: [
       {
         claim: "Verification report includes evidence-backed competitive insight structure.",
@@ -195,8 +255,16 @@ function buildVerificationReport(): ConversionGapReport {
         reasoning:
           "Synthetic verification payload validates rendering of competitive insight evidence fields.",
         confidence: 0.5,
+        actionPriority: "P2",
       },
     ],
+    competitor_synthesis: {
+      coreDifferentiationTension: "insufficient data",
+      messagingOverlapRisk: { level: "moderate", explanation: "insufficient data" },
+      substitutionRiskNarrative: "insufficient data",
+      counterPositioningVector: "insufficient data",
+      pricingDefenseNarrative: "insufficient data",
+    },
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},

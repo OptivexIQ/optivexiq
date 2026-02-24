@@ -23,6 +23,7 @@ import {
 } from "@/features/conversion-gap/services/reportAggregationRecommendations";
 import type { BuildConversionGapReportInput } from "@/features/conversion-gap/services/reportAggregation.types";
 import type { CompetitiveMatrix } from "@/features/conversion-gap/types/conversionGapReport.types";
+import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 
 function applyCompetitiveMatrixOverride(
   base: CompetitiveMatrix,
@@ -75,6 +76,8 @@ function applyCompetitiveMatrixOverride(
 export function buildConversionGapReport(
   input: BuildConversionGapReportInput,
 ): ConversionGapReport {
+  const insufficientEvidence =
+    "insufficient data: legacy record missing structured evidence for this field.";
   const company = normalizeCompanyName(input.company, input.websiteUrl);
   const scores = computeScores(input.gapAnalysis);
   const competitors = Array.isArray(input.competitorData.competitors)
@@ -174,6 +177,7 @@ export function buildConversionGapReport(
   });
 
   const baseReport: ConversionGapReport = {
+    canonicalSchemaVersion: CANONICAL_REPORT_SCHEMA_VERSION,
     id: input.reportId,
     company,
     segment: input.segment,
@@ -222,7 +226,62 @@ export function buildConversionGapReport(
           recommendedPositioningDirection:
             input.positioningAnalysis.recommendedPositioningDirection,
         }
-      : undefined,
+      : {
+          similarityScore: 0,
+          overlapAreas: ["insufficient data"],
+          opportunities: [
+            {
+              theme: "insufficient data",
+              rationale: "insufficient data",
+              implementationDifficulty: "medium",
+              expectedImpact: "low",
+            },
+          ],
+          strategyRecommendations: ["insufficient data"],
+          parityRisks: ["insufficient data"],
+          strategicNarrativeDifferences: [
+            {
+              difference: "insufficient data",
+              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+              confidence: 0,
+              actionPriority: "P2",
+            },
+          ],
+          underservedPositioningTerritories: [
+            {
+              territory: "insufficient data",
+              rationale: "insufficient data",
+              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+              confidence: 0,
+              actionPriority: "P2",
+            },
+          ],
+          credibleDifferentiationAxes: [
+            {
+              axis: "insufficient data",
+              rationale: "insufficient data",
+              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+              confidence: 0,
+              actionPriority: "P2",
+            },
+          ],
+          marketPerceptionRisks: [
+            {
+              risk: "insufficient data",
+              whyItMatters: "insufficient data",
+              evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+              confidence: 0,
+              actionPriority: "P2",
+            },
+          ],
+          recommendedPositioningDirection: {
+            direction: "insufficient data",
+            rationale: "insufficient data",
+            supportingEvidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+            confidence: 0,
+            actionPriority: "P2",
+          },
+        },
     competitiveInsights: input.positioningAnalysis
       ? input.positioningAnalysis.competitiveInsights
       : [],
@@ -230,7 +289,16 @@ export function buildConversionGapReport(
     positioningMap: positioningMap as unknown as Record<string, unknown>,
     rewrites: input.rewrites as unknown as Record<string, unknown>,
     rewriteRecommendations,
-    competitor_synthesis: input.competitorSynthesis,
+    competitor_synthesis: input.competitorSynthesis ?? {
+      coreDifferentiationTension: "insufficient data",
+      messagingOverlapRisk: {
+        level: "moderate",
+        explanation: "insufficient data",
+      },
+      substitutionRiskNarrative: "insufficient data",
+      counterPositioningVector: "insufficient data",
+      pricingDefenseNarrative: "insufficient data",
+    },
     revenueImpact: {
       pipelineAtRisk: revenue.pipelineAtRisk,
       estimatedLiftPercent: revenue.revenueProjection.estimatedLiftPercent,

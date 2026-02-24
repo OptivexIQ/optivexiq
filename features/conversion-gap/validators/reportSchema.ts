@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 
 export const conversionGapReportSchema = z.object({
+  canonicalSchemaVersion: z.literal(CANONICAL_REPORT_SCHEMA_VERSION),
   id: z.string(),
   company: z.string(),
   segment: z.string(),
@@ -62,8 +64,7 @@ export const conversionGapReportSchema = z.object({
     ),
     dimensionScores: z.record(z.number()).optional(),
   }),
-  differentiationInsights: z
-    .object({
+  differentiationInsights: z.object({
       similarityScore: z.number().min(0).max(100),
       overlapAreas: z.array(z.string()),
       opportunities: z.array(
@@ -153,8 +154,7 @@ export const conversionGapReportSchema = z.object({
           actionPriority: z.enum(["P0", "P1", "P2"]),
         })
         .optional(),
-    })
-    .optional(),
+    }),
   competitiveInsights: z.array(
     z.object({
       claim: z.string().trim().min(1),
@@ -219,8 +219,7 @@ export const conversionGapReportSchema = z.object({
         .optional(),
     }),
   ),
-  competitor_synthesis: z
-    .object({
+  competitor_synthesis: z.object({
       coreDifferentiationTension: z.string(),
       messagingOverlapRisk: z.object({
         level: z.enum(["low", "moderate", "high"]),
@@ -229,8 +228,7 @@ export const conversionGapReportSchema = z.object({
       substitutionRiskNarrative: z.string(),
       counterPositioningVector: z.string(),
       pricingDefenseNarrative: z.string(),
-    })
-    .optional(),
+    }),
   executiveNarrative: z.string(),
   executiveSummary: z.string(),
   diagnosis: z.object({

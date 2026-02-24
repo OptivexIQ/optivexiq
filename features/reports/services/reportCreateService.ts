@@ -47,6 +47,7 @@ import {
 import { validateGapReport } from "@/features/reports/services/reportService";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
 import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
+import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 import { assertCanonicalSectionCompleteness } from "@/features/reports/services/canonicalSectionCompletenessService";
 import {
   runObjectionAnalysisModule,
@@ -371,7 +372,10 @@ function buildFailedReportData(
 ): unknown {
   const now = new Date().toISOString();
   const safeMessage = message.trim() || "Report generation failed.";
+  const insufficientEvidence =
+    "insufficient data: legacy record missing structured evidence for this field.";
   const failedReport: ConversionGapReport = {
+    canonicalSchemaVersion: CANONICAL_REPORT_SCHEMA_VERSION,
     id: reportId,
     company: "Unknown",
     segment: "SaaS",
@@ -418,7 +422,70 @@ function buildFailedReportData(
       guidance: [],
       dimensionScores: {},
     },
+    differentiationInsights: {
+      similarityScore: 0,
+      overlapAreas: ["insufficient data"],
+      opportunities: [
+        {
+          theme: "insufficient data",
+          rationale: "insufficient data",
+          implementationDifficulty: "medium",
+          expectedImpact: "low",
+        },
+      ],
+      strategyRecommendations: ["insufficient data"],
+      parityRisks: ["insufficient data"],
+      strategicNarrativeDifferences: [
+        {
+          difference: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      underservedPositioningTerritories: [
+        {
+          territory: "insufficient data",
+          rationale: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      credibleDifferentiationAxes: [
+        {
+          axis: "insufficient data",
+          rationale: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      marketPerceptionRisks: [
+        {
+          risk: "insufficient data",
+          whyItMatters: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      recommendedPositioningDirection: {
+        direction: "insufficient data",
+        rationale: "insufficient data",
+        supportingEvidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+        confidence: 0,
+        actionPriority: "P2",
+      },
+    },
     competitiveInsights: [],
+    competitor_synthesis: {
+      coreDifferentiationTension: "insufficient data",
+      messagingOverlapRisk: { level: "moderate", explanation: "insufficient data" },
+      substitutionRiskNarrative: "insufficient data",
+      counterPositioningVector: "insufficient data",
+      pricingDefenseNarrative: "insufficient data",
+    },
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},

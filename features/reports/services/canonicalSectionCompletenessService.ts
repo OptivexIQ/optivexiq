@@ -1,4 +1,5 @@
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
+import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 
 type CompletenessResult = { ok: true } | { ok: false; reason: string };
 
@@ -92,9 +93,6 @@ function hasMeaningfulObjectionCoverage(
 function hasMeaningfulDifferentiationInsights(
   value: ConversionGapReport["differentiationInsights"],
 ): boolean {
-  if (!value) {
-    return false;
-  }
   return (
     value.overlapAreas.length > 0 ||
     value.opportunities.length > 0 ||
@@ -125,11 +123,27 @@ function hasMeaningfulCompetitiveInsights(
   );
 }
 
+function hasMeaningfulCompetitorSynthesis(
+  value: ConversionGapReport["competitor_synthesis"],
+): boolean {
+  return (
+    hasMeaningfulText(value.coreDifferentiationTension) &&
+    hasMeaningfulText(value.messagingOverlapRisk.explanation) &&
+    hasMeaningfulText(value.substitutionRiskNarrative) &&
+    hasMeaningfulText(value.counterPositioningVector) &&
+    hasMeaningfulText(value.pricingDefenseNarrative)
+  );
+}
+
 export function assertCanonicalSectionCompleteness(
   report: ConversionGapReport,
 ): CompletenessResult {
   if (report.status !== "completed") {
     return { ok: true };
+  }
+
+  if (report.canonicalSchemaVersion !== CANONICAL_REPORT_SCHEMA_VERSION) {
+    return { ok: false, reason: "invalid_canonical_schema_version" };
   }
 
   if (report.executiveNarrative.trim().length === 0) {
@@ -169,6 +183,10 @@ export function assertCanonicalSectionCompleteness(
 
   if (!hasMeaningfulCompetitiveInsights(report.competitiveInsights)) {
     return { ok: false, reason: "missing_competitive_insights_section" };
+  }
+
+  if (!hasMeaningfulCompetitorSynthesis(report.competitor_synthesis)) {
+    return { ok: false, reason: "missing_competitor_synthesis_section" };
   }
 
   if (!hasMeaningfulCompetitiveMatrix(report.competitiveMatrix)) {

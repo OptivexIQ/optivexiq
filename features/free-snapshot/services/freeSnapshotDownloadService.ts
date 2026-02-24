@@ -5,6 +5,7 @@ import { freeConversionSnapshotSchema } from "@/features/free-snapshot/validator
 import { generateSnapshotPdf } from "@/features/free-snapshot/pdf/generateSnapshotPdf";
 import { calculateScore } from "@/features/conversion-gap/services/scoringEngine";
 import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
+import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 
 function toCanonicalReport(
   snapshotId: string,
@@ -15,7 +16,10 @@ function toCanonicalReport(
   const gapA = snapshot.topMessagingGap;
   const gapB = snapshot.topObjectionGap;
   const score = Math.round((snapshot.clarityScore + snapshot.positioningScore) / 2);
+  const insufficientEvidence =
+    "insufficient data: legacy record missing structured evidence for this field.";
   const baseReport: ConversionGapReport = {
+    canonicalSchemaVersion: CANONICAL_REPORT_SCHEMA_VERSION,
     id: snapshotId,
     company: websiteUrl,
     segment: "SaaS",
@@ -100,6 +104,48 @@ function toCanonicalReport(
       parityRisks: [snapshot.riskEstimate].filter(
         (value) => value.trim().length > 0,
       ),
+      strategicNarrativeDifferences: [
+        {
+          difference: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      underservedPositioningTerritories: [
+        {
+          territory: "insufficient data",
+          rationale: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      credibleDifferentiationAxes: [
+        {
+          axis: "insufficient data",
+          rationale: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      marketPerceptionRisks: [
+        {
+          risk: "insufficient data",
+          whyItMatters: "insufficient data",
+          evidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+          confidence: 0,
+          actionPriority: "P2",
+        },
+      ],
+      recommendedPositioningDirection: {
+        direction: "insufficient data",
+        rationale: "insufficient data",
+        supportingEvidence: [{ competitor: "insufficient data", snippet: insufficientEvidence }],
+        confidence: 0,
+        actionPriority: "P2",
+      },
     },
     competitiveInsights: [
       {
@@ -113,8 +159,16 @@ function toCanonicalReport(
         reasoning:
           "Snapshot mode stores limited competitor context, so this insight reflects top captured risk wording only.",
         confidence: 0.45,
+        actionPriority: "P2",
       },
     ],
+    competitor_synthesis: {
+      coreDifferentiationTension: "insufficient data",
+      messagingOverlapRisk: { level: "moderate", explanation: "insufficient data" },
+      substitutionRiskNarrative: "insufficient data",
+      counterPositioningVector: "insufficient data",
+      pricingDefenseNarrative: "insufficient data",
+    },
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},
