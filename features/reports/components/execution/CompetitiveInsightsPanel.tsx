@@ -14,7 +14,7 @@ function confidenceTone(value: number): string {
   return "border-rose-500/40 bg-rose-500/10 text-rose-300";
 }
 
-function priorityTone(value: "P0" | "P1" | "P2" | undefined): string {
+function priorityTone(value: "P0" | "P1" | "P2"): string {
   if (value === "P0") {
     return "border-rose-500/40 bg-rose-500/10 text-rose-300";
   }
@@ -69,7 +69,7 @@ export function CompetitiveInsightsPanel({
                       item.actionPriority,
                     )}`}
                   >
-                    {item.actionPriority ?? "P2"}
+                    {item.actionPriority}
                   </span>
                 </div>
               </div>

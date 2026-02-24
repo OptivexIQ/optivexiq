@@ -257,6 +257,13 @@ export function buildConversionGapReport(
           underservedPositioningTerritories: [],
           credibleDifferentiationAxes: [],
           marketPerceptionRisks: [],
+          recommendedPositioningDirection: {
+            direction: "",
+            rationale: "",
+            supportingEvidence: [],
+            confidence: 0,
+            actionPriority: "P2",
+          },
         },
     competitiveInsights: input.positioningAnalysis
       ? input.positioningAnalysis.competitiveInsights

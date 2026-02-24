@@ -90,8 +90,7 @@ export const conversionGapReportSchema = z.object({
             confidence: z.number().min(0).max(1),
             actionPriority: z.enum(["P0", "P1", "P2"]),
           }),
-        )
-        .optional(),
+        ),
       underservedPositioningTerritories: z
         .array(
           z.object({
@@ -106,8 +105,7 @@ export const conversionGapReportSchema = z.object({
             confidence: z.number().min(0).max(1),
             actionPriority: z.enum(["P0", "P1", "P2"]),
           }),
-        )
-        .optional(),
+        ),
       credibleDifferentiationAxes: z
         .array(
           z.object({
@@ -122,8 +120,7 @@ export const conversionGapReportSchema = z.object({
             confidence: z.number().min(0).max(1),
             actionPriority: z.enum(["P0", "P1", "P2"]),
           }),
-        )
-        .optional(),
+        ),
       marketPerceptionRisks: z
         .array(
           z.object({
@@ -138,8 +135,7 @@ export const conversionGapReportSchema = z.object({
             confidence: z.number().min(0).max(1),
             actionPriority: z.enum(["P0", "P1", "P2"]),
           }),
-        )
-        .optional(),
+        ),
       recommendedPositioningDirection: z
         .object({
           direction: z.string(),
@@ -152,8 +148,7 @@ export const conversionGapReportSchema = z.object({
           ),
           confidence: z.number().min(0).max(1),
           actionPriority: z.enum(["P0", "P1", "P2"]),
-        })
-        .optional(),
+        }),
     }),
   competitiveInsights: z.array(
     z.object({
@@ -166,7 +161,7 @@ export const conversionGapReportSchema = z.object({
       ),
       reasoning: z.string().trim().min(20),
       confidence: z.number().min(0).max(1),
-      actionPriority: z.enum(["P0", "P1", "P2"]).optional(),
+      actionPriority: z.enum(["P0", "P1", "P2"]),
     }),
   ),
   competitiveMatrix: z
