@@ -106,6 +106,40 @@ export type DifferentiationInsights = {
   }>;
   strategyRecommendations: string[];
   parityRisks: string[];
+  strategicNarrativeDifferences?: Array<{
+    difference: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  underservedPositioningTerritories?: Array<{
+    territory: string;
+    rationale: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  credibleDifferentiationAxes?: Array<{
+    axis: string;
+    rationale: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  marketPerceptionRisks?: Array<{
+    risk: string;
+    whyItMatters: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  recommendedPositioningDirection?: {
+    direction: string;
+    rationale: string;
+    supportingEvidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  };
 };
 
 export type CompetitiveInsight = {
@@ -116,6 +150,7 @@ export type CompetitiveInsight = {
   }>;
   reasoning: string;
   confidence: number;
+  actionPriority?: "P0" | "P1" | "P2";
 };
 
 export type ConversionGapReport = {

@@ -76,6 +76,83 @@ export const conversionGapReportSchema = z.object({
       ),
       strategyRecommendations: z.array(z.string()),
       parityRisks: z.array(z.string()),
+      strategicNarrativeDifferences: z
+        .array(
+          z.object({
+            difference: z.string(),
+            evidence: z.array(
+              z.object({
+                competitor: z.string().trim().min(1),
+                snippet: z.string().trim().min(20),
+              }),
+            ),
+            confidence: z.number().min(0).max(1),
+            actionPriority: z.enum(["P0", "P1", "P2"]),
+          }),
+        )
+        .optional(),
+      underservedPositioningTerritories: z
+        .array(
+          z.object({
+            territory: z.string(),
+            rationale: z.string(),
+            evidence: z.array(
+              z.object({
+                competitor: z.string().trim().min(1),
+                snippet: z.string().trim().min(20),
+              }),
+            ),
+            confidence: z.number().min(0).max(1),
+            actionPriority: z.enum(["P0", "P1", "P2"]),
+          }),
+        )
+        .optional(),
+      credibleDifferentiationAxes: z
+        .array(
+          z.object({
+            axis: z.string(),
+            rationale: z.string(),
+            evidence: z.array(
+              z.object({
+                competitor: z.string().trim().min(1),
+                snippet: z.string().trim().min(20),
+              }),
+            ),
+            confidence: z.number().min(0).max(1),
+            actionPriority: z.enum(["P0", "P1", "P2"]),
+          }),
+        )
+        .optional(),
+      marketPerceptionRisks: z
+        .array(
+          z.object({
+            risk: z.string(),
+            whyItMatters: z.string(),
+            evidence: z.array(
+              z.object({
+                competitor: z.string().trim().min(1),
+                snippet: z.string().trim().min(20),
+              }),
+            ),
+            confidence: z.number().min(0).max(1),
+            actionPriority: z.enum(["P0", "P1", "P2"]),
+          }),
+        )
+        .optional(),
+      recommendedPositioningDirection: z
+        .object({
+          direction: z.string(),
+          rationale: z.string(),
+          supportingEvidence: z.array(
+            z.object({
+              competitor: z.string().trim().min(1),
+              snippet: z.string().trim().min(20),
+            }),
+          ),
+          confidence: z.number().min(0).max(1),
+          actionPriority: z.enum(["P0", "P1", "P2"]),
+        })
+        .optional(),
     })
     .optional(),
   competitiveInsights: z.array(
@@ -89,6 +166,7 @@ export const conversionGapReportSchema = z.object({
       ),
       reasoning: z.string().trim().min(20),
       confidence: z.number().min(0).max(1),
+      actionPriority: z.enum(["P0", "P1", "P2"]).optional(),
     }),
   ),
   competitiveMatrix: z

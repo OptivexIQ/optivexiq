@@ -212,6 +212,15 @@ export function buildConversionGapReport(
           strategyRecommendations:
             input.positioningAnalysis.positioningStrategyRecommendations,
           parityRisks: input.positioningAnalysis.highRiskParityZones,
+          strategicNarrativeDifferences:
+            input.positioningAnalysis.strategicNarrativeDifferences,
+          underservedPositioningTerritories:
+            input.positioningAnalysis.underservedPositioningTerritories,
+          credibleDifferentiationAxes:
+            input.positioningAnalysis.credibleDifferentiationAxes,
+          marketPerceptionRisks: input.positioningAnalysis.marketPerceptionRisks,
+          recommendedPositioningDirection:
+            input.positioningAnalysis.recommendedPositioningDirection,
         }
       : undefined,
     competitiveInsights: input.positioningAnalysis

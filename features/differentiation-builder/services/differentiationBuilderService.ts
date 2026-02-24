@@ -33,6 +33,40 @@ export type DifferentiationBuilderOutput = {
   overlapAreas: string[];
   uniqueStrengthSignals: string[];
   underleveragedStrengths: string[];
+  strategicNarrativeDifferences: Array<{
+    difference: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  underservedPositioningTerritories: Array<{
+    territory: string;
+    rationale: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  credibleDifferentiationAxes: Array<{
+    axis: string;
+    rationale: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  marketPerceptionRisks: Array<{
+    risk: string;
+    whyItMatters: string;
+    evidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  }>;
+  recommendedPositioningDirection: {
+    direction: string;
+    rationale: string;
+    supportingEvidence: Array<{ competitor: string; snippet: string }>;
+    confidence: number;
+    actionPriority: "P0" | "P1" | "P2";
+  };
   differentiationOpportunities: DifferentiationOpportunity[];
   positioningStrategyRecommendations: string[];
   highRiskParityZones: string[];
@@ -50,6 +84,13 @@ export async function runDifferentiationBuilder(
       overlapAreas: synthesized.data.overlapAreas,
       uniqueStrengthSignals: synthesized.data.uniqueStrengthSignals,
       underleveragedStrengths: synthesized.data.underleveragedStrengths,
+      strategicNarrativeDifferences: synthesized.data.strategicNarrativeDifferences,
+      underservedPositioningTerritories:
+        synthesized.data.underservedPositioningTerritories,
+      credibleDifferentiationAxes: synthesized.data.credibleDifferentiationAxes,
+      marketPerceptionRisks: synthesized.data.marketPerceptionRisks,
+      recommendedPositioningDirection:
+        synthesized.data.recommendedPositioningDirection,
       differentiationOpportunities: synthesized.data.differentiationOpportunities,
       positioningStrategyRecommendations:
         synthesized.data.positioningStrategyRecommendations,
