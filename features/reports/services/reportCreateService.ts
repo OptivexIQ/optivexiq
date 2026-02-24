@@ -50,10 +50,8 @@ import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/servi
 import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
 import { assertCanonicalSectionCompleteness } from "@/features/reports/services/canonicalSectionCompletenessService";
 import {
-  runObjectionAnalysisModule,
   type ObjectionAnalysisOutput,
 } from "@/features/objection-engine/ai/objectionAnalysisModule";
-import { runDifferentiationBuilder } from "@/features/differentiation-builder/services/differentiationBuilderService";
 import { buildCompetitiveMatrixFromPositioning } from "@/features/differentiation-builder/services/competitiveMatrixService";
 import {
   buildDifferentiationPositioningMap,
@@ -358,16 +356,43 @@ function assertUsageTotalsIntegrity(params: {
     reason: validation.reason,
     expected_total_tokens: validation.expectedTotalTokens,
     actual_total_tokens: validation.actualTotalTokens,
-    modules: params.usageTotals.modules.map((module) => ({
-      name: module.name,
-      model: module.model,
-      tokens: module.totalTokens,
-      prompt_tokens: module.promptTokens,
-      completion_tokens: module.completionTokens,
+    modules: params.usageTotals.modules.map((usageModule) => ({
+      name: usageModule.name,
+      model: usageModule.model,
+      tokens: usageModule.totalTokens,
+      prompt_tokens: usageModule.promptTokens,
+      completion_tokens: usageModule.completionTokens,
     })),
   });
 
   throw new Error("usage_totals_validation_failed");
+}
+
+function assertNoDuplicateAdvancedExecution(params: {
+  reportId: string;
+  userId: string;
+  usageTotals: UsageTotals;
+}): void {
+  const counts = new Map<string, number>();
+  for (const usageModule of params.usageTotals.modules) {
+    const key = usageModule.name;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  const required = ["objectionAnalysis", "differentiationBuilder"] as const;
+  for (const moduleName of required) {
+    const count = counts.get(moduleName) ?? 0;
+    if (count !== 1) {
+      logger.error("Duplicate-or-missing advanced module execution detected.", {
+        report_id: params.reportId,
+        user_id: params.userId,
+        module_name: moduleName,
+        observed_count: count,
+        modules: params.usageTotals.modules.map((usageModule) => usageModule.name),
+      });
+      throw new Error("duplicate_module_execution_detected");
+    }
+  }
 }
 
 function deriveCompanyName(url: string): string {
@@ -921,6 +946,7 @@ async function processSnapshotReport(
       companyContent,
       pricingContent: null,
       competitors: [],
+      includeAdvancedIntelligence: false,
     });
     await updateExecutionState(reportId, "finalizing", 92);
 
@@ -932,13 +958,13 @@ async function processSnapshotReport(
       prompt_tokens: usage.promptTokens,
       completion_tokens: usage.completionTokens,
       estimated_cost_cents: usage.costCents,
-      modules: usage.usageTotals.modules.map((module) => ({
-        name: module.name,
-        model: module.model,
-        tokens: module.totalTokens,
-        prompt_tokens: module.promptTokens,
-        completion_tokens: module.completionTokens,
-        estimated_cost_cents: module.estimatedCostCents,
+      modules: usage.usageTotals.modules.map((usageModule) => ({
+        name: usageModule.name,
+        model: usageModule.model,
+        tokens: usageModule.totalTokens,
+        prompt_tokens: usageModule.promptTokens,
+        completion_tokens: usageModule.completionTokens,
+        estimated_cost_cents: usageModule.estimatedCostCents,
       })),
     });
     assertUsageTotalsIntegrity({
@@ -1121,57 +1147,49 @@ async function processGapReport(
       companyContent,
       pricingContent,
       competitors,
+      includeAdvancedIntelligence: true,
     });
-    const objectionAnalysis = await runObjectionAnalysisModule({
-      profile,
-      companyContent,
-      pricingContent,
-      competitors,
-      gapAnalysis: results.gapAnalysis,
-      pricingContext: results.pricing,
+    assertNoDuplicateAdvancedExecution({
+      reportId,
+      userId,
+      usageTotals: usage.usageTotals,
     });
+    if (!results.objectionAnalysis || !results.differentiationInsights) {
+      throw new Error("missing_advanced_intelligence_artifacts");
+    }
+    const objectionAnalysis = results.objectionAnalysis;
+    const differentiationInsights = results.differentiationInsights;
     const mergedGapAnalysis: GapAnalysisOutput = {
       ...results.gapAnalysis,
       missingObjections: mergeMissingObjections(
         results.gapAnalysis.missingObjections,
-        objectionAnalysis.data.missingObjections.map((item) => item.objection),
+        objectionAnalysis.missingObjections.map((item) => item.objection),
       ),
     };
     const mergedObjectionRewrites = buildObjectionRewriteFromAnalysis(
       results.objections,
-      objectionAnalysis.data,
+      objectionAnalysis,
     );
-    const differentiationInsights = await runDifferentiationBuilder({
-      profile,
-      companyContent,
-      pricingContent,
-      competitors,
-      gapAnalysis: mergedGapAnalysis,
-    });
     const competitiveMatrixOverride = await buildCompetitiveMatrixFromPositioning({
       competitors,
-      differentiation: differentiationInsights.data,
+      differentiation: differentiationInsights,
     });
     const positioningMapOverride = toCanonicalPositioningMapData(
       buildDifferentiationPositioningMap({
         companyName: deriveCompanyName(report.homepage_url),
         profile,
         competitors,
-        positioning: differentiationInsights.data,
+        positioning: differentiationInsights,
         matrix: competitiveMatrixOverride.data,
       }),
     );
     const totalInputTokens =
       usage.promptTokens +
       competitorAnalysis.usage.promptTokens +
-      objectionAnalysis.usage.promptTokens +
-      differentiationInsights.usage.promptTokens +
       competitiveMatrixOverride.usage.promptTokens;
     const totalOutputTokens =
       usage.completionTokens +
       competitorAnalysis.usage.completionTokens +
-      objectionAnalysis.usage.completionTokens +
-      differentiationInsights.usage.completionTokens +
       competitiveMatrixOverride.usage.completionTokens;
     const totalTokens = totalInputTokens + totalOutputTokens;
     const totalCostCents = estimateCostCents(totalInputTokens, totalOutputTokens);
@@ -1199,8 +1217,8 @@ async function processGapReport(
         competitors,
       },
       competitorSynthesis: results.competitorSynthesis,
-      objectionAnalysis: objectionAnalysis.data,
-      positioningAnalysis: differentiationInsights.data,
+      objectionAnalysis,
+      positioningAnalysis: differentiationInsights,
       competitiveMatrixOverride: competitiveMatrixOverride.data,
       positioningMapOverride,
       profile,
@@ -1214,18 +1232,16 @@ async function processGapReport(
       throw new Error("invalid_report_data");
     }
     const fullReportUsageTotals = buildUsageTotals([
-      ...usage.usageTotals.modules.map((module) => ({
-        name: module.name,
+      ...usage.usageTotals.modules.map((usageModule) => ({
+        name: usageModule.name,
         usage: {
-          promptTokens: module.promptTokens,
-          completionTokens: module.completionTokens,
-          totalTokens: module.totalTokens,
-          model: module.model,
+          promptTokens: usageModule.promptTokens,
+          completionTokens: usageModule.completionTokens,
+          totalTokens: usageModule.totalTokens,
+          model: usageModule.model,
         },
       })),
       { name: "competitorEvidenceExtraction", usage: competitorAnalysis.usage },
-      { name: "objectionAnalysis", usage: objectionAnalysis.usage },
-      { name: "differentiationBuilder", usage: differentiationInsights.usage },
       { name: "competitiveMatrixSynthesis", usage: competitiveMatrixOverride.usage },
     ]);
     logger.info("Full report usage totals assembled.", {
@@ -1235,13 +1251,13 @@ async function processGapReport(
       prompt_tokens: totalInputTokens,
       completion_tokens: totalOutputTokens,
       estimated_cost_cents: fullReportUsageTotals.estimatedCostCents,
-      modules: fullReportUsageTotals.modules.map((module) => ({
-        name: module.name,
-        model: module.model,
-        tokens: module.totalTokens,
-        prompt_tokens: module.promptTokens,
-        completion_tokens: module.completionTokens,
-        estimated_cost_cents: module.estimatedCostCents,
+      modules: fullReportUsageTotals.modules.map((usageModule) => ({
+        name: usageModule.name,
+        model: usageModule.model,
+        tokens: usageModule.totalTokens,
+        prompt_tokens: usageModule.promptTokens,
+        completion_tokens: usageModule.completionTokens,
+        estimated_cost_cents: usageModule.estimatedCostCents,
       })),
     });
     assertUsageTotalsIntegrity({
@@ -1297,14 +1313,14 @@ async function processGapReport(
       metadata: {
         report_id: reportId,
         objection_engine: {
-          coverage_score: objectionAnalysis.data.objectionCoverageScore,
-          missing_count: objectionAnalysis.data.missingObjections.length,
-          critical_risk_count: objectionAnalysis.data.criticalRisks.length,
+          coverage_score: objectionAnalysis.objectionCoverageScore,
+          missing_count: objectionAnalysis.missingObjections.length,
+          critical_risk_count: objectionAnalysis.criticalRisks.length,
         },
         differentiation_builder: {
-          similarity_score: differentiationInsights.data.narrativeSimilarityScore,
-          overlap_count: differentiationInsights.data.overlapAreas.length,
-          parity_risk_count: differentiationInsights.data.highRiskParityZones.length,
+          similarity_score: differentiationInsights.narrativeSimilarityScore,
+          overlap_count: differentiationInsights.overlapAreas.length,
+          parity_risk_count: differentiationInsights.highRiskParityZones.length,
         },
       },
     });

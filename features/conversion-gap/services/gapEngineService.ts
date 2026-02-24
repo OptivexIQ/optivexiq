@@ -38,6 +38,11 @@ import {
 } from "@/features/usage/services/usageTotals";
 import { logger } from "@/lib/logger";
 import {
+  runObjectionAnalysisModule,
+  type ObjectionAnalysisOutput,
+} from "@/features/objection-engine/ai/objectionAnalysisModule";
+import { runDifferentiationBuilder } from "@/features/differentiation-builder/services/differentiationBuilderService";
+import {
   AI_INPUT_TOKEN_RATE_CENTS,
   AI_OUTPUT_TOKEN_RATE_CENTS,
 } from "@/lib/constants/limits";
@@ -60,6 +65,7 @@ export type GapEngineContext = {
   companyContent: ExtractedPageContent;
   pricingContent: ExtractedPageContent | null;
   competitors: CompetitorInsight[];
+  includeAdvancedIntelligence?: boolean;
 };
 
 export type GapEngineResults = {
@@ -72,6 +78,10 @@ export type GapEngineResults = {
   competitorSynthesis: Awaited<
     ReturnType<typeof synthesizeCompetitorIntelligence>
   >["data"];
+  objectionAnalysis: ObjectionAnalysisOutput | null;
+  differentiationInsights: Awaited<
+    ReturnType<typeof runDifferentiationBuilder>
+  >["data"] | null;
 };
 
 export function deriveCompetitorUrls(value: unknown): string[] {
@@ -219,6 +229,26 @@ export async function runGapEngine(
     homepageAnalysis: hero.data,
     pricingAnalysis: pricing.data,
   });
+  const includeAdvancedIntelligence = context.includeAdvancedIntelligence === true;
+  const advancedIntelligence = includeAdvancedIntelligence
+    ? await Promise.all([
+        runObjectionAnalysisModule({
+          profile: context.profile,
+          companyContent: context.companyContent,
+          pricingContent: context.pricingContent,
+          competitors: context.competitors,
+          gapAnalysis: gapAnalysis.data,
+          pricingContext: pricing.data,
+        }),
+        runDifferentiationBuilder({
+          profile: context.profile,
+          companyContent: context.companyContent,
+          pricingContent: context.pricingContent,
+          competitors: context.competitors,
+          gapAnalysis: gapAnalysis.data,
+        }),
+      ])
+    : null;
 
   const usageTotals = buildUsageTotals([
     { name: "gapAnalysis", usage: gapAnalysis.usage },
@@ -228,6 +258,12 @@ export async function runGapEngine(
     { name: "differentiation", usage: differentiation.usage },
     { name: "competitiveCounter", usage: competitiveCounter.usage },
     { name: "competitorSynthesis", usage: competitorSynthesis.usage },
+    ...(advancedIntelligence
+      ? [
+          { name: "objectionAnalysis", usage: advancedIntelligence[0].usage },
+          { name: "differentiationBuilder", usage: advancedIntelligence[1].usage },
+        ]
+      : []),
   ]);
 
   const promptTokens = usageTotals.promptTokens;
@@ -260,6 +296,8 @@ export async function runGapEngine(
       differentiation: differentiation.data,
       competitiveCounter: competitiveCounter.data,
       competitorSynthesis: competitorSynthesis.data,
+      objectionAnalysis: advancedIntelligence ? advancedIntelligence[0].data : null,
+      differentiationInsights: advancedIntelligence ? advancedIntelligence[1].data : null,
     },
     usage: {
       promptTokens,
