@@ -20,6 +20,7 @@ export function SnapshotPdfTemplate({
   const quickWins = report.rewriteRecommendations.slice(0, 5);
   const missingObjections = report.objectionCoverage.missing.slice(0, 3);
   const mitigationGuidance = report.objectionCoverage.guidance.slice(0, 3);
+  const differentiationInsights = report.differentiationInsights;
 
   return (
     <article className="snapshot-pdf mx-auto max-w-200 bg-white text-slate-900">
@@ -190,6 +191,36 @@ export function SnapshotPdfTemplate({
             ))}
           </ul>
         </section>
+
+        {differentiationInsights ? (
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold">Differentiation Findings</h2>
+            <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                Narrative similarity score
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                {differentiationInsights.similarityScore}/100
+              </p>
+            </article>
+            <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                Top parity risks
+              </p>
+              {differentiationInsights.parityRisks.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {differentiationInsights.parityRisks.slice(0, 3).map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-slate-700">
+                  No parity risks identified.
+                </p>
+              )}
+            </article>
+          </section>
+        ) : null}
 
         <section className="rounded-2xl bg-(--brand-primary) px-6 py-5 text-white page-break">
           <h2 className="text-lg font-semibold">

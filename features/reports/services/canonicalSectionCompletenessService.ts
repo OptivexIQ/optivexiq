@@ -89,6 +89,20 @@ function hasMeaningfulObjectionCoverage(
   );
 }
 
+function hasMeaningfulDifferentiationInsights(
+  value: ConversionGapReport["differentiationInsights"],
+): boolean {
+  if (!value) {
+    return false;
+  }
+  return (
+    value.overlapAreas.length > 0 ||
+    value.opportunities.length > 0 ||
+    value.strategyRecommendations.length > 0 ||
+    value.parityRisks.length > 0
+  );
+}
+
 export function assertCanonicalSectionCompleteness(
   report: ConversionGapReport,
 ): CompletenessResult {
@@ -125,6 +139,10 @@ export function assertCanonicalSectionCompleteness(
 
   if (!hasMeaningfulObjectionCoverage(report.objectionCoverage)) {
     return { ok: false, reason: "missing_objection_coverage_section" };
+  }
+
+  if (!hasMeaningfulDifferentiationInsights(report.differentiationInsights)) {
+    return { ok: false, reason: "missing_differentiation_insights_section" };
   }
 
   if (!hasMeaningfulCompetitiveMatrix(report.competitiveMatrix)) {

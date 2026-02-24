@@ -95,6 +95,19 @@ export type CompetitiveMatrix = {
   pricingDefenseNarrative?: string;
 };
 
+export type DifferentiationInsights = {
+  similarityScore: number;
+  overlapAreas: string[];
+  opportunities: Array<{
+    theme: string;
+    rationale: string;
+    implementationDifficulty: "low" | "medium" | "high";
+    expectedImpact: "low" | "medium" | "high";
+  }>;
+  strategyRecommendations: string[];
+  parityRisks: string[];
+};
+
 export type ConversionGapReport = {
   id: string;
   company: string;
@@ -120,6 +133,7 @@ export type ConversionGapReport = {
 
   messagingOverlap: MessagingOverlap;
   objectionCoverage: ObjectionCoverage;
+  differentiationInsights?: DifferentiationInsights;
   competitiveMatrix: CompetitiveMatrix;
   positioningMap: Record<string, unknown>;
   rewrites: Record<string, unknown>;

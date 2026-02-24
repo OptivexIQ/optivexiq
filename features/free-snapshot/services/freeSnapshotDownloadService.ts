@@ -82,6 +82,25 @@ function toCanonicalReport(
         ),
       },
     },
+    differentiationInsights: {
+      similarityScore: Math.max(
+        0,
+        Math.min(100, Math.round((snapshot.positioningScore + snapshot.clarityScore) / 2)),
+      ),
+      overlapAreas: [snapshot.topMessagingGap].filter(
+        (value) => value.trim().length > 0,
+      ),
+      opportunities: snapshot.quickWins.slice(0, 3).map((item, index) => ({
+        theme: `Snapshot opportunity ${index + 1}`,
+        rationale: item,
+        implementationDifficulty: "low" as const,
+        expectedImpact: "medium" as const,
+      })),
+      strategyRecommendations: snapshot.quickWins.slice(0, 3),
+      parityRisks: [snapshot.riskEstimate].filter(
+        (value) => value.trim().length > 0,
+      ),
+    },
     competitiveMatrix: { profileMatrix: [], competitorRows: [], differentiators: [], counters: [] },
     positioningMap: {},
     rewrites: {},

@@ -52,6 +52,13 @@ import {
   runObjectionAnalysisModule,
   type ObjectionAnalysisOutput,
 } from "@/features/objection-engine/ai/objectionAnalysisModule";
+import { runPositioningAnalysisModule } from "@/features/differentiation-builder/ai/positioningAnalysisModule";
+import { runDifferentiationBuilder } from "@/features/differentiation-builder/services/differentiationBuilderService";
+import { buildCompetitiveMatrixFromPositioning } from "@/features/differentiation-builder/services/competitiveMatrixService";
+import {
+  buildDifferentiationPositioningMap,
+  toCanonicalPositioningMapData,
+} from "@/features/differentiation-builder/services/positioningMapGenerationService";
 
 export type ReportCreatePayload = {
   homepage_url: string;
@@ -1009,9 +1016,46 @@ async function processGapReport(
       results.objections,
       objectionAnalysis.data,
     );
-    const totalInputTokens = usage.inputTokens + objectionAnalysis.usage.inputTokens;
+    const positioningAnalysis = await runPositioningAnalysisModule({
+      profile,
+      companyContent,
+      pricingContent,
+      competitors,
+      gapAnalysis: mergedGapAnalysis,
+      competitorSynthesis: results.competitorSynthesis,
+    });
+    const differentiationInsights = runDifferentiationBuilder({
+      profile,
+      companyContent,
+      pricingContent,
+      competitors,
+      gapAnalysis: mergedGapAnalysis,
+    });
+    const competitiveMatrixOverride = buildCompetitiveMatrixFromPositioning({
+      profile,
+      companyContent,
+      pricingContent,
+      competitors,
+      gapAnalysis: mergedGapAnalysis,
+      positioning: positioningAnalysis.data,
+    });
+    const positioningMapOverride = toCanonicalPositioningMapData(
+      buildDifferentiationPositioningMap({
+        companyName: deriveCompanyName(report.homepage_url),
+        profile,
+        competitors,
+        positioning: positioningAnalysis.data,
+        matrix: competitiveMatrixOverride,
+      }),
+    );
+    const totalInputTokens =
+      usage.inputTokens +
+      objectionAnalysis.usage.inputTokens +
+      positioningAnalysis.usage.inputTokens;
     const totalOutputTokens =
-      usage.outputTokens + objectionAnalysis.usage.outputTokens;
+      usage.outputTokens +
+      objectionAnalysis.usage.outputTokens +
+      positioningAnalysis.usage.outputTokens;
     const totalTokens = totalInputTokens + totalOutputTokens;
     const totalCostCents = estimateCostCents(totalInputTokens, totalOutputTokens);
 
@@ -1039,6 +1083,20 @@ async function processGapReport(
       },
       competitorSynthesis: results.competitorSynthesis,
       objectionAnalysis: objectionAnalysis.data,
+      positioningAnalysis: {
+        ...positioningAnalysis.data,
+        uniqueStrengthSignals: differentiationInsights.uniqueStrengthSignals,
+        underleveragedStrengths: differentiationInsights.underleveragedStrengths,
+        differentiationOpportunities:
+          differentiationInsights.differentiationOpportunities,
+        positioningStrategyRecommendations:
+          differentiationInsights.positioningStrategyRecommendations,
+        highRiskParityZones: differentiationInsights.highRiskParityZones,
+        enterpriseDifferentiators:
+          differentiationInsights.enterpriseDifferentiators,
+      },
+      competitiveMatrixOverride,
+      positioningMapOverride,
       profile,
       status: "completed",
     });
@@ -1096,6 +1154,11 @@ async function processGapReport(
           coverage_score: objectionAnalysis.data.objectionCoverageScore,
           missing_count: objectionAnalysis.data.missingObjections.length,
           critical_risk_count: objectionAnalysis.data.criticalRisks.length,
+        },
+        differentiation_builder: {
+          similarity_score: positioningAnalysis.data.narrativeSimilarityScore,
+          overlap_count: positioningAnalysis.data.overlapAreas.length,
+          parity_risk_count: positioningAnalysis.data.highRiskParityZones.length,
         },
       },
     });

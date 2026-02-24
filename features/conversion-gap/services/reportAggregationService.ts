@@ -22,6 +22,55 @@ import {
   buildRewriteRecommendations,
 } from "@/features/conversion-gap/services/reportAggregationRecommendations";
 import type { BuildConversionGapReportInput } from "@/features/conversion-gap/services/reportAggregation.types";
+import type { CompetitiveMatrix } from "@/features/conversion-gap/types/conversionGapReport.types";
+
+function applyCompetitiveMatrixOverride(
+  base: CompetitiveMatrix,
+  override?: BuildConversionGapReportInput["competitiveMatrixOverride"],
+): CompetitiveMatrix {
+  if (!override) {
+    return base;
+  }
+
+  const profileMatrix = override.rows.flatMap((row) =>
+    row.competitors.map((competitor) => ({
+      competitor: competitor.name,
+      ourAdvantage: `${row.dimension}: ${row.you}`,
+      theirAdvantage: `${row.dimension}: ${competitor.value}`,
+    })),
+  );
+
+  const competitorRows = override.rows.reduce<
+    CompetitiveMatrix["competitorRows"]
+  >((acc, row) => {
+    for (const competitor of row.competitors) {
+      const existing = acc.find(
+        (item) => item.competitor.toLowerCase() === competitor.name.toLowerCase(),
+      );
+      if (!existing) {
+        acc.push({
+          competitor: competitor.name,
+          summary: competitor.evidence,
+          strengths: [],
+          weaknesses: [],
+          positioning: [`${row.dimension}: ${competitor.value}`],
+        });
+        continue;
+      }
+      if (existing.summary.length === 0 && competitor.evidence.length > 0) {
+        existing.summary = competitor.evidence;
+      }
+      existing.positioning.push(`${row.dimension}: ${competitor.value}`);
+    }
+    return acc;
+  }, []);
+
+  return {
+    ...base,
+    profileMatrix,
+    competitorRows,
+  };
+}
 
 export function buildConversionGapReport(
   input: BuildConversionGapReportInput,
@@ -83,15 +132,21 @@ export function buildConversionGapReport(
         baseCompetitiveMatrix,
       )
     : baseCompetitiveMatrix;
+  const normalizedCompetitiveMatrix = applyCompetitiveMatrixOverride(
+    competitiveMatrix,
+    input.competitiveMatrixOverride,
+  );
 
-  const positioningMap = buildPositioningMap({
-    company,
-    competitors,
-    gapAnalysis: input.gapAnalysis,
-    differentiationScore: scores.differentiationScore,
-    clarityScore: scores.clarityScore,
-    messagingOverlap: messagingOverlap.items,
-  });
+  const positioningMap =
+    input.positioningMapOverride ??
+    buildPositioningMap({
+      company,
+      competitors,
+      gapAnalysis: input.gapAnalysis,
+      differentiationScore: scores.differentiationScore,
+      clarityScore: scores.clarityScore,
+      messagingOverlap: messagingOverlap.items,
+    });
   const rewriteRecommendations = buildRewriteRecommendations({
     rewrites: input.rewrites,
     scores,
@@ -149,7 +204,17 @@ export function buildConversionGapReport(
     diagnosis,
     messagingOverlap,
     objectionCoverage,
-    competitiveMatrix,
+    differentiationInsights: input.positioningAnalysis
+      ? {
+          similarityScore: input.positioningAnalysis.narrativeSimilarityScore,
+          overlapAreas: input.positioningAnalysis.overlapAreas,
+          opportunities: input.positioningAnalysis.differentiationOpportunities,
+          strategyRecommendations:
+            input.positioningAnalysis.positioningStrategyRecommendations,
+          parityRisks: input.positioningAnalysis.highRiskParityZones,
+        }
+      : undefined,
+    competitiveMatrix: normalizedCompetitiveMatrix,
     positioningMap: positioningMap as unknown as Record<string, unknown>,
     rewrites: input.rewrites as unknown as Record<string, unknown>,
     rewriteRecommendations,

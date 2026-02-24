@@ -14,6 +14,7 @@ import { RewriteRecommendations } from "@/features/reports/components/execution/
 import { WhatHappensIfUnchanged } from "@/features/reports/components/WhatHappensIfUnchanged";
 import { ReportExportActions } from "@/features/reports/components/ReportExportActions";
 import { CompetitiveMatrixPreview } from "@/features/reports/components/execution/CompetitiveMatrixPreview";
+import { DifferentiationInsightsPanel } from "@/features/reports/components/execution/DifferentiationInsightsPanel";
 
 const PositioningMapPreview = dynamic(
   () =>
@@ -78,6 +79,7 @@ export function GapReportView({
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <MessagingOverlap report={report} />
+          <DifferentiationInsightsPanel report={report} />
           <RewriteRecommendations report={report} />
         </div>
         <div className="flex flex-col gap-6">

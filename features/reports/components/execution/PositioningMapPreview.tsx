@@ -21,6 +21,7 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
   const positioning = report.positioningMap as PositioningMapData | null;
   const axes = positioning?.axes;
   const points = positioning?.points ?? [];
+  const interpretation = positioning?.insights?.[0] ?? null;
   const primaryPoint =
     points.find(
       (point) => point.label.toLowerCase() === report.company.toLowerCase(),
@@ -104,6 +105,14 @@ export function PositioningMapPreview({ report }: PositioningMapPreviewProps) {
           ) : null}
         </div>
       </div>
+      {interpretation ? (
+        <div className="mt-4 rounded-lg border border-border/60 bg-secondary/30 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+            Map interpretation
+          </p>
+          <p className="mt-1 text-sm text-foreground">{interpretation}</p>
+        </div>
+      ) : null}
 
       <Button asChild variant="secondary" className="mt-4 w-full">
         <Link href={`/dashboard/reports/${report.id}/positioning-map`}>

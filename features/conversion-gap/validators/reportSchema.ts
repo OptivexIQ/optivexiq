@@ -62,6 +62,22 @@ export const conversionGapReportSchema = z.object({
     ),
     dimensionScores: z.record(z.number()).optional(),
   }),
+  differentiationInsights: z
+    .object({
+      similarityScore: z.number().min(0).max(100),
+      overlapAreas: z.array(z.string()),
+      opportunities: z.array(
+        z.object({
+          theme: z.string(),
+          rationale: z.string(),
+          implementationDifficulty: z.enum(["low", "medium", "high"]),
+          expectedImpact: z.enum(["low", "medium", "high"]),
+        }),
+      ),
+      strategyRecommendations: z.array(z.string()),
+      parityRisks: z.array(z.string()),
+    })
+    .optional(),
   competitiveMatrix: z
     .object({
       profileMatrix: z.array(

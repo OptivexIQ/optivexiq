@@ -83,6 +83,39 @@ function toTextLines(report: ConversionGapReport): string[] {
       lines.push(`  - ${item.objection}: ${item.recommendedStrategy}`);
     }
   }
+
+  if (report.differentiationInsights) {
+    lines.push("");
+    lines.push("Differentiation Insights");
+    lines.push(
+      `- Narrative Similarity Score: ${report.differentiationInsights.similarityScore}/100`,
+    );
+    const parityRisks = report.differentiationInsights.parityRisks.slice(0, 5);
+    if (parityRisks.length > 0) {
+      lines.push("- Parity risks:");
+      for (const risk of parityRisks) {
+        lines.push(`  - ${risk}`);
+      }
+    }
+    const opportunities = report.differentiationInsights.opportunities.slice(0, 5);
+    if (opportunities.length > 0) {
+      lines.push("- Opportunities:");
+      for (const item of opportunities) {
+        lines.push(
+          `  - ${item.theme} (impact: ${item.expectedImpact}, difficulty: ${item.implementationDifficulty})`,
+        );
+        lines.push(`    Rationale: ${item.rationale}`);
+      }
+    }
+    const strategyRecommendations =
+      report.differentiationInsights.strategyRecommendations.slice(0, 5);
+    if (strategyRecommendations.length > 0) {
+      lines.push("- Strategy recommendations:");
+      for (const recommendation of strategyRecommendations) {
+        lines.push(`  - ${recommendation}`);
+      }
+    }
+  }
   return lines;
 }
 

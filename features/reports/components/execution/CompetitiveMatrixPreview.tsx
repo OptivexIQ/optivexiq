@@ -14,6 +14,8 @@ export function CompetitiveMatrixPreview({
   const competitorCoverage = matrix.competitorRows.length;
   const advantageCoverage = matrix.profileRows.length;
   const topNarrative = matrix.narratives[0]?.value ?? null;
+  const parityRiskCount = report.differentiationInsights?.parityRisks.length ?? 0;
+  const topParityRisk = report.differentiationInsights?.parityRisks[0] ?? null;
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
@@ -46,12 +48,28 @@ export function CompetitiveMatrixPreview({
               {advantageCoverage}
             </p>
           </div>
+          <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+              Parity risk zones
+            </p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {parityRiskCount}
+            </p>
+          </div>
           {topNarrative ? (
             <div className="sm:col-span-2 rounded-lg border border-border/60 bg-secondary/30 p-3">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                 Key insight
               </p>
               <p className="mt-1 text-sm text-foreground">{topNarrative}</p>
+            </div>
+          ) : null}
+          {topParityRisk ? (
+            <div className="sm:col-span-2 rounded-lg border border-border/60 bg-secondary/30 p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                Highest parity pressure
+              </p>
+              <p className="mt-1 text-sm text-foreground">{topParityRisk}</p>
             </div>
           ) : null}
         </div>

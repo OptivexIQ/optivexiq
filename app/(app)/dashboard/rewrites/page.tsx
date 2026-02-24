@@ -17,6 +17,10 @@ type RewritesPageProps = {
         objection?: string;
         impact?: string;
         strategy?: string;
+        theme?: string;
+        rationale?: string;
+        expectedImpact?: string;
+        implementationDifficulty?: string;
         reportId?: string;
       }
     | Promise<{
@@ -25,6 +29,10 @@ type RewritesPageProps = {
         objection?: string;
         impact?: string;
         strategy?: string;
+        theme?: string;
+        rationale?: string;
+        expectedImpact?: string;
+        implementationDifficulty?: string;
         reportId?: string;
       }>;
 };
@@ -49,12 +57,24 @@ function resolvePrefillRequest(
   const objection = sanitizeQueryValue(value?.objection);
   const impact = sanitizeQueryValue(value?.impact);
   const strategy = sanitizeQueryValue(value?.strategy);
+  const theme = sanitizeQueryValue(value?.theme);
+  const rationale = sanitizeQueryValue(value?.rationale);
+  const expectedImpact = sanitizeQueryValue(value?.expectedImpact);
+  const implementationDifficulty = sanitizeQueryValue(
+    value?.implementationDifficulty,
+  );
   const reportId = sanitizeQueryValue(value?.reportId);
 
   const noteSections = [
     objection ? `Address objection: ${objection}` : null,
     impact ? `Impact context: ${impact}` : null,
     strategy ? `Recommended strategy: ${strategy}` : null,
+    theme ? `Positioning theme: ${theme}` : null,
+    rationale ? `Rationale: ${rationale}` : null,
+    expectedImpact ? `Expected impact: ${expectedImpact}` : null,
+    implementationDifficulty
+      ? `Implementation difficulty: ${implementationDifficulty}`
+      : null,
     reportId ? `Source report: ${reportId}` : null,
   ].filter((item): item is string => Boolean(item));
 
