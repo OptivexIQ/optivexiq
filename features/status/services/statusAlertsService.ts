@@ -76,6 +76,27 @@ function inferIncidentKey(alert: AlertRow): string {
 
 function humanizeUpdate(alert: AlertRow): string {
   const source = normalizeSource(alert.source);
+  const context =
+    alert.context && typeof alert.context === "object" && !Array.isArray(alert.context)
+      ? (alert.context as Record<string, unknown>)
+      : null;
+  const resolvedAt = context?.resolved_at;
+  if (typeof resolvedAt === "string" && resolvedAt.trim().length > 0) {
+    if (source === "queue.processing_delay") {
+      return "Analysis processing delays recovered and returned to expected range.";
+    }
+    if (source === "queue.lag") {
+      return "Analysis queue backlog recovered to expected range.";
+    }
+    if (source === "queue.failure_rate") {
+      return "Analysis failure rate recovered to expected range.";
+    }
+    if (source === "queue.worker.report" || source === "queue.worker.snapshot") {
+      return "Background analysis worker health recovered.";
+    }
+    return "Service recovered and is operating normally.";
+  }
+
   if (source === "queue.processing_delay") {
     return "Analysis processing delays are elevated; we are mitigating queue pressure.";
   }

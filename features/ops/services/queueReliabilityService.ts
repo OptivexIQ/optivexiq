@@ -80,6 +80,29 @@ const ALERT_THRESHOLDS = {
   averageProcessingDelaySeconds: 300,
   failureRate: 0.35,
 };
+const RECOVERY_THRESHOLDS = {
+  oldestQueuedAgeSeconds: 300,
+  averageProcessingDelaySeconds: 180,
+  failureRate: 0.2,
+};
+
+const ALERT_MESSAGES = {
+  workerReportTriggered: "Report worker heartbeat stale.",
+  workerSnapshotTriggered: "Snapshot worker heartbeat stale.",
+  queueLagTriggered: "Queue lag threshold exceeded.",
+  processingDelayTriggered: "Average queue processing delay threshold exceeded.",
+  failureRateTriggered: "Queue failure rate threshold exceeded.",
+  workerReportResolved: "Report worker heartbeat recovered.",
+  workerSnapshotResolved: "Snapshot worker heartbeat recovered.",
+  queueLagResolved: "Queue lag recovered.",
+  processingDelayResolved: "Average queue processing delay recovered.",
+  failureRateResolved: "Queue failure rate recovered.",
+} as const;
+
+type OperationalAlertRow = {
+  id: number;
+  context: unknown;
+};
 
 function secondsSince(iso: string | null): number {
   if (!iso) {
@@ -330,6 +353,34 @@ async function recentlyAlerted(source: string, message: string): Promise<boolean
   return Array.isArray(data) && data.length > 0;
 }
 
+async function latestAlertForSource(source: string): Promise<OperationalAlertRow | null> {
+  const admin = createSupabaseAdminClient("worker");
+  const { data } = await admin
+    .from("operational_alerts")
+    .select("id, context")
+    .eq("source", source)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return null;
+  }
+
+  const row = data[0] as { id: unknown; context: unknown };
+  return {
+    id: typeof row.id === "number" ? row.id : Number(row.id ?? 0),
+    context: row.context ?? null,
+  };
+}
+
+function alertIsResolved(row: OperationalAlertRow | null): boolean {
+  if (!row || !row.context || typeof row.context !== "object" || Array.isArray(row.context)) {
+    return false;
+  }
+  const resolvedAt = (row.context as Record<string, unknown>).resolved_at;
+  return typeof resolvedAt === "string" && resolvedAt.trim().length > 0;
+}
+
 export async function evaluateQueueHealthAlerts(
   snapshot: QueueHealthSnapshot,
 ): Promise<void> {
@@ -345,11 +396,21 @@ export async function evaluateQueueHealthAlerts(
   const snapshotWorkerRequired =
     snapshot.queueSize.snapshot > 0 || snapshot.oldestQueuedAgeSeconds.snapshot > 0;
 
-  if (reportWorkerRequired && !snapshot.workerStatus.report.alive) {
+  const reportWorkerBreached = reportWorkerRequired && !snapshot.workerStatus.report.alive;
+  const snapshotWorkerBreached =
+    snapshotWorkerRequired && !snapshot.workerStatus.snapshot.alive;
+  const queueLagBreached =
+    snapshot.oldestQueuedAgeSeconds.overall >= ALERT_THRESHOLDS.oldestQueuedAgeSeconds;
+  const processingDelayBreached =
+    snapshot.averageProcessingDelaySeconds.overall >=
+    ALERT_THRESHOLDS.averageProcessingDelaySeconds;
+  const failureRateBreached = snapshot.failureRate.overall >= ALERT_THRESHOLDS.failureRate;
+
+  if (reportWorkerBreached) {
     alerts.push({
       severity: "high",
       source: "queue.worker.report",
-      message: "Report worker heartbeat stale.",
+      message: ALERT_MESSAGES.workerReportTriggered,
       context: {
         worker: "report_worker",
         last_seen_at: snapshot.workerStatus.report.lastSeenAt,
@@ -357,11 +418,11 @@ export async function evaluateQueueHealthAlerts(
     });
   }
 
-  if (snapshotWorkerRequired && !snapshot.workerStatus.snapshot.alive) {
+  if (snapshotWorkerBreached) {
     alerts.push({
       severity: "high",
       source: "queue.worker.snapshot",
-      message: "Snapshot worker heartbeat stale.",
+      message: ALERT_MESSAGES.workerSnapshotTriggered,
       context: {
         worker: "snapshot_worker",
         last_seen_at: snapshot.workerStatus.snapshot.lastSeenAt,
@@ -369,13 +430,11 @@ export async function evaluateQueueHealthAlerts(
     });
   }
 
-  if (
-    snapshot.oldestQueuedAgeSeconds.overall >= ALERT_THRESHOLDS.oldestQueuedAgeSeconds
-  ) {
+  if (queueLagBreached) {
     alerts.push({
       severity: "high",
       source: "queue.lag",
-      message: "Queue lag threshold exceeded.",
+      message: ALERT_MESSAGES.queueLagTriggered,
       context: {
         oldest_queued_age_seconds: snapshot.oldestQueuedAgeSeconds.overall,
         report_oldest_age_seconds: snapshot.oldestQueuedAgeSeconds.report,
@@ -384,14 +443,11 @@ export async function evaluateQueueHealthAlerts(
     });
   }
 
-  if (
-    snapshot.averageProcessingDelaySeconds.overall >=
-    ALERT_THRESHOLDS.averageProcessingDelaySeconds
-  ) {
+  if (processingDelayBreached) {
     alerts.push({
       severity: "warning",
       source: "queue.processing_delay",
-      message: "Average queue processing delay threshold exceeded.",
+      message: ALERT_MESSAGES.processingDelayTriggered,
       context: {
         average_processing_delay_seconds:
           snapshot.averageProcessingDelaySeconds.overall,
@@ -399,11 +455,11 @@ export async function evaluateQueueHealthAlerts(
     });
   }
 
-  if (snapshot.failureRate.overall >= ALERT_THRESHOLDS.failureRate) {
+  if (failureRateBreached) {
     alerts.push({
       severity: "critical",
       source: "queue.failure_rate",
-      message: "Queue failure rate threshold exceeded.",
+      message: ALERT_MESSAGES.failureRateTriggered,
       context: {
         overall_failure_rate: snapshot.failureRate.overall,
         report_failure_rate: snapshot.failureRate.report,
@@ -421,6 +477,100 @@ export async function evaluateQueueHealthAlerts(
       source: alert.source,
       message: alert.message,
       context: alert.context,
+    });
+  }
+
+  const latestBySource = await Promise.all([
+    latestAlertForSource("queue.worker.report"),
+    latestAlertForSource("queue.worker.snapshot"),
+    latestAlertForSource("queue.lag"),
+    latestAlertForSource("queue.processing_delay"),
+    latestAlertForSource("queue.failure_rate"),
+  ]);
+
+  const [latestWorkerReport, latestWorkerSnapshot, latestQueueLag, latestDelay, latestFailure] =
+    latestBySource;
+
+  const recoveries: Array<{
+    active: boolean;
+    stillBreached: boolean;
+    source: string;
+    message: string;
+    context: Record<string, unknown>;
+  }> = [
+    {
+      active: !!latestWorkerReport && !alertIsResolved(latestWorkerReport),
+      stillBreached: reportWorkerBreached,
+      source: "queue.worker.report",
+      message: ALERT_MESSAGES.workerReportResolved,
+      context: {
+        worker: "report_worker",
+        resolved_at: new Date().toISOString(),
+        last_seen_at: snapshot.workerStatus.report.lastSeenAt,
+      },
+    },
+    {
+      active: !!latestWorkerSnapshot && !alertIsResolved(latestWorkerSnapshot),
+      stillBreached: snapshotWorkerBreached,
+      source: "queue.worker.snapshot",
+      message: ALERT_MESSAGES.workerSnapshotResolved,
+      context: {
+        worker: "snapshot_worker",
+        resolved_at: new Date().toISOString(),
+        last_seen_at: snapshot.workerStatus.snapshot.lastSeenAt,
+      },
+    },
+    {
+      active: !!latestQueueLag && !alertIsResolved(latestQueueLag),
+      stillBreached:
+        snapshot.oldestQueuedAgeSeconds.overall >= RECOVERY_THRESHOLDS.oldestQueuedAgeSeconds,
+      source: "queue.lag",
+      message: ALERT_MESSAGES.queueLagResolved,
+      context: {
+        resolved_at: new Date().toISOString(),
+        oldest_queued_age_seconds: snapshot.oldestQueuedAgeSeconds.overall,
+        report_oldest_age_seconds: snapshot.oldestQueuedAgeSeconds.report,
+        snapshot_oldest_age_seconds: snapshot.oldestQueuedAgeSeconds.snapshot,
+      },
+    },
+    {
+      active: !!latestDelay && !alertIsResolved(latestDelay),
+      stillBreached:
+        snapshot.averageProcessingDelaySeconds.overall >=
+        RECOVERY_THRESHOLDS.averageProcessingDelaySeconds,
+      source: "queue.processing_delay",
+      message: ALERT_MESSAGES.processingDelayResolved,
+      context: {
+        resolved_at: new Date().toISOString(),
+        average_processing_delay_seconds: snapshot.averageProcessingDelaySeconds.overall,
+      },
+    },
+    {
+      active: !!latestFailure && !alertIsResolved(latestFailure),
+      stillBreached: snapshot.failureRate.overall >= RECOVERY_THRESHOLDS.failureRate,
+      source: "queue.failure_rate",
+      message: ALERT_MESSAGES.failureRateResolved,
+      context: {
+        resolved_at: new Date().toISOString(),
+        overall_failure_rate: snapshot.failureRate.overall,
+        report_failure_rate: snapshot.failureRate.report,
+        snapshot_failure_rate: snapshot.failureRate.snapshot,
+      },
+    },
+  ];
+
+  for (const recovery of recoveries) {
+    if (!recovery.active || recovery.stillBreached) {
+      continue;
+    }
+    if (await recentlyAlerted(recovery.source, recovery.message)) {
+      continue;
+    }
+    await emitOperationalAlert({
+      severity: "warning",
+      source: recovery.source,
+      message: recovery.message,
+      context: recovery.context,
     });
   }
 }
