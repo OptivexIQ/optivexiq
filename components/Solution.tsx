@@ -4,7 +4,7 @@ export function Solution() {
       number: "01",
       title: "Enter Your Homepage + Competitors",
       description:
-        "Paste your homepage URL and up to 5 competitor URLs. OptivexIQ crawls and ingests all positioning signals, CTAs, and value propositions.",
+        "Paste your homepage URL and up to 5 competitor URLs. OptivexIQ analyzes key publicly available messaging elements, CTAs, and value propositions.",
     },
     {
       number: "02",

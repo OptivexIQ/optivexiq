@@ -3,7 +3,7 @@ export function ConversionEngine() {
     {
       title: "Gap Detection",
       description:
-        "Identifies missing value propositions, unclear positioning, and weak differentiation across your entire homepage.",
+        "Identifies missing value propositions, unclear positioning, and weak differentiation across key homepage messaging elements.",
       tag: "Core",
     },
     {
