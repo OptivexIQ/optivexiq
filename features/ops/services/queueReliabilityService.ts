@@ -80,6 +80,7 @@ const ALERT_THRESHOLDS = {
   averageProcessingDelaySeconds: 300,
   failureRate: 0.35,
 };
+const MIN_ACTIVE_JOBS_FOR_DELAY_ALERT = 3;
 const RECOVERY_THRESHOLDS = {
   oldestQueuedAgeSeconds: 300,
   averageProcessingDelaySeconds: 180,
@@ -163,6 +164,7 @@ async function getQueueTimingMetrics(queue: QueueName): Promise<{
   const { data: recent } = await admin
     .from(queue)
     .select("created_at, locked_at, completed_at, status")
+    .eq("status", "processing")
     .order("updated_at", { ascending: false })
     .limit(200);
 
@@ -402,8 +404,9 @@ export async function evaluateQueueHealthAlerts(
   const queueLagBreached =
     snapshot.oldestQueuedAgeSeconds.overall >= ALERT_THRESHOLDS.oldestQueuedAgeSeconds;
   const processingDelayBreached =
+    snapshot.queueSize.total >= MIN_ACTIVE_JOBS_FOR_DELAY_ALERT &&
     snapshot.averageProcessingDelaySeconds.overall >=
-    ALERT_THRESHOLDS.averageProcessingDelaySeconds;
+      ALERT_THRESHOLDS.averageProcessingDelaySeconds;
   const failureRateBreached = snapshot.failureRate.overall >= ALERT_THRESHOLDS.failureRate;
 
   if (reportWorkerBreached) {
@@ -446,13 +449,14 @@ export async function evaluateQueueHealthAlerts(
   if (processingDelayBreached) {
     alerts.push({
       severity: "warning",
-      source: "queue.processing_delay",
-      message: ALERT_MESSAGES.processingDelayTriggered,
-      context: {
-        average_processing_delay_seconds:
-          snapshot.averageProcessingDelaySeconds.overall,
-      },
-    });
+        source: "queue.processing_delay",
+        message: ALERT_MESSAGES.processingDelayTriggered,
+        context: {
+          average_processing_delay_seconds:
+            snapshot.averageProcessingDelaySeconds.overall,
+          active_job_count: snapshot.queueSize.total,
+        },
+      });
   }
 
   if (failureRateBreached) {
@@ -536,6 +540,7 @@ export async function evaluateQueueHealthAlerts(
     {
       active: !!latestDelay && !alertIsResolved(latestDelay),
       stillBreached:
+        snapshot.queueSize.total >= MIN_ACTIVE_JOBS_FOR_DELAY_ALERT &&
         snapshot.averageProcessingDelaySeconds.overall >=
         RECOVERY_THRESHOLDS.averageProcessingDelaySeconds,
       source: "queue.processing_delay",
@@ -543,6 +548,7 @@ export async function evaluateQueueHealthAlerts(
       context: {
         resolved_at: new Date().toISOString(),
         average_processing_delay_seconds: snapshot.averageProcessingDelaySeconds.overall,
+        active_job_count: snapshot.queueSize.total,
       },
     },
     {
