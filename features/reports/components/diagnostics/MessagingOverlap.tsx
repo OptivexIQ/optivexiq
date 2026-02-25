@@ -309,7 +309,7 @@ export function MessagingOverlap({ report }: MessagingOverlapProps) {
             </div>
           ) : null}
           {ctaLabel ? (
-            <Button variant="secondary" asChild>
+            <Button variant="secondary" size="sm" asChild>
               <Link
                 href={`/dashboard/reports/${report.id}/rewrite-recommendations`}
               >
