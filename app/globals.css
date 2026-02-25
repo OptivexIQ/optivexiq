@@ -92,14 +92,30 @@
 
   --sidebar-border: oklch(0.3 0.02 255);
   --sidebar-ring: oklch(0.62 0.14 225);
+  --focus-color: var(--ring);
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+  :root[data-input-modality="pointer"] :where(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+  }
+  :where(:focus:not(:focus-visible)) {
+    outline: none;
+    box-shadow: none;
+  }
   :where(a, button, input, textarea, select, summary):focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--background);
+  }
+  :where([role="button"], [role="link"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--background);
   }
   body {
     @apply bg-background text-foreground;

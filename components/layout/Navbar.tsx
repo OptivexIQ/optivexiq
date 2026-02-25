@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { createSupabaseBrowserClient } from "@/services/supabase/browser";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -22,6 +22,8 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const desktopMenuClosedByPointerRef = useRef(false);
+  const mobileMenuClosedByPointerRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -105,7 +107,25 @@ export function Navbar() {
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuContent
+                align="end"
+                className="w-44"
+                onPointerDownCapture={() => {
+                  desktopMenuClosedByPointerRef.current = true;
+                }}
+                onPointerDownOutside={() => {
+                  desktopMenuClosedByPointerRef.current = true;
+                }}
+                onInteractOutside={() => {
+                  desktopMenuClosedByPointerRef.current = true;
+                }}
+                onCloseAutoFocus={(event) => {
+                  if (desktopMenuClosedByPointerRef.current) {
+                    event.preventDefault();
+                  }
+                  desktopMenuClosedByPointerRef.current = false;
+                }}
+              >
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
@@ -205,7 +225,24 @@ export function Navbar() {
                       </Avatar>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
+                  <DropdownMenuContent
+                    align="start"
+                    onPointerDownCapture={() => {
+                      mobileMenuClosedByPointerRef.current = true;
+                    }}
+                    onPointerDownOutside={() => {
+                      mobileMenuClosedByPointerRef.current = true;
+                    }}
+                    onInteractOutside={() => {
+                      mobileMenuClosedByPointerRef.current = true;
+                    }}
+                    onCloseAutoFocus={(event) => {
+                      if (mobileMenuClosedByPointerRef.current) {
+                        event.preventDefault();
+                      }
+                      mobileMenuClosedByPointerRef.current = false;
+                    }}
+                  >
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard">Dashboard</Link>
                     </DropdownMenuItem>

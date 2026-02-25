@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useRef } from "react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ export default function DashboardNavbarMenu({
   userInitials,
 }: DashboardNavbarMenuProps) {
   const initials = userInitials || "";
+  const menuClosedByPointerRef = useRef(false);
 
   return (
     <DropdownMenu>
@@ -29,7 +31,25 @@ export default function DashboardNavbarMenu({
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
+      <DropdownMenuContent
+        align="end"
+        className="w-44"
+        onPointerDownCapture={() => {
+          menuClosedByPointerRef.current = true;
+        }}
+        onPointerDownOutside={() => {
+          menuClosedByPointerRef.current = true;
+        }}
+        onInteractOutside={() => {
+          menuClosedByPointerRef.current = true;
+        }}
+        onCloseAutoFocus={(event) => {
+          if (menuClosedByPointerRef.current) {
+            event.preventDefault();
+          }
+          menuClosedByPointerRef.current = false;
+        }}
+      >
         <DropdownMenuItem asChild>
           <Link href="/dashboard/settings">Account</Link>
         </DropdownMenuItem>
