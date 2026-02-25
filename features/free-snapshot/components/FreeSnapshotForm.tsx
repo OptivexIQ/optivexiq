@@ -291,11 +291,11 @@ export function FreeSnapshotForm() {
                     setCompetitorUrlsInput(event.target.value);
                     setCompetitorError(null);
                   }}
-                  placeholder="https://competitor-one.com\nhttps://competitor-two.com"
+                  placeholder="https://competitor-one.com, https://competitor-two.com"
                   rows={3}
                 />
                 <span className="text-xs text-muted-foreground">
-                  Up to 2 competitors, one per line.
+                  Up to 2 competitors, separated by commas or new lines.
                 </span>
                 {competitorError ? (
                   <span className="text-xs text-destructive">
