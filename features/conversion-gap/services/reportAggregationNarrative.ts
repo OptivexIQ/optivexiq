@@ -9,7 +9,168 @@ import type {
 } from "@/features/conversion-gap/types/conversionGapReport.types";
 import type { SaasProfileFormValues } from "@/features/saas-profile/types/profile.types";
 import type { CompetitorSynthesisOutput } from "@/features/conversion-gap/services/competitorSynthesisService";
+import type { CompetitiveMatrixOutput } from "@/features/differentiation-builder/services/competitiveMatrixService";
 import { clampScore } from "@/features/conversion-gap/services/reportAggregationScoring";
+
+function normalizeCompetitorName(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function resolveDistributionForCompetitor(
+  distributions: Map<
+    string,
+    {
+      low: number;
+      moderate: number;
+      high: number;
+      dimensions: number;
+    }
+  >,
+  competitorName: string,
+):
+  | {
+      low: number;
+      moderate: number;
+      high: number;
+      dimensions: number;
+    }
+  | undefined {
+  const normalized = normalizeCompetitorName(competitorName);
+  const exact = distributions.get(normalized);
+  if (exact) {
+    return exact;
+  }
+
+  for (const [key, value] of distributions.entries()) {
+    if (key.includes(normalized) || normalized.includes(key)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function mapMatrixValueToRank(value: string): number | null {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "low") {
+    return 0;
+  }
+  if (normalized === "medium") {
+    return 1;
+  }
+  if (normalized === "high") {
+    return 2;
+  }
+  return null;
+}
+
+function buildOverlapDistributionByCompetitor(
+  matrix?: CompetitiveMatrixOutput,
+): Map<
+  string,
+  {
+    low: number;
+    moderate: number;
+    high: number;
+    dimensions: number;
+  }
+> {
+  const output = new Map<
+    string,
+    {
+      low: number;
+      moderate: number;
+      high: number;
+      dimensions: number;
+    }
+  >();
+
+  if (!matrix || matrix.rows.length === 0) {
+    return output;
+  }
+
+  const counters = new Map<
+    string,
+    { low: number; moderate: number; high: number; dimensions: number }
+  >();
+
+  for (const row of matrix.rows) {
+    const youRank = mapMatrixValueToRank(row.you);
+    if (youRank === null) {
+      continue;
+    }
+
+    for (const competitor of row.competitors) {
+      const competitorRank = mapMatrixValueToRank(competitor.value);
+      if (competitorRank === null) {
+        continue;
+      }
+
+      const key = normalizeCompetitorName(competitor.name);
+      const current = counters.get(key) ?? {
+        low: 0,
+        moderate: 0,
+        high: 0,
+        dimensions: 0,
+      };
+
+      const distance = Math.abs(youRank - competitorRank);
+      if (distance === 0) {
+        current.high += 1;
+      } else if (distance === 1) {
+        current.moderate += 1;
+      } else {
+        current.low += 1;
+      }
+      current.dimensions += 1;
+      counters.set(key, current);
+    }
+  }
+
+  for (const [key, value] of counters.entries()) {
+    if (value.dimensions <= 0) {
+      continue;
+    }
+
+    const total = value.dimensions;
+    const toPercent = (count: number) => (count / total) * 100;
+    const raw = {
+      low: toPercent(value.low),
+      moderate: toPercent(value.moderate),
+      high: toPercent(value.high),
+    };
+
+    const floored = {
+      low: Math.floor(raw.low),
+      moderate: Math.floor(raw.moderate),
+      high: Math.floor(raw.high),
+    };
+    const remainders = [
+      { key: "low" as const, value: raw.low - floored.low },
+      { key: "moderate" as const, value: raw.moderate - floored.moderate },
+      { key: "high" as const, value: raw.high - floored.high },
+    ].sort((a, b) => b.value - a.value);
+
+    const normalized = { ...floored };
+    let remaining = 100 - (floored.low + floored.moderate + floored.high);
+    let cursor = 0;
+    while (remaining > 0) {
+      const target = remainders[cursor % remainders.length].key;
+      normalized[target] += 1;
+      remaining -= 1;
+      cursor += 1;
+    }
+
+    output.set(key, {
+      low: normalized.low,
+      moderate: normalized.moderate,
+      high: normalized.high,
+      dimensions: value.dimensions,
+    });
+  }
+
+  return output;
+}
 
 export function buildExecutiveNarrative(input: {
   company: string;
@@ -62,6 +223,7 @@ export function buildMessagingOverlap(input: {
   overlapSignals: string[];
   competitors: CompetitorInsight[];
   funnelRisk: number;
+  competitiveMatrixOverride?: CompetitiveMatrixOutput;
 }): ConversionGapReport["messagingOverlap"] {
   const competitorNames = input.competitors
     .map((item) => item.name?.trim() ?? "")
@@ -70,6 +232,10 @@ export function buildMessagingOverlap(input: {
     competitorNames.length > 0
       ? competitorNames
       : input.overlapSignals.map((_, index) => `Competitor ${index + 1}`);
+
+  const distributionByCompetitor = buildOverlapDistributionByCompetitor(
+    input.competitiveMatrixOverride,
+  );
 
   const items = names.map((competitor, index) => {
     const severity = clampScore(
@@ -82,6 +248,10 @@ export function buildMessagingOverlap(input: {
       you: clampScore(100 - severity * 0.55),
       competitors: clampScore(55 + severity * 0.45),
       risk,
+      overlapDistribution: resolveDistributionForCompetitor(
+        distributionByCompetitor,
+        competitor,
+      ),
     };
   });
 
@@ -101,6 +271,7 @@ export function buildMessagingOverlapFromSynthesis(
     synthesis: CompetitorSynthesisOutput;
     competitors: CompetitorInsight[];
     overlapSignals: string[];
+    competitiveMatrixOverride?: CompetitiveMatrixOutput;
   },
 ): ConversionGapReport["messagingOverlap"] {
   const { synthesis } = input;
@@ -123,6 +294,10 @@ export function buildMessagingOverlapFromSynthesis(
   const resolvedNames =
     names.length > 0 ? names : ["Competitor 1", "Competitor 2"];
 
+  const distributionByCompetitor = buildOverlapDistributionByCompetitor(
+    input.competitiveMatrixOverride,
+  );
+
   const items = resolvedNames.map((competitor, index) => {
     const nameOffset =
       competitor
@@ -143,6 +318,10 @@ export function buildMessagingOverlapFromSynthesis(
       you: youScore,
       competitors: competitorScore,
       risk: competitorRisk,
+      overlapDistribution: resolveDistributionForCompetitor(
+        distributionByCompetitor,
+        competitor,
+      ),
     };
   });
 

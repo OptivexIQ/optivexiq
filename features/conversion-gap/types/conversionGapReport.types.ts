@@ -7,6 +7,12 @@ export type MessagingOverlapItem = {
   you: number;
   competitors: number;
   risk: ThreatLevel;
+  overlapDistribution?: {
+    low: number;
+    moderate: number;
+    high: number;
+    dimensions: number;
+  };
 };
 
 export type MessagingOverlap = {

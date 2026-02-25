@@ -32,6 +32,14 @@ export const conversionGapReportSchema = z.object({
         you: z.number(),
         competitors: z.number(),
         risk: z.enum(["low", "medium", "high"]),
+        overlapDistribution: z
+          .object({
+            low: z.number().min(0).max(100),
+            moderate: z.number().min(0).max(100),
+            high: z.number().min(0).max(100),
+            dimensions: z.number().int().min(1),
+          })
+          .optional(),
       }),
     ),
     insight: z.string(),

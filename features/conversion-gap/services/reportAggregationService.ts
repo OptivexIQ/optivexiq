@@ -109,12 +109,14 @@ export function buildConversionGapReport(
     overlapSignals: toSafeArray(input.gapAnalysis.messagingOverlap),
     competitors,
     funnelRisk: scores.funnelRisk,
+    competitiveMatrixOverride: input.competitiveMatrixOverride,
   });
   const messagingOverlap = input.competitorSynthesis
     ? buildMessagingOverlapFromSynthesis({
         synthesis: input.competitorSynthesis,
         competitors,
         overlapSignals: toSafeArray(input.gapAnalysis.messagingOverlap),
+        competitiveMatrixOverride: input.competitiveMatrixOverride,
       })
     : defaultMessagingOverlap;
 
