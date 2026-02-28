@@ -32,6 +32,44 @@ export const rewriteGenerateRequestSchema = z
     websiteUrl: websiteUrlSchema,
     content: contentSchema,
     notes: notesSchema,
+    strategicContext: z
+      .object({
+        target: rewriteTypeSchema,
+        goal: z.enum(["conversion", "clarity", "differentiation"]),
+        icp: z.string().trim().max(120, "ICP is too long."),
+        focus: z.object({
+          differentiation: z.boolean(),
+          objection: z.boolean(),
+        }),
+      })
+      .optional(),
+    rewriteStrategy: z
+      .object({
+        tone: z.enum([
+          "neutral",
+          "confident",
+          "technical",
+          "direct",
+          "founder-led",
+          "enterprise",
+        ]),
+        length: z.enum(["short", "standard", "long"]),
+        emphasis: z
+          .array(
+            z.enum([
+              "clarity",
+              "differentiation",
+              "objection-handling",
+              "pricing-clarity",
+              "proof-credibility",
+            ]),
+          )
+          .max(5)
+          .default([]),
+        constraints: z.string().trim().max(500).optional(),
+        audience: z.string().trim().max(120).optional(),
+      })
+      .optional(),
   })
   .refine((value) => Boolean(value.websiteUrl || value.content), {
     path: ["websiteUrl"],
@@ -41,4 +79,3 @@ export const rewriteGenerateRequestSchema = z
 export type RewriteGenerateRequestValues = z.infer<
   typeof rewriteGenerateRequestSchema
 >;
-

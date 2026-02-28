@@ -74,9 +74,35 @@ function buildUserPrompt(input: RewriteGenerateRequestValues, context: string) {
   const sourceType = input.content ? "Pasted content provided." : "No pasted content.";
   const url = input.websiteUrl ? `Website URL: ${input.websiteUrl}` : "Website URL: not provided";
   const notes = input.notes ? `Notes: ${input.notes}` : "Notes: none";
+  const strategicContext = input.strategicContext
+    ? [
+        "Strategic context:",
+        `- Target: ${input.strategicContext.target === "pricing" ? "Pricing" : "Homepage"}`,
+        `- Goal: ${input.strategicContext.goal}`,
+        `- ICP: ${input.strategicContext.icp}`,
+        `- Differentiation focus: ${input.strategicContext.focus.differentiation ? "On" : "Off"}`,
+        `- Objection focus: ${input.strategicContext.focus.objection ? "On" : "Off"}`,
+      ].join("\n")
+    : "";
+  const rewriteStrategy = input.rewriteStrategy
+    ? [
+        "Rewrite strategy:",
+        `- Tone: ${input.rewriteStrategy.tone}`,
+        `- Length: ${input.rewriteStrategy.length}`,
+        `- Emphasis: ${
+          input.rewriteStrategy.emphasis.length > 0
+            ? input.rewriteStrategy.emphasis.join(", ")
+            : "none"
+        }`,
+        `- Constraints: ${input.rewriteStrategy.constraints?.trim() || "none"}`,
+        `- Audience: ${input.rewriteStrategy.audience?.trim() || "not specified"}`,
+      ].join("\n")
+    : "";
   const content = input.content ? `Content:\n${input.content}` : "";
 
-  return [url, sourceType, notes, context, content].filter(Boolean).join("\n\n");
+  return [url, sourceType, notes, strategicContext, rewriteStrategy, context, content]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export async function buildRewriteOpenAIRequest(
@@ -94,4 +120,3 @@ export async function buildRewriteOpenAIRequest(
     ],
   };
 }
-

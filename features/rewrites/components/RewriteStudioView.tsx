@@ -1,6 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
 import { isHttpError } from "@/lib/api/httpClient";
 import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPanel";
@@ -11,15 +20,20 @@ import {
 } from "@/features/rewrites/components/RewriteStudioControlBar";
 import { RewriteStudioHeader } from "@/features/rewrites/components/RewriteStudioHeader";
 import { streamRewrite } from "@/features/rewrites/services/rewritesClient";
+import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
 import type {
   RewriteExportFormat,
   RewriteGenerateRequest,
+  RewriteStrategy,
   RewriteStudioInitialData,
 } from "@/features/rewrites/types/rewrites.types";
 
 type RewriteStudioViewProps = {
   initialData: RewriteStudioInitialData;
 };
+const REWRITE_STUDIO_CONTEXT_STORAGE_KEY = "optivexiq.rewrite_studio.context.v1";
+const REWRITE_STUDIO_STRATEGY_STORAGE_KEY =
+  "optivexiq.rewrite_studio.strategy.v1";
 
 function toMarkdownDocument(output: string) {
   return output.endsWith("\n") ? output : `${output}\n`;
@@ -65,6 +79,44 @@ function toHtmlDocument(markdown: string) {
   ].join("\n");
 }
 
+function toStructuredMarkdownDocument(output: string, rewriteType: RewriteGenerateRequest["rewriteType"]) {
+  const model = buildRewriteOutputViewModel(output);
+  const lines: string[] = [];
+  lines.push(`# ${rewriteType === "pricing" ? "Pricing" : "Homepage"} Rewrite`);
+  lines.push("");
+  lines.push("## Executive Rewrite Summary");
+  if (model.summaryBullets.length > 0) {
+    for (const bullet of model.summaryBullets.slice(0, 3)) {
+      lines.push(`- ${bullet}`);
+    }
+  } else {
+    lines.push("- Summary not available for this rewrite.");
+  }
+  lines.push("");
+  lines.push("## Rewritten Copy");
+  const copySections =
+    model.copySections.length > 0 ? model.copySections : [{ title: "Rewrite", body: output }];
+  for (const section of copySections) {
+    lines.push(`### ${section.title}`);
+    lines.push(section.body);
+    lines.push("");
+  }
+
+  lines.push("## Strategic Rationale");
+  if (model.rationaleSections.length > 0) {
+    for (const section of model.rationaleSections) {
+      lines.push(`### ${section.title}`);
+      lines.push(section.body);
+      lines.push("");
+    }
+  } else {
+    lines.push("Not available for this rewrite.");
+    lines.push("");
+  }
+
+  return lines.join("\n").trimEnd() + "\n";
+}
+
 function downloadContent(filename: string, type: string, content: string) {
   const blob = new Blob([content], { type });
   const link = document.createElement("a");
@@ -72,6 +124,33 @@ function downloadContent(filename: string, type: string, content: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(link.href);
+}
+
+function printPdfDocument(markdown: string) {
+  const html = toHtmlDocument(markdown);
+  const win = window.open("", "_blank", "noopener,noreferrer");
+  if (!win) {
+    throw new Error("Popup blocked. Enable popups to export PDF.");
+  }
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
+function formatHistoryTimestamp(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unknown date";
+  }
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
@@ -90,6 +169,14 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const [requestRef, setRequestRef] = useState<string | null>(
     initialData.initialRequestRef ?? null,
   );
+  const [previousOutput, setPreviousOutput] = useState("");
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedBaselineRef, setSelectedBaselineRef] = useState<string | null>(
+    null,
+  );
+  const [refineMode, setRefineMode] = useState(false);
+  const [deltaInstructions, setDeltaInstructions] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const profileIcp = initialData.profileIcpRole.trim() || "Profile ICP";
   const [useCustomIcp, setUseCustomIcp] = useState(
     initialData.initialStudioContext?.useCustomIcp ?? false,
@@ -106,16 +193,160 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const [objectionFocus, setObjectionFocus] = useState(
     initialData.initialStudioContext?.objectionFocus ?? false,
   );
+  const [strategy, setStrategy] = useState<RewriteStrategy>({
+    tone: "neutral",
+    length: "standard",
+    emphasis: [],
+    constraints: "",
+    audience: "",
+  });
 
   const selectedIcpLabel = useCustomIcp ? customIcp.trim() : profileIcp;
-  const selectedGoalLabel =
-    goal === "clarity"
-      ? "Clarity"
-      : goal === "differentiation"
-        ? "Differentiation"
-        : "Conversion";
   const resolvedIcpLabel =
     selectedIcpLabel.trim().length > 0 ? selectedIcpLabel : "Custom ICP";
+  const historyVersions = initialData.historyVersions ?? [];
+  const compareBaselineOptions = historyVersions
+    .filter((item) => item.requestRef !== requestRef)
+    .map((item) => {
+      const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
+      const timestamp = formatHistoryTimestamp(item.createdAt);
+      const toneLabel = item.tone ? `Tone: ${item.tone}` : "Tone: n/a";
+      const emphasisLabel =
+        item.emphasis && item.emphasis.length > 0
+          ? `Emphasis: ${item.emphasis.join(", ")}`
+          : "Emphasis: n/a";
+      return {
+        requestRef: item.requestRef,
+        label: `${timestamp} | ${target} | ${toneLabel} | ${emphasisLabel}`,
+      };
+    });
+  const selectedBaselineOutput =
+    historyVersions.find((item) => item.requestRef === selectedBaselineRef)
+      ?.outputMarkdown ?? previousOutput;
+
+  useEffect(() => {
+    if (initialData.initialStudioContext) {
+      return;
+    }
+
+    const raw = window.localStorage.getItem(REWRITE_STUDIO_CONTEXT_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        rewriteType?: "homepage" | "pricing";
+        useCustomIcp?: boolean;
+        customIcp?: string;
+        goal?: StudioGoal;
+        differentiationFocus?: boolean;
+        objectionFocus?: boolean;
+      };
+
+      if (parsed.rewriteType === "homepage" || parsed.rewriteType === "pricing") {
+        setRequest((previous) => ({ ...previous, rewriteType: parsed.rewriteType! }));
+      }
+      if (typeof parsed.useCustomIcp === "boolean") {
+        setUseCustomIcp(parsed.useCustomIcp);
+      }
+      if (typeof parsed.customIcp === "string") {
+        setCustomIcp(parsed.customIcp);
+      }
+      if (
+        parsed.goal === "conversion" ||
+        parsed.goal === "clarity" ||
+        parsed.goal === "differentiation"
+      ) {
+        setGoal(parsed.goal);
+      }
+      if (typeof parsed.differentiationFocus === "boolean") {
+        setDifferentiationFocus(parsed.differentiationFocus);
+      }
+      if (typeof parsed.objectionFocus === "boolean") {
+        setObjectionFocus(parsed.objectionFocus);
+      }
+    } catch {
+      window.localStorage.removeItem(REWRITE_STUDIO_CONTEXT_STORAGE_KEY);
+    }
+  }, [initialData.initialStudioContext]);
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(REWRITE_STUDIO_STRATEGY_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<RewriteStrategy>;
+      setStrategy((previous) => ({
+        tone:
+          parsed.tone === "confident" ||
+          parsed.tone === "technical" ||
+          parsed.tone === "direct" ||
+          parsed.tone === "founder-led" ||
+          parsed.tone === "enterprise" ||
+          parsed.tone === "neutral"
+            ? parsed.tone
+            : previous.tone,
+        length:
+          parsed.length === "short" ||
+          parsed.length === "standard" ||
+          parsed.length === "long"
+            ? parsed.length
+            : previous.length,
+        emphasis: Array.isArray(parsed.emphasis)
+          ? parsed.emphasis.filter(
+              (item): item is RewriteStrategy["emphasis"][number] =>
+                item === "clarity" ||
+                item === "differentiation" ||
+                item === "objection-handling" ||
+                item === "pricing-clarity" ||
+                item === "proof-credibility",
+            )
+          : previous.emphasis,
+        constraints:
+          typeof parsed.constraints === "string"
+            ? parsed.constraints
+            : previous.constraints,
+        audience:
+          typeof parsed.audience === "string"
+            ? parsed.audience
+            : previous.audience,
+      }));
+    } catch {
+      window.localStorage.removeItem(REWRITE_STUDIO_STRATEGY_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const payload = {
+      rewriteType: request.rewriteType,
+      useCustomIcp,
+      customIcp,
+      goal,
+      differentiationFocus,
+      objectionFocus,
+    };
+    window.localStorage.setItem(
+      REWRITE_STUDIO_CONTEXT_STORAGE_KEY,
+      JSON.stringify(payload),
+    );
+  }, [
+    request.rewriteType,
+    useCustomIcp,
+    customIcp,
+    goal,
+    differentiationFocus,
+    objectionFocus,
+  ]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      REWRITE_STUDIO_STRATEGY_STORAGE_KEY,
+      JSON.stringify(strategy),
+    );
+  }, [strategy]);
 
   const resetStudio = () => {
     setRequest({
@@ -130,7 +361,19 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setGoal("conversion");
     setDifferentiationFocus(true);
     setObjectionFocus(false);
+    setStrategy({
+      tone: "neutral",
+      length: "standard",
+      emphasis: [],
+      constraints: "",
+      audience: "",
+    });
     setOutput("");
+    setPreviousOutput("");
+    setCompareMode(false);
+    setSelectedBaselineRef(null);
+    setRefineMode(false);
+    setDeltaInstructions("");
     setError(null);
     setRequestRef(null);
   };
@@ -144,6 +387,47 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setObjectionFocus(false);
   };
 
+  const handleSaveVersion = () => {
+    if (output.trim().length === 0) {
+      setError("No rewrite output available to save.");
+      return;
+    }
+    if (!requestRef) {
+      setError("Generate a rewrite first, then save to version history.");
+      return;
+    }
+    setHistoryOpen(true);
+    toast({
+      title: "Version saved",
+      description: "Saved versions are available in Version History.",
+    });
+  };
+
+  const handleDuplicate = () => {
+    if (output.trim().length === 0) {
+      return;
+    }
+    setPreviousOutput(output);
+    setOutput("");
+    setCompareMode(false);
+    setSelectedBaselineRef(null);
+    setRequestRef(null);
+    setError(null);
+    toast({
+      title: "Rewrite duplicated",
+      description: "Workspace reset for a new iteration with your current setup.",
+    });
+  };
+
+  const handleRefine = () => {
+    setRefineMode(true);
+    setCompareMode(false);
+    queueMicrotask(() => {
+      const node = document.getElementById("rewrite-delta-instructions");
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
   const handleSubmit = async () => {
     if (useCustomIcp && customIcp.trim().length === 0) {
       setError("Custom ICP is required when ICP is set to Custom.");
@@ -151,6 +435,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }
 
     setError(null);
+    if (output.trim().length > 0) {
+      setPreviousOutput(output);
+    }
     setOutput("");
     setRequestRef(null);
     setRunning(true);
@@ -159,21 +446,29 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
     try {
       const userNotes = request.notes?.trim() ?? "";
-      const studioContext = [
-        "Studio context:",
-        `- Target: ${request.rewriteType === "pricing" ? "Pricing" : "Homepage"}`,
-        `- ICP: ${resolvedIcpLabel}`,
-        `- Goal: ${selectedGoalLabel}`,
-        `- Differentiation focus: ${differentiationFocus ? "On" : "Off"}`,
-        `- Objection focus: ${objectionFocus ? "On" : "Off"}`,
-      ].join("\n");
-
       const submissionRequest: RewriteGenerateRequest = {
         ...request,
         notes:
-          userNotes.length > 0
-            ? `${studioContext}\n\nUser notes:\n${userNotes}`
-            : studioContext,
+          refineMode && deltaInstructions.trim().length > 0
+            ? [
+                userNotes.length > 0 ? userNotes : "",
+                `Refine delta instructions: ${deltaInstructions.trim()}`,
+              ]
+                .filter((item) => item.length > 0)
+                .join("\n\n")
+            : userNotes.length > 0
+              ? userNotes
+              : undefined,
+        strategicContext: {
+          target: request.rewriteType,
+          goal,
+          icp: resolvedIcpLabel,
+          focus: {
+            differentiation: differentiationFocus,
+            objection: objectionFocus,
+          },
+        },
+        rewriteStrategy: strategy,
       };
 
       const result = await streamRewrite(submissionRequest, {
@@ -187,6 +482,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         title: "Rewrite generated",
         description: "Your output is ready to copy or export.",
       });
+      setRefineMode(false);
+      setDeltaInstructions("");
     } catch (submissionError) {
       if (controller.signal.aborted) {
         setError("Generation canceled.");
@@ -209,34 +506,141 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     abortRef.current?.abort();
   };
 
+  const openVersion = (requestRefToOpen: string) => {
+    const version = historyVersions.find(
+      (item) => item.requestRef === requestRefToOpen,
+    );
+    if (!version) {
+      return;
+    }
+
+    setOutput(version.outputMarkdown);
+    setRequestRef(version.requestRef);
+    setCompareMode(false);
+    setSelectedBaselineRef(null);
+    setError(null);
+    setHistoryOpen(false);
+  };
+
+  const restoreVersion = (requestRefToRestore: string) => {
+    const version = historyVersions.find(
+      (item) => item.requestRef === requestRefToRestore,
+    );
+    if (!version) {
+      return;
+    }
+
+    setRequest((previous) => ({
+      ...previous,
+      rewriteType: version.rewriteType,
+      websiteUrl: version.websiteUrl ?? previous.websiteUrl,
+      content: version.sourceContent ?? "",
+      notes: version.userNotes ?? "",
+    }));
+    setOutput(version.outputMarkdown);
+    setRequestRef(version.requestRef);
+    setUseCustomIcp(
+      Boolean(version.strategicContext?.icp) &&
+        version.strategicContext?.icp?.trim().toLowerCase() !==
+          profileIcp.trim().toLowerCase(),
+    );
+    setCustomIcp(
+      version.strategicContext?.icp &&
+        version.strategicContext.icp.trim().toLowerCase() !==
+          profileIcp.trim().toLowerCase()
+        ? version.strategicContext.icp
+        : "",
+    );
+    setGoal(version.strategicContext?.goal ?? "conversion");
+    setDifferentiationFocus(
+      version.strategicContext?.differentiationFocus ?? true,
+    );
+    setObjectionFocus(version.strategicContext?.objectionFocus ?? false);
+    setStrategy((previous) => ({
+      ...previous,
+      tone:
+        version.tone === "neutral" ||
+        version.tone === "confident" ||
+        version.tone === "technical" ||
+        version.tone === "direct" ||
+        version.tone === "founder-led" ||
+        version.tone === "enterprise"
+          ? version.tone
+          : previous.tone,
+      length:
+        version.length === "short" ||
+        version.length === "standard" ||
+        version.length === "long"
+          ? version.length
+          : previous.length,
+      emphasis:
+        version.emphasis
+          ?.filter(
+            (item): item is RewriteStrategy["emphasis"][number] =>
+              item === "clarity" ||
+              item === "differentiation" ||
+              item === "objection-handling" ||
+              item === "pricing-clarity" ||
+              item === "proof-credibility",
+          )
+          .slice(0, 5) ?? previous.emphasis,
+    }));
+    setRefineMode(false);
+    setDeltaInstructions("");
+    setCompareMode(false);
+    setSelectedBaselineRef(null);
+    setError(null);
+    setHistoryOpen(false);
+    toast({
+      title: "Version restored",
+      description: "Version loaded as active workspace state.",
+    });
+  };
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(toMarkdownDocument(output));
+    await navigator.clipboard.writeText(
+      toStructuredMarkdownDocument(output, request.rewriteType),
+    );
     toast({ title: "Copied", description: "Rewrite copied as markdown." });
   };
 
   const handleExport = (format: RewriteExportFormat) => {
     const base = `${request.rewriteType}-rewrite`;
+    const structuredMarkdown = toStructuredMarkdownDocument(
+      output,
+      request.rewriteType,
+    );
     if (format === "markdown") {
       downloadContent(
         `${base}.md`,
         "text/markdown",
-        toMarkdownDocument(output),
+        structuredMarkdown,
       );
       return;
     }
 
     if (format === "text") {
-      downloadContent(`${base}.txt`, "text/plain", toPlainTextDocument(output));
+      downloadContent(
+        `${base}.txt`,
+        "text/plain",
+        toPlainTextDocument(structuredMarkdown),
+      );
       return;
     }
 
-    downloadContent(`${base}.html`, "text/html", toHtmlDocument(output));
+    if (format === "pdf") {
+      printPdfDocument(structuredMarkdown);
+      return;
+    }
+
+    downloadContent(`${base}.html`, "text/html", toHtmlDocument(structuredMarkdown));
   };
 
   return (
     <div className="flex w-full flex-col gap-6">
       <RewriteStudioHeader
         disableActions={running}
+        onOpenHistory={() => setHistoryOpen(true)}
         onNewRewrite={resetStudio}
       />
       <RewriteStudioControlBar
@@ -259,12 +663,21 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         onResetContext={resetControlContext}
       />
 
+      <p className="text-sm text-muted-foreground">
+        Plan: {initialData.planLabel}. No hard cap on rewrites (within token
+        limits).
+      </p>
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <RewriteInputPanel
           value={request}
+          strategy={strategy}
+          refineMode={refineMode}
+          deltaInstructions={deltaInstructions}
           running={running}
-          error={error}
           onChange={setRequest}
+          onStrategyChange={setStrategy}
+          onDeltaInstructionsChange={setDeltaInstructions}
           onSubmit={() => void handleSubmit()}
           onCancel={handleCancel}
         />
@@ -272,11 +685,106 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           rewriteType={request.rewriteType}
           running={running}
           output={output}
+          previousOutput={selectedBaselineOutput}
+          compareMode={compareMode}
+          compareBaselineOptions={compareBaselineOptions}
+          selectedBaselineRef={selectedBaselineRef}
           requestRef={requestRef}
+          error={error}
           onCopy={() => void handleCopy()}
-          onExport={(format) => handleExport(format)}
+          onExport={(format) => {
+            try {
+              handleExport(format);
+            } catch (exportError) {
+              const message =
+                exportError instanceof Error
+                  ? exportError.message
+                  : "Unable to export rewrite.";
+              setError(message);
+              toast({
+                title: "Export failed",
+                description: message,
+              });
+            }
+          }}
+          onSaveVersion={handleSaveVersion}
+          onDuplicate={handleDuplicate}
+          onRefine={handleRefine}
+          onToggleCompare={() => {
+            setCompareMode((previous) => {
+              const next = !previous;
+              if (next && !selectedBaselineRef && compareBaselineOptions.length > 0) {
+                setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
+              }
+              return next;
+            });
+          }}
+          onSelectBaseline={setSelectedBaselineRef}
+          onRetry={() => void handleSubmit()}
         />
       </div>
+
+      <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>Version History</SheetTitle>
+            <SheetDescription>
+              Open or restore previous rewrite versions.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-3 overflow-y-auto pr-1">
+            {historyVersions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No rewrite versions available yet.
+              </p>
+            ) : (
+              historyVersions.map((item) => (
+                <div
+                  key={item.requestRef}
+                  className="rounded-lg border border-border/60 bg-card p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">
+                      {item.rewriteType === "pricing" ? "Pricing" : "Homepage"}
+                    </Badge>
+                    <Badge variant="secondary">Saved</Badge>
+                    {item.tone ? <Badge variant="secondary">{item.tone}</Badge> : null}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {formatHistoryTimestamp(item.createdAt)} | {item.requestRef}
+                  </p>
+                  {item.emphasis && item.emphasis.length > 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Emphasis: {item.emphasis.join(", ")}
+                    </p>
+                  ) : null}
+                  <p className="mt-3 line-clamp-2 text-sm text-foreground/90">
+                    {item.outputMarkdown}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openVersion(item.requestRef)}
+                    >
+                      Open
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => restoreVersion(item.requestRef)}
+                    >
+                      Restore
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -1,16 +1,16 @@
 "use client";
-
-import Link from "next/link";
 import { History, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type RewriteStudioHeaderProps = {
   disableActions?: boolean;
+  onOpenHistory: () => void;
   onNewRewrite: () => void;
 };
 
 export function RewriteStudioHeader({
   disableActions,
+  onOpenHistory,
   onNewRewrite,
 }: RewriteStudioHeaderProps) {
   return (
@@ -25,11 +25,14 @@ export function RewriteStudioHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button asChild variant="outline" disabled={disableActions}>
-          <Link href="/dashboard/rewrites/history">
-            <History className="h-4 w-4" />
-            Version History
-          </Link>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disableActions}
+          onClick={onOpenHistory}
+        >
+          <History className="h-4 w-4" />
+          Version History
         </Button>
         <Button
           type="button"

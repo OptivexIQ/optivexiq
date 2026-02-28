@@ -150,6 +150,15 @@ export async function handleGenerateStream(params: {
     userId,
     model: generateRequest.model,
   });
+  if (isRewriteRequest) {
+    logger.info("rewrite.generate.started", {
+      requestId,
+      userId,
+      requestRef: rewriteRef,
+      rewriteType: rewriteInput?.rewriteType ?? null,
+      model: generateRequest.model,
+    });
+  }
 
   const estimatedInputTokens = estimateTokens(generateRequest);
   const estimatedOutputTokens =
@@ -186,6 +195,14 @@ export async function handleGenerateStream(params: {
     stream = await streamChatCompletion(generateRequest);
   } catch (error) {
     logger.error("Failed to start AI stream.", error, { requestId });
+    if (isRewriteRequest) {
+      logger.error("rewrite.generate.failed", error, {
+        requestId,
+        userId,
+        requestRef: rewriteRef,
+        stage: "stream_start",
+      });
+    }
     await rollbackGenerateUsage({
       userId,
       reservationKey: requestId,
@@ -213,6 +230,14 @@ export async function handleGenerateStream(params: {
     firstChunk = first.value;
   } catch (error) {
     logger.error("Failed to prime AI stream.", error, { requestId });
+    if (isRewriteRequest) {
+      logger.error("rewrite.generate.failed", error, {
+        requestId,
+        userId,
+        requestRef: rewriteRef,
+        stage: "stream_prime",
+      });
+    }
     await rollbackGenerateUsage({
       userId,
       reservationKey: requestId,
@@ -275,6 +300,14 @@ export async function handleGenerateStream(params: {
 
           if (failed || aborted || finalized) {
             if (failed) {
+              if (isRewriteRequest) {
+                logger.error("rewrite.generate.failed", {
+                  requestId,
+                  userId,
+                  requestRef: rewriteRef,
+                  stage: "stream_runtime",
+                });
+              }
               await rollbackGenerateUsage({
                 userId,
                 reservationKey: requestId,
@@ -439,6 +472,18 @@ export async function handleGenerateStream(params: {
             costCents,
             finalizationMode: finalization.mode,
           });
+          if (isRewriteRequest) {
+            logger.info("rewrite.generate.completed", {
+              requestId,
+              userId,
+              requestRef: rewriteRef,
+              rewriteType: rewriteInput?.rewriteType ?? null,
+              inputTokens,
+              outputTokens,
+              costCents,
+              durationMs: Date.now() - startTime,
+            });
+          }
         }
       })();
     },

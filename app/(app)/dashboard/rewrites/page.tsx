@@ -8,7 +8,10 @@ import { PLAN_LABELS } from "@/lib/constants/plans";
 import { getSubscription } from "@/features/billing/services/planValidationService";
 import { RewriteStudioView } from "@/features/rewrites/components/RewriteStudioView";
 import type { RewriteGenerateRequest } from "@/features/rewrites/types/rewrites.types";
-import { getRewriteHistoryByRequestRefForUser } from "@/features/rewrites/services/rewriteHistoryReadService";
+import {
+  getRewriteHistoryByRequestRefForUser,
+  listRewriteHistoryForUser,
+} from "@/features/rewrites/services/rewriteHistoryReadService";
 
 type RewritesPageProps = {
   searchParams?:
@@ -48,7 +51,7 @@ function sanitizeQueryValue(value: string | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function parseStudioContextFromNotes(notes: string | null) {
+function parseStudioContextFromNotes(notes: string | null | undefined) {
   const safe = notes ?? "";
   const parseMatch = (pattern: RegExp) => {
     const match = safe.match(pattern);
@@ -73,6 +76,32 @@ function parseStudioContextFromNotes(notes: string | null) {
     differentiationFocus: differentiationLabel !== "off",
     objectionFocus: objectionLabel === "on",
   } as const;
+}
+
+function parseStrategyFromNotes(notes: string | null | undefined) {
+  const safe = notes ?? "";
+  const parseMatch = (pattern: RegExp) => {
+    const match = safe.match(pattern);
+    return match?.[1]?.trim() ?? "";
+  };
+  const tone = parseMatch(/- Tone:\s*(.+)/i);
+  const length = parseMatch(/- Length:\s*(.+)/i);
+  const emphasisRaw = parseMatch(/- Emphasis:\s*(.+)/i);
+  const emphasis =
+    emphasisRaw.length > 0 && emphasisRaw.toLowerCase() !== "none"
+      ? emphasisRaw.split(",").map((item) => item.trim()).filter(Boolean)
+      : [];
+
+  return { tone, length, emphasis };
+}
+
+function extractUserNotesFromHistoryNotes(notes: string | null | undefined) {
+  const safe = notes ?? "";
+  const marker = "\n\nUser notes:\n";
+  const markerIndex = safe.indexOf(marker);
+  return markerIndex >= 0
+    ? safe.slice(markerIndex + marker.length).trim()
+    : safe.trim();
 }
 
 function resolvePrefillRequest(
@@ -148,17 +177,11 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
     : "No subscription";
 
   const requestRef = sanitizeQueryValue(resolvedSearchParams?.requestRef);
+  const rewriteHistory = await listRewriteHistoryForUser(user.id, 20);
   const historyRecord = requestRef
     ? await getRewriteHistoryByRequestRefForUser(user.id, requestRef)
     : null;
-  const historyUserNotes = (() => {
-    const notes = historyRecord?.notes ?? "";
-    const marker = "\n\nUser notes:\n";
-    const markerIndex = notes.indexOf(marker);
-    return markerIndex >= 0
-      ? notes.slice(markerIndex + marker.length).trim()
-      : notes.trim();
-  })();
+  const historyUserNotes = extractUserNotesFromHistoryNotes(historyRecord?.notes);
   const initialStudioContext = historyRecord
     ? (() => {
         const parsed = parseStudioContextFromNotes(historyRecord.notes);
@@ -199,6 +222,28 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
           initialOutputMarkdown: historyRecord?.outputMarkdown ?? "",
           initialRequestRef: historyRecord?.requestRef ?? null,
           initialStudioContext,
+          historyVersions: rewriteHistory.map((item) => {
+            const strategy = parseStrategyFromNotes(item.notes);
+            const context = parseStudioContextFromNotes(item.notes);
+            return {
+              requestRef: item.requestRef,
+              rewriteType: item.rewriteType,
+              createdAt: item.createdAt,
+              outputMarkdown: item.outputMarkdown,
+              websiteUrl: item.websiteUrl,
+              sourceContent: item.sourceContent,
+              userNotes: extractUserNotesFromHistoryNotes(item.notes),
+              strategicContext: {
+                goal: context.goal,
+                icp: context.icpLabel,
+                differentiationFocus: context.differentiationFocus,
+                objectionFocus: context.objectionFocus,
+              },
+              tone: strategy.tone || undefined,
+              length: strategy.length || undefined,
+              emphasis: strategy.emphasis,
+            };
+          }),
         }}
       />
 

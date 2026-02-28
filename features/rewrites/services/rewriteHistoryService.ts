@@ -23,6 +23,47 @@ function normalizeNullable(value: string | undefined) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function toPersistedNotes(input: RewriteGenerateRequestValues): string | null {
+  const userNotes =
+    typeof input.notes === "string" ? input.notes.trim() : "";
+
+  const contextLines = input.strategicContext
+    ? [
+        "Studio context:",
+        `- Target: ${input.strategicContext.target === "pricing" ? "Pricing" : "Homepage"}`,
+        `- Goal: ${input.strategicContext.goal}`,
+        `- ICP: ${input.strategicContext.icp}`,
+        `- Differentiation focus: ${input.strategicContext.focus.differentiation ? "On" : "Off"}`,
+        `- Objection focus: ${input.strategicContext.focus.objection ? "On" : "Off"}`,
+      ]
+    : [];
+
+  const strategyLines = input.rewriteStrategy
+    ? [
+        "Rewrite strategy:",
+        `- Tone: ${input.rewriteStrategy.tone}`,
+        `- Length: ${input.rewriteStrategy.length}`,
+        `- Emphasis: ${
+          input.rewriteStrategy.emphasis.length > 0
+            ? input.rewriteStrategy.emphasis.join(", ")
+            : "none"
+        }`,
+      ]
+    : [];
+
+  const sections = [
+    contextLines.length > 0 ? contextLines.join("\n") : "",
+    strategyLines.length > 0 ? strategyLines.join("\n") : "",
+    userNotes.length > 0 ? `User notes:\n${userNotes}` : "",
+  ].filter((item) => item.length > 0);
+
+  if (sections.length === 0) {
+    return null;
+  }
+
+  return sections.join("\n\n");
+}
+
 export function generateRewriteRequestRef() {
   const timestamp = Date.now();
   const randomSuffix = randomInt(0, 1000).toString().padStart(3, "0");
@@ -39,7 +80,7 @@ export async function saveRewriteRecord(
     request_ref: params.requestRef,
     rewrite_type: params.input.rewriteType,
     website_url: normalizeNullable(params.input.websiteUrl),
-    notes: normalizeNullable(params.input.notes),
+    notes: toPersistedNotes(params.input),
     source_content: normalizeNullable(params.input.content),
     output_markdown: params.outputMarkdown,
     model: params.model,
@@ -59,4 +100,3 @@ export async function saveRewriteRecord(
 
   return { ok: true };
 }
-

@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
 
 import {
   Select,
@@ -88,6 +89,7 @@ function ControlSelect<T extends StudioSelectValue>({
 
 type RewriteStudioControlBarProps = {
   profileIcp: string;
+  profileIcpHref?: string;
   rewriteType: RewriteGenerateRequest["rewriteType"];
   useCustomIcp: boolean;
   customIcp: string;
@@ -106,6 +108,7 @@ type RewriteStudioControlBarProps = {
 
 export function RewriteStudioControlBar({
   profileIcp,
+  profileIcpHref = "/dashboard/profile/edit",
   rewriteType,
   useCustomIcp,
   customIcp,
@@ -128,7 +131,9 @@ export function RewriteStudioControlBar({
     "Homepage";
   const selectedIcpLabel = useCustomIcp
     ? customIcp.trim() || "Custom ICP"
-    : profileIcp;
+    : profileIcp.trim().length > 0
+      ? profileIcp
+      : "Not set";
   const selectedGoalLabel =
     GOAL_OPTIONS.find((option) => option.value === goal)?.label ?? "Conversion";
   const isDefaultContext =
@@ -206,13 +211,23 @@ export function RewriteStudioControlBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="profile">{profileIcp}</SelectItem>
+              <SelectItem value="profile">
+                {profileIcp.trim().length > 0 ? profileIcp : "Not set (Profile)"}
+              </SelectItem>
               {hasCustomIcp ? (
                 <SelectItem value="custom">{customIcp}</SelectItem>
               ) : null}
               <SelectItem value="add_custom">+ Add custom ICP</SelectItem>
             </SelectContent>
           </Select>
+          {profileIcp.trim().length === 0 ? (
+            <Link
+              href={profileIcpHref}
+              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Set ICP
+            </Link>
+          ) : null}
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-5">
