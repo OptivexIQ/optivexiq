@@ -2,7 +2,6 @@ export * from "@/features/reports/components/CompetitiveThreatLevel";
 export * from "@/features/reports/components/ConversionRiskIndicator";
 export * from "@/features/reports/components/diagnostics/MessagingOverlap";
 export * from "@/features/reports/components/diagnostics/ObjectionCoverage";
-export * from "@/features/reports/components/diagnostics/TopPriorityFixes";
 export * from "@/features/reports/components/execution/PositioningMapPreview";
 export * from "@/features/reports/components/execution/RewriteRecommendations";
 export * from "@/features/reports/components/execution/RewriteRecommendationsList";

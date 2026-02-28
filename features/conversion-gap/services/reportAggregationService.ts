@@ -192,7 +192,12 @@ export function buildConversionGapReport(
     company,
     segment: input.segment,
     gapAnalysis: input.gapAnalysis,
+    competitorSynthesis: input.competitorSynthesis,
     scores,
+    revenueImpact: {
+      pipelineAtRisk: revenue.pipelineAtRisk,
+      projectedPipelineRecovery: revenue.revenueProjection.projectedPipelineRecovery,
+    },
   });
   const diagnosis = buildDiagnosis({
     gapAnalysis: input.gapAnalysis,

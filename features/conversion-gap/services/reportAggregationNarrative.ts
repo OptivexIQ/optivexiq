@@ -176,18 +176,75 @@ export function buildExecutiveNarrative(input: {
   company: string;
   segment: string;
   gapAnalysis: GapAnalysisOutput;
+  competitorSynthesis?: CompetitorSynthesisOutput;
   scores: {
     conversionScore: number;
     funnelRisk: number;
+    confidenceScore: number;
+  };
+  revenueImpact: {
+    pipelineAtRisk: number;
+    projectedPipelineRecovery: number;
   };
 }): string {
-  const topGap = input.gapAnalysis.gaps[0] ?? "";
-  const topRisk = input.gapAnalysis.risks[0] ?? "";
-  const topOpportunity = input.gapAnalysis.opportunities[0] ?? "";
-  const headline = `${input.company} in ${input.segment} shows a conversion profile of ${input.scores.conversionScore}/100 with funnel risk at ${input.scores.funnelRisk}/100.`;
-  const diagnosis = `Primary gap: ${topGap}. Primary risk: ${topRisk}.`;
-  const opportunity = `Highest-leverage opportunity: ${topOpportunity}.`;
-  return [headline, diagnosis, opportunity].join(" ");
+  const clean = (value: string) => value.trim().replace(/\s+/g, " ");
+  const first = (values: string[], fallback: string) =>
+    values.map(clean).find((item) => item.length > 0) ?? fallback;
+  const toCurrency = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(Math.max(0, Number.isFinite(value) ? value : 0));
+  const toPercent = (value: number) => `${Math.round(value)}%`;
+
+  const profileLabel =
+    input.scores.conversionScore >= 75
+      ? "efficient"
+      : input.scores.conversionScore >= 55
+        ? "mixed"
+        : "at-risk";
+  const riskPosture =
+    input.scores.funnelRisk >= 70
+      ? "elevated"
+      : input.scores.funnelRisk >= 45
+        ? "moderate"
+        : "contained";
+
+  const primaryRisk = first(
+    input.gapAnalysis.risks,
+    "Positioning ambiguity at critical buyer decision points",
+  );
+  const primaryOpportunity = first(
+    input.gapAnalysis.opportunities,
+    "Prioritize the highest-impact messaging fix on the most conversion-critical page",
+  );
+  const competitiveContext = clean(
+    input.competitorSynthesis?.substitutionRiskNarrative ??
+      input.competitorSynthesis?.messagingOverlapRisk.explanation ??
+      "",
+  );
+  const resolvedCompetitiveContext =
+    competitiveContext.length > 0
+      ? competitiveContext
+      : "Competitive message parity is increasing substitution risk where differentiation proof is not explicit";
+  const captureRate =
+    input.revenueImpact.pipelineAtRisk > 0
+      ? (input.revenueImpact.projectedPipelineRecovery /
+          input.revenueImpact.pipelineAtRisk) *
+        100
+      : 0;
+
+  return [
+    `${input.company} in ${input.segment} is operating with a ${profileLabel} conversion profile under a ${riskPosture} risk posture.`,
+    `The primary revenue risk is ${primaryRisk}.`,
+    `${resolvedCompetitiveContext}.`,
+    `Financially, ${toCurrency(input.revenueImpact.pipelineAtRisk)} of pipeline is currently at risk, with modeled recovery potential of ${toCurrency(input.revenueImpact.projectedPipelineRecovery)} (${toPercent(captureRate)} capture) at ${toPercent(input.scores.confidenceScore)} confidence.`,
+    `Highest-leverage action: ${primaryOpportunity}.`,
+  ]
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function buildDiagnosis(input: {
