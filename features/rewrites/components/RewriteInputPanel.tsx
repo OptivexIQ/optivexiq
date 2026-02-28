@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Sparkles } from "lucide-react";
+import { Info, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type {
   RewriteEmphasis,
   RewriteGenerateRequest,
@@ -89,8 +95,29 @@ export function RewriteInputPanel({
     onStrategyChange({ ...strategy, emphasis: next });
   };
 
+  const InfoHelp = ({ label, hint }: { label: string; hint: string }) => (
+    <span className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none"
+            aria-label={`${label} help`}
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-xs">
+          {hint}
+        </TooltipContent>
+      </Tooltip>
+    </span>
+  );
+
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-6">
+    <TooltipProvider>
+      <div className="rounded-xl border border-border/60 bg-card p-6">
       <p className="text-sm font-semibold text-foreground/85">
         Rewrite request
       </p>
@@ -240,7 +267,13 @@ export function RewriteInputPanel({
 
             <div>
               <p className="mb-2 text-sm font-medium text-foreground/85">
-                Constraints (optional)
+                <InfoHelp
+                  label="Constraints (optional, hard requirements)"
+                  hint='Non-negotiables the rewrite must follow. Example: "Avoid discount language. Keep claims under 12 words."'
+                />
+              </p>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Non-negotiables the rewrite must follow (must include/avoid).
               </p>
               <Textarea
                 disabled={running}
@@ -262,12 +295,18 @@ export function RewriteInputPanel({
 
         <div>
           <p className="mb-2 text-sm font-medium text-foreground/85">
-            Notes (optional)
+            <InfoHelp
+              label="Context notes (optional, guidance)"
+              hint='Background context to guide tone and emphasis. Example: "Launching to RevOps teams after Product Hunt week."'
+            />
+          </p>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Background context and priorities to guide tone and emphasis.
           </p>
           <Textarea
             disabled={running}
             rows={3}
-            placeholder="Any constraints, tone requirements, or messaging goals."
+            placeholder="Business context, goals, objections, or campaign nuance."
             value={value.notes ?? ""}
             onChange={(event) =>
               onChange(updateField(value, "notes", event.target.value))
@@ -306,6 +345,7 @@ export function RewriteInputPanel({
           </Button>
         ) : null}
       </div>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

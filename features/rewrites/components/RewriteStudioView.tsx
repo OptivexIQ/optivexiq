@@ -31,7 +31,8 @@ import type {
 type RewriteStudioViewProps = {
   initialData: RewriteStudioInitialData;
 };
-const REWRITE_STUDIO_CONTEXT_STORAGE_KEY = "optivexiq.rewrite_studio.context.v1";
+const REWRITE_STUDIO_CONTEXT_STORAGE_KEY =
+  "optivexiq.rewrite_studio.context.v1";
 const REWRITE_STUDIO_STRATEGY_STORAGE_KEY =
   "optivexiq.rewrite_studio.strategy.v1";
 
@@ -79,7 +80,10 @@ function toHtmlDocument(markdown: string) {
   ].join("\n");
 }
 
-function toStructuredMarkdownDocument(output: string, rewriteType: RewriteGenerateRequest["rewriteType"]) {
+function toStructuredMarkdownDocument(
+  output: string,
+  rewriteType: RewriteGenerateRequest["rewriteType"],
+) {
   const model = buildRewriteOutputViewModel(output);
   const lines: string[] = [];
   lines.push(`# ${rewriteType === "pricing" ? "Pricing" : "Homepage"} Rewrite`);
@@ -95,7 +99,9 @@ function toStructuredMarkdownDocument(output: string, rewriteType: RewriteGenera
   lines.push("");
   lines.push("## Rewritten Copy");
   const copySections =
-    model.copySections.length > 0 ? model.copySections : [{ title: "Rewrite", body: output }];
+    model.copySections.length > 0
+      ? model.copySections
+      : [{ title: "Rewrite", body: output }];
   for (const section of copySections) {
     lines.push(`### ${section.title}`);
     lines.push(section.body);
@@ -244,8 +250,14 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         objectionFocus?: boolean;
       };
 
-      if (parsed.rewriteType === "homepage" || parsed.rewriteType === "pricing") {
-        setRequest((previous) => ({ ...previous, rewriteType: parsed.rewriteType! }));
+      if (
+        parsed.rewriteType === "homepage" ||
+        parsed.rewriteType === "pricing"
+      ) {
+        setRequest((previous) => ({
+          ...previous,
+          rewriteType: parsed.rewriteType!,
+        }));
       }
       if (typeof parsed.useCustomIcp === "boolean") {
         setUseCustomIcp(parsed.useCustomIcp);
@@ -272,7 +284,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   }, [initialData.initialStudioContext]);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(REWRITE_STUDIO_STRATEGY_STORAGE_KEY);
+    const raw = window.localStorage.getItem(
+      REWRITE_STUDIO_STRATEGY_STORAGE_KEY,
+    );
     if (!raw) {
       return;
     }
@@ -415,7 +429,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setError(null);
     toast({
       title: "Rewrite duplicated",
-      description: "Workspace reset for a new iteration with your current setup.",
+      description:
+        "Workspace reset for a new iteration with your current setup.",
     });
   };
 
@@ -611,11 +626,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       request.rewriteType,
     );
     if (format === "markdown") {
-      downloadContent(
-        `${base}.md`,
-        "text/markdown",
-        structuredMarkdown,
-      );
+      downloadContent(`${base}.md`, "text/markdown", structuredMarkdown);
       return;
     }
 
@@ -633,7 +644,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       return;
     }
 
-    downloadContent(`${base}.html`, "text/html", toHtmlDocument(structuredMarkdown));
+    downloadContent(
+      `${base}.html`,
+      "text/html",
+      toHtmlDocument(structuredMarkdown),
+    );
   };
 
   return (
@@ -662,11 +677,6 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         onObjectionFocusChange={setObjectionFocus}
         onResetContext={resetControlContext}
       />
-
-      <p className="text-sm text-muted-foreground">
-        Plan: {initialData.planLabel}. No hard cap on rewrites (within token
-        limits).
-      </p>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <RewriteInputPanel
@@ -713,7 +723,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           onToggleCompare={() => {
             setCompareMode((previous) => {
               const next = !previous;
-              if (next && !selectedBaselineRef && compareBaselineOptions.length > 0) {
+              if (
+                next &&
+                !selectedBaselineRef &&
+                compareBaselineOptions.length > 0
+              ) {
                 setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
               }
               return next;
@@ -749,7 +763,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                       {item.rewriteType === "pricing" ? "Pricing" : "Homepage"}
                     </Badge>
                     <Badge variant="secondary">Saved</Badge>
-                    {item.tone ? <Badge variant="secondary">{item.tone}</Badge> : null}
+                    {item.tone ? (
+                      <Badge variant="secondary">{item.tone}</Badge>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {formatHistoryTimestamp(item.createdAt)} | {item.requestRef}
