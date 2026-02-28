@@ -4,8 +4,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { RewriteGenerateRequest, RewriteType } from "@/features/rewrites/types/rewrites.types";
-import { RewriteTypePicker } from "@/features/rewrites/components/RewriteTypePicker";
+import type { RewriteGenerateRequest } from "@/features/rewrites/types/rewrites.types";
 
 type RewriteInputPanelProps = {
   value: RewriteGenerateRequest;
@@ -38,14 +37,6 @@ export function RewriteInputPanel({
       <p className="mt-1 text-sm text-muted-foreground">
         Provide a website URL, pasted copy, or both. URL or content is required.
       </p>
-
-      <div className="mt-4">
-        <RewriteTypePicker
-          value={(value.rewriteType ?? "homepage") as RewriteType}
-          onChange={(rewriteType) => onChange({ ...value, rewriteType })}
-          disabled={running}
-        />
-      </div>
 
       <div className="mt-4 grid gap-4">
         <div>
@@ -107,4 +98,3 @@ export function RewriteInputPanel({
     </div>
   );
 }
-

@@ -22,5 +22,15 @@ export type RewriteStreamResult = {
 export type RewriteStudioInitialData = {
   defaultWebsiteUrl: string;
   planLabel: string;
+  profileIcpRole: string;
   defaultRewriteRequest?: Partial<RewriteGenerateRequest>;
+  initialOutputMarkdown?: string;
+  initialRequestRef?: string | null;
+  initialStudioContext?: {
+    useCustomIcp?: boolean;
+    customIcp?: string;
+    goal?: "conversion" | "clarity" | "differentiation";
+    differentiationFocus?: boolean;
+    objectionFocus?: boolean;
+  };
 };

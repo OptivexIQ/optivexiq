@@ -5,7 +5,6 @@ import { ExecutiveNarrativeSummary } from "@/features/reports/components/Executi
 import { ConversionRiskIndicator } from "@/features/reports/components/ConversionRiskIndicator";
 import { RevenueImpactPanel } from "@/features/reports/components/RevenueImpactPanel";
 import { GapScoreCard } from "@/features/conversion-gap/components/GapScoreCard";
-import { TopPriorityFixes } from "@/features/reports/components/diagnostics/TopPriorityFixes";
 import { PriorityIndex } from "@/features/reports/components/PriorityIndex";
 import { ObjectionCoverage } from "@/features/reports/components/diagnostics/ObjectionCoverage";
 import { CompetitiveThreatLevel } from "@/features/reports/components/CompetitiveThreatLevel";
@@ -66,16 +65,14 @@ export function GapReportView({
   return (
     <div className="flex w-full flex-col gap-8">
       <ReportHeader report={report} exportRestricted={exportRestricted} />
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_40rem]">
-        <ExecutiveNarrativeSummary report={report} />
-        <RevenueImpactPanel report={report} />
-      </div>
+
+      <ExecutiveNarrativeSummary report={report} />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <GapScoreCard report={report} />
         <ConversionRiskIndicator report={report} />
         <CompetitiveThreatLevel report={report} />
-        <TopPriorityFixes report={report} />
+        <RevenueImpactPanel report={report} />
       </div>
 
       <PriorityIndex report={report} />

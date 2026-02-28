@@ -1,11 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { isHttpError } from "@/lib/api/httpClient";
 import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPanel";
 import { RewriteOutputPanel } from "@/features/rewrites/components/RewriteOutputPanel";
+import {
+  RewriteStudioControlBar,
+  type StudioGoal,
+} from "@/features/rewrites/components/RewriteStudioControlBar";
+import { RewriteStudioHeader } from "@/features/rewrites/components/RewriteStudioHeader";
 import { streamRewrite } from "@/features/rewrites/services/rewritesClient";
 import type {
   RewriteExportFormat,
@@ -80,12 +84,72 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     notes: "",
     ...(initialData.defaultRewriteRequest ?? {}),
   });
-  const [output, setOutput] = useState("");
+  const [output, setOutput] = useState(initialData.initialOutputMarkdown ?? "");
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [requestRef, setRequestRef] = useState<string | null>(null);
+  const [requestRef, setRequestRef] = useState<string | null>(
+    initialData.initialRequestRef ?? null,
+  );
+  const profileIcp = initialData.profileIcpRole.trim() || "Profile ICP";
+  const [useCustomIcp, setUseCustomIcp] = useState(
+    initialData.initialStudioContext?.useCustomIcp ?? false,
+  );
+  const [customIcp, setCustomIcp] = useState(
+    initialData.initialStudioContext?.customIcp ?? "",
+  );
+  const [goal, setGoal] = useState<StudioGoal>(
+    initialData.initialStudioContext?.goal ?? "conversion",
+  );
+  const [differentiationFocus, setDifferentiationFocus] = useState(
+    initialData.initialStudioContext?.differentiationFocus ?? true,
+  );
+  const [objectionFocus, setObjectionFocus] = useState(
+    initialData.initialStudioContext?.objectionFocus ?? false,
+  );
+
+  const selectedIcpLabel = useCustomIcp ? customIcp.trim() : profileIcp;
+  const selectedGoalLabel =
+    goal === "clarity"
+      ? "Clarity"
+      : goal === "differentiation"
+        ? "Differentiation"
+        : "Conversion";
+  const resolvedIcpLabel =
+    selectedIcpLabel.trim().length > 0 ? selectedIcpLabel : "Custom ICP";
+
+  const resetStudio = () => {
+    setRequest({
+      rewriteType: "homepage",
+      websiteUrl: initialData.defaultWebsiteUrl,
+      content: "",
+      notes: "",
+      ...(initialData.defaultRewriteRequest ?? {}),
+    });
+    setUseCustomIcp(false);
+    setCustomIcp("");
+    setGoal("conversion");
+    setDifferentiationFocus(true);
+    setObjectionFocus(false);
+    setOutput("");
+    setError(null);
+    setRequestRef(null);
+  };
+
+  const resetControlContext = () => {
+    setRequest((previous) => ({ ...previous, rewriteType: "homepage" }));
+    setUseCustomIcp(false);
+    setCustomIcp("");
+    setGoal("conversion");
+    setDifferentiationFocus(true);
+    setObjectionFocus(false);
+  };
 
   const handleSubmit = async () => {
+    if (useCustomIcp && customIcp.trim().length === 0) {
+      setError("Custom ICP is required when ICP is set to Custom.");
+      return;
+    }
+
     setError(null);
     setOutput("");
     setRequestRef(null);
@@ -94,7 +158,25 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     abortRef.current = controller;
 
     try {
-      const result = await streamRewrite(request, {
+      const userNotes = request.notes?.trim() ?? "";
+      const studioContext = [
+        "Studio context:",
+        `- Target: ${request.rewriteType === "pricing" ? "Pricing" : "Homepage"}`,
+        `- ICP: ${resolvedIcpLabel}`,
+        `- Goal: ${selectedGoalLabel}`,
+        `- Differentiation focus: ${differentiationFocus ? "On" : "Off"}`,
+        `- Objection focus: ${objectionFocus ? "On" : "Off"}`,
+      ].join("\n");
+
+      const submissionRequest: RewriteGenerateRequest = {
+        ...request,
+        notes:
+          userNotes.length > 0
+            ? `${studioContext}\n\nUser notes:\n${userNotes}`
+            : studioContext,
+      };
+
+      const result = await streamRewrite(submissionRequest, {
         signal: controller.signal,
         onChunk: (chunk) => {
           setOutput((previous) => previous + chunk);
@@ -153,20 +235,29 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Rewrite Studio
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold text-foreground">
-            On-demand homepage and pricing rewrites
-          </h1>
-        </div>
-      </div>
-
-      <p className="text-sm text-muted-foreground">
-        No hard cap on rewrites on Pro (within token limits).
-      </p>
+      <RewriteStudioHeader
+        disableActions={running}
+        onNewRewrite={resetStudio}
+      />
+      <RewriteStudioControlBar
+        profileIcp={profileIcp}
+        rewriteType={request.rewriteType}
+        useCustomIcp={useCustomIcp}
+        goal={goal}
+        differentiationFocus={differentiationFocus}
+        objectionFocus={objectionFocus}
+        disabled={running}
+        onRewriteTypeChange={(rewriteType) =>
+          setRequest((previous) => ({ ...previous, rewriteType }))
+        }
+        onUseCustomIcpChange={setUseCustomIcp}
+        onCustomIcpChange={setCustomIcp}
+        customIcp={customIcp}
+        onGoalChange={setGoal}
+        onDifferentiationFocusChange={setDifferentiationFocus}
+        onObjectionFocusChange={setObjectionFocus}
+        onResetContext={resetControlContext}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <RewriteInputPanel

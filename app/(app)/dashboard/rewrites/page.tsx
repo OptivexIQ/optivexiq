@@ -8,6 +8,7 @@ import { PLAN_LABELS } from "@/lib/constants/plans";
 import { getSubscription } from "@/features/billing/services/planValidationService";
 import { RewriteStudioView } from "@/features/rewrites/components/RewriteStudioView";
 import type { RewriteGenerateRequest } from "@/features/rewrites/types/rewrites.types";
+import { getRewriteHistoryByRequestRefForUser } from "@/features/rewrites/services/rewriteHistoryReadService";
 
 type RewritesPageProps = {
   searchParams?:
@@ -22,6 +23,7 @@ type RewritesPageProps = {
         expectedImpact?: string;
         implementationDifficulty?: string;
         reportId?: string;
+        requestRef?: string;
       }
     | Promise<{
         rewriteType?: string;
@@ -34,6 +36,7 @@ type RewritesPageProps = {
         expectedImpact?: string;
         implementationDifficulty?: string;
         reportId?: string;
+        requestRef?: string;
       }>;
 };
 
@@ -43,6 +46,33 @@ function sanitizeQueryValue(value: string | undefined): string | null {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseStudioContextFromNotes(notes: string | null) {
+  const safe = notes ?? "";
+  const parseMatch = (pattern: RegExp) => {
+    const match = safe.match(pattern);
+    return match?.[1]?.trim() ?? "";
+  };
+  const rawIcpLabel = parseMatch(/- ICP:\s*(.+)/i);
+  const icpLabel = rawIcpLabel.toLowerCase();
+  const goalLabel = parseMatch(/- Goal:\s*(.+)/i).toLowerCase();
+  const differentiationLabel = parseMatch(
+    /- Differentiation focus:\s*(.+)/i,
+  ).toLowerCase();
+  const objectionLabel = parseMatch(/- Objection focus:\s*(.+)/i).toLowerCase();
+
+  return {
+    icpLabel: rawIcpLabel,
+    goal:
+      goalLabel === "clarity"
+        ? "clarity"
+        : goalLabel === "differentiation"
+          ? "differentiation"
+          : "conversion",
+    differentiationFocus: differentiationLabel !== "off",
+    objectionFocus: objectionLabel === "on",
+  } as const;
 }
 
 function resolvePrefillRequest(
@@ -117,13 +147,58 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
     ? `${PLAN_LABELS[subscription.plan]} plan`
     : "No subscription";
 
+  const requestRef = sanitizeQueryValue(resolvedSearchParams?.requestRef);
+  const historyRecord = requestRef
+    ? await getRewriteHistoryByRequestRefForUser(user.id, requestRef)
+    : null;
+  const historyUserNotes = (() => {
+    const notes = historyRecord?.notes ?? "";
+    const marker = "\n\nUser notes:\n";
+    const markerIndex = notes.indexOf(marker);
+    return markerIndex >= 0
+      ? notes.slice(markerIndex + marker.length).trim()
+      : notes.trim();
+  })();
+  const initialStudioContext = historyRecord
+    ? (() => {
+        const parsed = parseStudioContextFromNotes(historyRecord.notes);
+        const profileIcp = profileResult.data.icpRole.trim().toLowerCase();
+        const parsedIcp = parsed.icpLabel.trim().toLowerCase();
+        const useCustomIcp =
+          parsedIcp.length > 0 && profileIcp.length > 0
+            ? parsedIcp !== profileIcp
+            : parsedIcp.length > 0;
+
+        return {
+          useCustomIcp,
+          customIcp: useCustomIcp ? parsed.icpLabel : "",
+          goal: parsed.goal,
+          differentiationFocus: parsed.differentiationFocus,
+          objectionFocus: parsed.objectionFocus,
+        } as const;
+      })()
+    : undefined;
+  const resolvedDefaultRewriteRequest: Partial<RewriteGenerateRequest> =
+    historyRecord
+      ? {
+          rewriteType: historyRecord.rewriteType,
+          websiteUrl: historyRecord.websiteUrl ?? profileResult.data.websiteUrl,
+          content: historyRecord.sourceContent ?? "",
+          notes: historyUserNotes,
+        }
+      : resolvePrefillRequest(resolvedSearchParams);
+
   return (
     <div className="flex w-full flex-col gap-6">
       <RewriteStudioView
         initialData={{
           defaultWebsiteUrl: profileResult.data.websiteUrl,
           planLabel,
-          defaultRewriteRequest: resolvePrefillRequest(resolvedSearchParams),
+          profileIcpRole: profileResult.data.icpRole,
+          defaultRewriteRequest: resolvedDefaultRewriteRequest,
+          initialOutputMarkdown: historyRecord?.outputMarkdown ?? "",
+          initialRequestRef: historyRecord?.requestRef ?? null,
+          initialStudioContext,
         }}
       />
 
