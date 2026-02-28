@@ -13,7 +13,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { isHttpError } from "@/lib/api/httpClient";
 import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPanel";
+import { RewriteExecutiveSummaryCard } from "@/features/rewrites/components/RewriteExecutiveSummaryCard";
 import { RewriteOutputPanel } from "@/features/rewrites/components/RewriteOutputPanel";
+import { RewriteStrategicRationaleCard } from "@/features/rewrites/components/RewriteStrategicRationaleCard";
 import {
   RewriteStudioControlBar,
   type StudioGoal,
@@ -678,7 +680,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         onResetContext={resetControlContext}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <RewriteInputPanel
           value={request}
           strategy={strategy}
@@ -691,51 +693,61 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           onSubmit={() => void handleSubmit()}
           onCancel={handleCancel}
         />
-        <RewriteOutputPanel
-          rewriteType={request.rewriteType}
-          running={running}
-          output={output}
-          previousOutput={selectedBaselineOutput}
-          compareMode={compareMode}
-          compareBaselineOptions={compareBaselineOptions}
-          selectedBaselineRef={selectedBaselineRef}
-          requestRef={requestRef}
-          error={error}
-          onCopy={() => void handleCopy()}
-          onExport={(format) => {
-            try {
-              handleExport(format);
-            } catch (exportError) {
-              const message =
-                exportError instanceof Error
-                  ? exportError.message
-                  : "Unable to export rewrite.";
-              setError(message);
-              toast({
-                title: "Export failed",
-                description: message,
-              });
-            }
-          }}
-          onSaveVersion={handleSaveVersion}
-          onDuplicate={handleDuplicate}
-          onRefine={handleRefine}
-          onToggleCompare={() => {
-            setCompareMode((previous) => {
-              const next = !previous;
-              if (
-                next &&
-                !selectedBaselineRef &&
-                compareBaselineOptions.length > 0
-              ) {
-                setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
+        <div className="space-y-4">
+          <RewriteExecutiveSummaryCard
+            output={output}
+            compareMode={compareMode}
+          />
+          <RewriteOutputPanel
+            rewriteType={request.rewriteType}
+            running={running}
+            output={output}
+            previousOutput={selectedBaselineOutput}
+            compareMode={compareMode}
+            compareBaselineOptions={compareBaselineOptions}
+            selectedBaselineRef={selectedBaselineRef}
+            requestRef={requestRef}
+            error={error}
+            onCopy={() => void handleCopy()}
+            onExport={(format) => {
+              try {
+                handleExport(format);
+              } catch (exportError) {
+                const message =
+                  exportError instanceof Error
+                    ? exportError.message
+                    : "Unable to export rewrite.";
+                setError(message);
+                toast({
+                  title: "Export failed",
+                  description: message,
+                });
               }
-              return next;
-            });
-          }}
-          onSelectBaseline={setSelectedBaselineRef}
-          onRetry={() => void handleSubmit()}
-        />
+            }}
+            onSaveVersion={handleSaveVersion}
+            onDuplicate={handleDuplicate}
+            onRefine={handleRefine}
+            onToggleCompare={() => {
+              setCompareMode((previous) => {
+                const next = !previous;
+                if (
+                  next &&
+                  !selectedBaselineRef &&
+                  compareBaselineOptions.length > 0
+                ) {
+                  setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
+                }
+                return next;
+              });
+            }}
+            onSelectBaseline={setSelectedBaselineRef}
+            onRetry={() => void handleSubmit()}
+          />
+          <RewriteStrategicRationaleCard
+            output={output}
+            compareMode={compareMode}
+          />
+        </div>
       </div>
 
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>

@@ -68,17 +68,88 @@ function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
     .slice(0, 3);
 }
 
+function toPlainTextInline(value: string): string {
+  return value
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`{1,3}(.*?)`{1,3}/g, "$1")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toPlainTextBlock(value: string): string {
+  return value
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`{1,3}(.*?)`{1,3}/g, "$1")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .split("\n")
+    .map((line) =>
+      line
+        .replace(/^\s*[-*]\s+/, "")
+        .replace(/^\s*\d+\.\s+/, "")
+        .trimEnd(),
+    )
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function normalizeRationaleParagraph(raw: string): string {
+  const text = toPlainTextInline(raw)
+    .replace(/(?:^|\s)[-*]\s+/g, " ")
+    .replace(/(?:^|\s)\d+[.)]\s+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length === 0) {
+    return "";
+  }
+
+  const splitSentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+  const sentences = splitSentences.length > 0 ? splitSentences : [text];
+  const clampedSentences = sentences.slice(0, Math.min(4, sentences.length));
+  const built = clampedSentences.join(" ").trim();
+
+  const words = built.split(" ").filter(Boolean);
+  if (words.length <= 110) {
+    return built;
+  }
+
+  const truncated = words.slice(0, 110).join(" ").trim();
+  return /[.!?]$/.test(truncated) ? truncated : `${truncated}.`;
+}
+
 export function buildRewriteOutputViewModel(markdown: string): RewriteOutputViewModel {
   const sections = splitSections(markdown);
   const summaryBullets = toSummaryBullets(sections);
 
-  const rationaleSections = sections.filter((section) =>
-    section.title.toLowerCase().includes("rationale"),
-  );
+  const rationaleRaw = sections
+    .filter((section) => {
+      const lower = section.title.toLowerCase();
+      return lower.includes("rationale") || lower.includes("reasoning");
+    })
+    .map((section) => section.body)
+    .join(" ")
+    .trim();
+  const rationaleParagraph = normalizeRationaleParagraph(rationaleRaw);
+  const rationaleSections =
+    rationaleParagraph.length > 0
+      ? [{ title: "Rationale", body: rationaleParagraph }]
+      : [];
 
   const copySections = sections.filter((section) => {
     const lower = section.title.toLowerCase();
-    return !lower.includes("summary") && !lower.includes("rationale");
+    return (
+      !lower.includes("summary") &&
+      !lower.includes("rationale") &&
+      !lower.includes("reasoning")
+    );
   });
 
   return {

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import {
   Check,
   ChevronDown,
@@ -11,7 +12,6 @@ import {
   FileType2,
   FileText,
   Loader2,
-  Scale,
   Save,
   Sparkles,
   SplitSquareHorizontal,
@@ -30,11 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import type {
   RewriteExportFormat,
   RewriteType,
@@ -68,6 +63,43 @@ function filenameFor(type: RewriteType) {
   return `${type}-rewrite-${new Date().toISOString().slice(0, 10)}.md`;
 }
 
+const ALLOWED_MARKDOWN_ELEMENTS = [
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "strong",
+  "em",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "code",
+  "pre",
+  "hr",
+  "a",
+] as const;
+
+function sanitizeUrl(url: string) {
+  if (url.startsWith("#")) {
+    return url;
+  }
+
+  if (
+    url.startsWith("https://") ||
+    url.startsWith("http://") ||
+    url.startsWith("mailto:") ||
+    url.startsWith("tel:")
+  ) {
+    return url;
+  }
+
+  return "";
+}
+
 export function RewriteOutputPanel({
   rewriteType,
   running,
@@ -99,7 +131,6 @@ export function RewriteOutputPanel({
   );
   const [copied, setCopied] = useState(false);
   const [copiedError, setCopiedError] = useState(false);
-  const [rationaleOpen, setRationaleOpen] = useState(false);
 
   const hasPrevious =
     previousOutput.trim().length > 0 || compareBaselineOptions.length > 0;
@@ -134,7 +165,11 @@ export function RewriteOutputPanel({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={onSaveVersion} disabled={!canExport}>
+          <Button
+            variant="outline"
+            onClick={onSaveVersion}
+            disabled={!canExport}
+          >
             <Save className="h-4 w-4" />
             Save version
           </Button>
@@ -146,12 +181,24 @@ export function RewriteOutputPanel({
             <Sparkles className="h-4 w-4" />
             Refine
           </Button>
-          <Button variant="outline" onClick={onToggleCompare} disabled={!canExport || !hasPrevious}>
+          <Button
+            variant="outline"
+            onClick={onToggleCompare}
+            disabled={!canExport || !hasPrevious}
+          >
             <SplitSquareHorizontal className="h-4 w-4" />
             {compareMode ? "Exit compare" : "Compare"}
           </Button>
-          <Button variant="secondary" onClick={() => void handleCopy()} disabled={!canExport}>
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          <Button
+            variant="secondary"
+            onClick={() => void handleCopy()}
+            disabled={!canExport}
+          >
+            {copied ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
             {copied ? "Copied" : "Copy"}
           </Button>
           <DropdownMenu>
@@ -193,7 +240,7 @@ export function RewriteOutputPanel({
             value={selectedBaselineRef ?? undefined}
             onValueChange={onSelectBaseline}
           >
-            <SelectTrigger className="w-full sm:w-[420px]">
+            <SelectTrigger className="w-full sm:w-105">
               <SelectValue placeholder="Select previous version" />
             </SelectTrigger>
             <SelectContent>
@@ -214,10 +261,20 @@ export function RewriteOutputPanel({
           </p>
           <p className="mt-1 text-sm text-foreground/90">{error}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="destructive" onClick={onRetry}>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={onRetry}
+            >
               Retry
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void handleCopyError()}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleCopyError()}
+            >
               {copiedError ? "Copied" : "Copy error details"}
             </Button>
           </div>
@@ -266,7 +323,23 @@ export function RewriteOutputPanel({
                         {section.title}
                       </p>
                       <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
-                        {section.body}
+                        <ReactMarkdown
+                          skipHtml
+                          allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
+                          urlTransform={(url) => sanitizeUrl(url)}
+                          components={{
+                            a: ({ node, ...props }) => (
+                              <a
+                                {...props}
+                                target="_blank"
+                                rel="noreferrer noopener nofollow"
+                                className="text-primary underline-offset-4 hover:underline"
+                              />
+                            ),
+                          }}
+                        >
+                          {section.body}
+                        </ReactMarkdown>
                       </p>
                     </section>
                   ))
@@ -291,7 +364,23 @@ export function RewriteOutputPanel({
                       {section.title}
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
-                      {section.body}
+                      <ReactMarkdown
+                        skipHtml
+                        allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
+                        urlTransform={(url) => sanitizeUrl(url)}
+                        components={{
+                          a: ({ node, ...props }) => (
+                            <a
+                              {...props}
+                              target="_blank"
+                              rel="noreferrer noopener nofollow"
+                              className="text-primary underline-offset-4 hover:underline"
+                            />
+                          ),
+                        }}
+                      >
+                        {section.body}
+                      </ReactMarkdown>
                     </p>
                   </section>
                 ))}
@@ -299,104 +388,61 @@ export function RewriteOutputPanel({
             </div>
           ) : (
             <div className="space-y-4">
-              <section className="rounded-lg border border-border/60 bg-card p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-foreground">
-                    Executive Rewrite Summary
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Scale className="h-3.5 w-3.5" />
-                    Confidence: directional
-                  </span>
-                </div>
-                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-foreground/90">
-                  {(outputViewModel.summaryBullets.length > 0
-                    ? outputViewModel.summaryBullets
-                    : ["Summary not available for this rewrite."]
-                  ).map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="rounded-lg border border-border/60 bg-card p-4">
-                <p className="text-sm font-semibold text-foreground">
-                  Rewritten Copy
-                </p>
-                <div className="mt-3 space-y-3">
-                  {(outputViewModel.copySections.length > 0
-                    ? outputViewModel.copySections
-                    : [{ title: "Rewrite", body: output }]
-                  ).map((section) => (
-                    <div
-                      key={section.title}
-                      className="rounded-md border border-border/50 bg-secondary/20 p-3"
-                    >
-                      <p className="text-sm font-semibold text-foreground">
-                        {section.title}
-                      </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
+              <div className="mt-3 space-y-3">
+                {(outputViewModel.copySections.length > 0
+                  ? outputViewModel.copySections
+                  : [{ title: "Rewrite", body: output }]
+                ).map((section) => (
+                  <div
+                    key={section.title}
+                    className="rounded-md border border-border/50 bg-secondary/20 p-3"
+                  >
+                    <p className="text-sm font-semibold text-foreground">
+                      {section.title}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
+                      <ReactMarkdown
+                        skipHtml
+                        allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
+                        urlTransform={(url) => sanitizeUrl(url)}
+                        components={{
+                          a: ({ node, ...props }) => (
+                            <a
+                              {...props}
+                              target="_blank"
+                              rel="noreferrer noopener nofollow"
+                              className="text-primary underline-offset-4 hover:underline"
+                            />
+                          ),
+                        }}
+                      >
                         {section.body}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <Collapsible open={rationaleOpen} onOpenChange={setRationaleOpen}>
-                <section className="rounded-lg border border-border/60 bg-card p-4">
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" className="h-auto w-full justify-between px-0">
-                      <span className="text-sm font-semibold text-foreground">
-                        Strategic Rationale
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${rationaleOpen ? "rotate-180" : ""}`}
-                      />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="mt-3 space-y-3">
-                      {(outputViewModel.rationaleSections.length > 0
-                        ? outputViewModel.rationaleSections
-                        : [
-                            {
-                              title: "Rationale",
-                              body: "Not available for this rewrite.",
-                            },
-                          ]
-                      ).map((section) => (
-                        <div
-                          key={section.title}
-                          className="rounded-md border border-border/50 bg-secondary/20 p-3"
-                        >
-                          <p className="text-sm font-semibold text-foreground">
-                            {section.title}
-                          </p>
-                          <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
-                            {section.body}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </section>
-              </Collapsible>
+                      </ReactMarkdown>
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           )
         ) : (
           <div className="rounded-lg border border-border/60 bg-card p-4">
             <p className="text-sm font-semibold text-foreground">
-              Rewrite Studio creates conversion-ready copy from your current messaging.
+              Rewrite Studio creates conversion-ready copy from your current
+              messaging.
             </p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               <li>Add a website URL or paste your current copy.</li>
-              <li>Set strategic context and rewrite strategy before generating.</li>
+              <li>
+                Set strategic context and rewrite strategy before generating.
+              </li>
               <li>Use constraints for must-include or avoid instructions.</li>
             </ul>
             <p className="mt-3 text-sm text-muted-foreground">
               Need guidance?{" "}
-              <Link href="/docs" className="text-primary underline-offset-4 hover:underline">
+              <Link
+                href="/docs"
+                className="text-primary underline-offset-4 hover:underline"
+              >
                 Open docs
               </Link>
               .
