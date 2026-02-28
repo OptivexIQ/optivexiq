@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
-import { ChevronDown, Info } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  GitCompareArrows,
+  Info,
+  Upload,
+} from "lucide-react";
+import { useRef } from "react";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -33,6 +42,13 @@ function formatDate(value: string) {
   return dateFormatter.format(date);
 }
 
+function formatStatusLabel(status: ConversionGapReport["status"]) {
+  if (!status) {
+    return "";
+  }
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 type ReportHeaderProps = {
   report: ConversionGapReport;
   exportRestricted?: boolean;
@@ -42,6 +58,7 @@ export function ReportHeader({
   report,
   exportRestricted = false,
 }: ReportHeaderProps) {
+  const exportClosedByPointerRef = useRef(false);
   const exportUnavailable =
     exportRestricted ||
     report.status === "queued" ||
@@ -57,45 +74,91 @@ export function ReportHeader({
     <div className="rounded-xl p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-primary">Report detail</p>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {report.company}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span>{report.segment}</span>
-            <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-            <span>Last updated {formatDate(report.createdAt)}</span>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Report detail
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold text-foreground">
+              {report.company}
+            </h1>
+            <Badge variant="chart-3">{formatStatusLabel(report.status)}</Badge>
+          </div>
+          <div className="grid gap-3 pt-1 text-sm sm:grid-cols-3">
+            <div className="sm:pr-4 sm:border-r sm:border-border/60">
+              <p className="text-sm font-medium text-muted-foreground">
+                ICP Role
+              </p>
+              <p className="mt-1 text-foreground">{report.segment}</p>
+            </div>
+            <div className="sm:px-4 sm:border-r sm:border-border/60">
+              <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                <span>Confidence</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent className="font-normal">
+                      Confidence reflects data completeness and model certainty.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-foreground">
+                <Badge variant="chart-3" className="px-1.5 py-0.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span className="sr-only">Confidence verified</span>
+                </Badge>
+                <span>{report.confidenceScore}%</span>
+              </div>
+            </div>
+            <div className="sm:pl-4">
+              <p className="text-sm font-medium text-muted-foreground">
+                Last updated
+              </p>
+              <p className="mt-1 text-foreground">
+                {formatDate(report.createdAt)}
+              </p>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Badge variant="chart-3">{report.status}</Badge>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-2 rounded-full border border-border/60 px-3 py-1 text-sm text-muted-foreground">
-                  <Info className="h-3.5 w-3.5" />
-                  Confidence {report.confidenceScore}%
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                Confidence reflects data completeness and model certainty.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <Button variant="outline" asChild>
             <Link href="/dashboard/reports">Back to reports</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href={`/dashboard/reports/${report.id}/compare`}>Compare runs</Link>
+            <Link href={`/dashboard/reports/${report.id}/compare`}>
+              <GitCompareArrows className="h-4 w-4" />
+              Compare runs
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" disabled={exportUnavailable}>
+              <Button disabled={exportUnavailable}>
+                <Upload className="h-4 w-4" />
                 Export
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent
+              align="end"
+              className="w-48"
+              onPointerDownCapture={() => {
+                exportClosedByPointerRef.current = true;
+              }}
+              onPointerDownOutside={() => {
+                exportClosedByPointerRef.current = true;
+              }}
+              onInteractOutside={() => {
+                exportClosedByPointerRef.current = true;
+              }}
+              onCloseAutoFocus={(event) => {
+                if (exportClosedByPointerRef.current) {
+                  event.preventDefault();
+                }
+                exportClosedByPointerRef.current = false;
+              }}
+            >
               <DropdownMenuLabel>Export report</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {exportUnavailable ? (
