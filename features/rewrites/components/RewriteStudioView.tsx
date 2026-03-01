@@ -234,10 +234,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     .filter((item) => item.requestRef !== requestRef)
     .map((item) => {
       const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
-      const timestamp = formatHistoryTimestamp(item.createdAt);
       return {
         requestRef: item.requestRef,
-        label: `${timestamp} | ${target} | ${item.requestRef}`,
+        label: `${target} | ${item.requestRef}`,
       };
     });
   const selectedBaselineOutput =
@@ -778,6 +777,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           emphasis={strategy.emphasis}
           audience={strategy.audience}
           constraints={strategy.constraints}
+          currentRequestRef={requestRef}
           baselineTimestampLabel={baselineTimestampLabel}
           currentTimestampLabel={currentTimestampLabel}
           compareBaselineOptions={compareBaselineOptions}
