@@ -68,6 +68,32 @@ function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
     .slice(0, 3);
 }
 
+function extractLabeledLine(markdown: string, label: string): string | null {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(
+      `^\\s*(?:[-*]\\s+)?(?:\\*\\*)?${escapedLabel}(?:\\*\\*)?\\s*:\\s*(.+)$`,
+      "gim",
+    ),
+    new RegExp(
+      `^\\s*(?:[-*]\\s+)?(?:\\*\\*)?${escapedLabel}(?:\\*\\*)?\\s*-\\s*(.+)$`,
+      "gim",
+    ),
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(markdown);
+    if (match?.[1]) {
+      const value = match[1].trim();
+      if (value.length > 0) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+}
+
 function toPlainTextInline(value: string): string {
   return value
     .replace(/^#{1,6}\s+/gm, "")
@@ -76,25 +102,6 @@ function toPlainTextInline(value: string): string {
     .replace(/`{1,3}(.*?)`{1,3}/g, "$1")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
     .replace(/\s+/g, " ")
-    .trim();
-}
-
-function toPlainTextBlock(value: string): string {
-  return value
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/\*(.*?)\*/g, "$1")
-    .replace(/`{1,3}(.*?)`{1,3}/g, "$1")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
-    .split("\n")
-    .map((line) =>
-      line
-        .replace(/^\s*[-*]\s+/, "")
-        .replace(/^\s*\d+\.\s+/, "")
-        .trimEnd(),
-    )
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -132,7 +139,7 @@ export function buildRewriteOutputViewModel(markdown: string): RewriteOutputView
   const rationaleRaw = sections
     .filter((section) => {
       const lower = section.title.toLowerCase();
-      return lower.includes("rationale") || lower.includes("reasoning");
+      return lower.includes("rationale");
     })
     .map((section) => section.body)
     .join(" ")
@@ -143,14 +150,51 @@ export function buildRewriteOutputViewModel(markdown: string): RewriteOutputView
       ? [{ title: "Rationale", body: rationaleParagraph }]
       : [];
 
-  const copySections = sections.filter((section) => {
-    const lower = section.title.toLowerCase();
-    return (
-      !lower.includes("summary") &&
-      !lower.includes("rationale") &&
-      !lower.includes("reasoning")
-    );
-  });
+  const copySections = sections
+    .filter((section) => {
+      const lower = section.title.toLowerCase();
+      return (
+        !lower.includes("summary") &&
+        !lower.includes("rationale")
+      );
+    })
+    .slice();
+
+  const rewriteScopedText = sections
+    .filter((section) => {
+      const lower = section.title.toLowerCase();
+      if (lower.includes("summary") || lower.includes("rationale")) {
+        return false;
+      }
+      if (lower.includes("implementation") || lower.includes("checklist")) {
+        return false;
+      }
+      if (lower.includes("strategy")) {
+        return false;
+      }
+      return lower.includes("rewrite") || lower.includes("proposed");
+    })
+    .map((section) => section.body)
+    .join("\n\n")
+    .trim();
+
+  const ctaExtractionSource =
+    rewriteScopedText.length > 0 ? rewriteScopedText : normalize(markdown);
+  const primaryCta = extractLabeledLine(ctaExtractionSource, "Primary CTA");
+  const finalCta = extractLabeledLine(ctaExtractionSource, "Final CTA");
+  const hasPrimaryCtaSection = copySections.some((section) =>
+    section.title.toLowerCase().includes("primary cta"),
+  );
+  const hasFinalCtaSection = copySections.some((section) =>
+    section.title.toLowerCase().includes("final cta"),
+  );
+
+  if (primaryCta && !hasPrimaryCtaSection) {
+    copySections.push({ title: "Primary CTA", body: primaryCta });
+  }
+  if (finalCta && !hasFinalCtaSection) {
+    copySections.push({ title: "Final CTA", body: finalCta });
+  }
 
   return {
     summaryBullets,

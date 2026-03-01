@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { isHttpError } from "@/lib/api/httpClient";
 import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPanel";
+import { RewriteComparisonPanel } from "@/features/rewrites/components/RewriteComparisonPanel";
 import { RewriteExecutiveSummaryCard } from "@/features/rewrites/components/RewriteExecutiveSummaryCard";
 import { RewriteOutputPanel } from "@/features/rewrites/components/RewriteOutputPanel";
 import { RewriteStrategicRationaleCard } from "@/features/rewrites/components/RewriteStrategicRationaleCard";
@@ -231,6 +232,55 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const selectedBaselineOutput =
     historyVersions.find((item) => item.requestRef === selectedBaselineRef)
       ?.outputMarkdown ?? previousOutput;
+  const canCompare =
+    output.trim().length > 0 &&
+    (previousOutput.trim().length > 0 || compareBaselineOptions.length > 0);
+
+  useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      const tag = target.tagName.toLowerCase();
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        target.isContentEditable ||
+        target.closest("[contenteditable='true']") !== null
+      );
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && compareMode) {
+        event.preventDefault();
+        setCompareMode(false);
+        return;
+      }
+
+      const modifierPressed = event.metaKey || event.ctrlKey;
+      const isCompareToggle =
+        modifierPressed &&
+        event.altKey &&
+        event.key.toLowerCase() === "c";
+
+      if (!isCompareToggle || isTypingTarget(event.target) || !canCompare) {
+        return;
+      }
+
+      event.preventDefault();
+      setCompareMode((previous) => {
+        const next = !previous;
+        if (next && !selectedBaselineRef && compareBaselineOptions.length > 0) {
+          setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
+        }
+        return next;
+      });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canCompare, compareBaselineOptions, compareMode, selectedBaselineRef]);
 
   useEffect(() => {
     if (initialData.initialStudioContext) {
@@ -680,75 +730,75 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         onResetContext={resetControlContext}
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <RewriteInputPanel
-          value={request}
-          strategy={strategy}
-          refineMode={refineMode}
-          deltaInstructions={deltaInstructions}
-          running={running}
-          onChange={setRequest}
-          onStrategyChange={setStrategy}
-          onDeltaInstructionsChange={setDeltaInstructions}
-          onSubmit={() => void handleSubmit()}
-          onCancel={handleCancel}
+      {compareMode ? (
+        <RewriteComparisonPanel
+          currentOutput={output}
+          baselineOutput={selectedBaselineOutput}
+          compareBaselineOptions={compareBaselineOptions}
+          selectedBaselineRef={selectedBaselineRef}
+          onSelectBaseline={setSelectedBaselineRef}
+          onExitCompare={() => setCompareMode(false)}
         />
-        <div className="space-y-4">
-          <RewriteExecutiveSummaryCard
-            output={output}
-            compareMode={compareMode}
-          />
-          <RewriteOutputPanel
-            rewriteType={request.rewriteType}
+      ) : (
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <RewriteInputPanel
+            value={request}
+            strategy={strategy}
+            refineMode={refineMode}
+            deltaInstructions={deltaInstructions}
             running={running}
-            output={output}
-            previousOutput={selectedBaselineOutput}
-            compareMode={compareMode}
-            compareBaselineOptions={compareBaselineOptions}
-            selectedBaselineRef={selectedBaselineRef}
-            requestRef={requestRef}
-            error={error}
-            onCopy={() => void handleCopy()}
-            onExport={(format) => {
-              try {
-                handleExport(format);
-              } catch (exportError) {
-                const message =
-                  exportError instanceof Error
-                    ? exportError.message
-                    : "Unable to export rewrite.";
-                setError(message);
-                toast({
-                  title: "Export failed",
-                  description: message,
-                });
-              }
-            }}
-            onSaveVersion={handleSaveVersion}
-            onDuplicate={handleDuplicate}
-            onRefine={handleRefine}
-            onToggleCompare={() => {
-              setCompareMode((previous) => {
-                const next = !previous;
-                if (
-                  next &&
-                  !selectedBaselineRef &&
-                  compareBaselineOptions.length > 0
-                ) {
+            onChange={setRequest}
+            onStrategyChange={setStrategy}
+            onDeltaInstructionsChange={setDeltaInstructions}
+            onSubmit={() => void handleSubmit()}
+            onCancel={handleCancel}
+          />
+          <div className="space-y-4">
+            <RewriteExecutiveSummaryCard
+              output={output}
+              compareMode={compareMode}
+            />
+            <RewriteOutputPanel
+              rewriteType={request.rewriteType}
+              running={running}
+              output={output}
+              canCompare={canCompare}
+              requestRef={requestRef}
+              error={error}
+              onCopy={() => void handleCopy()}
+              onExport={(format) => {
+                try {
+                  handleExport(format);
+                } catch (exportError) {
+                  const message =
+                    exportError instanceof Error
+                      ? exportError.message
+                      : "Unable to export rewrite.";
+                  setError(message);
+                  toast({
+                    title: "Export failed",
+                    description: message,
+                  });
+                }
+              }}
+              onSaveVersion={handleSaveVersion}
+              onDuplicate={handleDuplicate}
+              onRefine={handleRefine}
+              onEnterCompare={() => {
+                if (!selectedBaselineRef && compareBaselineOptions.length > 0) {
                   setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
                 }
-                return next;
-              });
-            }}
-            onSelectBaseline={setSelectedBaselineRef}
-            onRetry={() => void handleSubmit()}
-          />
-          <RewriteStrategicRationaleCard
-            output={output}
-            compareMode={compareMode}
-          />
+                setCompareMode(true);
+              }}
+              onRetry={() => void handleSubmit()}
+            />
+            <RewriteStrategicRationaleCard
+              output={output}
+              compareMode={compareMode}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl">

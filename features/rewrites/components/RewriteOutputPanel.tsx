@@ -23,13 +23,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type {
   RewriteExportFormat,
   RewriteType,
@@ -40,13 +33,7 @@ type RewriteOutputPanelProps = {
   rewriteType: RewriteType;
   running: boolean;
   output: string;
-  previousOutput: string;
-  compareMode: boolean;
-  compareBaselineOptions: Array<{
-    requestRef: string;
-    label: string;
-  }>;
-  selectedBaselineRef: string | null;
+  canCompare: boolean;
   requestRef: string | null;
   error: string | null;
   onCopy: () => void | Promise<void>;
@@ -54,8 +41,7 @@ type RewriteOutputPanelProps = {
   onSaveVersion: () => void;
   onDuplicate: () => void;
   onRefine: () => void;
-  onToggleCompare: () => void;
-  onSelectBaseline: (requestRef: string) => void;
+  onEnterCompare: () => void;
   onRetry: () => void;
 };
 
@@ -104,10 +90,7 @@ export function RewriteOutputPanel({
   rewriteType,
   running,
   output,
-  previousOutput,
-  compareMode,
-  compareBaselineOptions,
-  selectedBaselineRef,
+  canCompare,
   requestRef,
   error,
   onCopy,
@@ -115,8 +98,7 @@ export function RewriteOutputPanel({
   onSaveVersion,
   onDuplicate,
   onRefine,
-  onToggleCompare,
-  onSelectBaseline,
+  onEnterCompare,
   onRetry,
 }: RewriteOutputPanelProps) {
   const canExport = output.trim().length > 0;
@@ -125,18 +107,8 @@ export function RewriteOutputPanel({
     () => buildRewriteOutputViewModel(output),
     [output],
   );
-  const previousViewModel = useMemo(
-    () => buildRewriteOutputViewModel(previousOutput),
-    [previousOutput],
-  );
   const [copied, setCopied] = useState(false);
   const [copiedError, setCopiedError] = useState(false);
-
-  const hasPrevious =
-    previousOutput.trim().length > 0 || compareBaselineOptions.length > 0;
-  const hasComparableData =
-    previousOutput.trim().length > 0 ||
-    (selectedBaselineRef !== null && selectedBaselineRef.length > 0);
 
   const handleCopy = async () => {
     await onCopy();
@@ -183,11 +155,11 @@ export function RewriteOutputPanel({
           </Button>
           <Button
             variant="outline"
-            onClick={onToggleCompare}
-            disabled={!canExport || !hasPrevious}
+            onClick={onEnterCompare}
+            disabled={!canExport || !canCompare}
           >
             <SplitSquareHorizontal className="h-4 w-4" />
-            {compareMode ? "Exit compare" : "Compare"}
+            Compare
           </Button>
           <Button
             variant="secondary"
@@ -230,29 +202,6 @@ export function RewriteOutputPanel({
           </DropdownMenu>
         </div>
       </div>
-
-      {compareMode ? (
-        <div className="mt-3">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">
-            Select baseline
-          </p>
-          <Select
-            value={selectedBaselineRef ?? undefined}
-            onValueChange={onSelectBaseline}
-          >
-            <SelectTrigger className="w-full sm:w-105">
-              <SelectValue placeholder="Select previous version" />
-            </SelectTrigger>
-            <SelectContent>
-              {compareBaselineOptions.map((option) => (
-                <SelectItem key={option.requestRef} value={option.requestRef}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
 
       {error ? (
         <div className="mt-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
@@ -307,123 +256,42 @@ export function RewriteOutputPanel({
             </div>
           </div>
         ) : output ? (
-          compareMode ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Previous
-                </p>
-                {hasComparableData ? (
-                  previousViewModel.copySections.map((section) => (
-                    <section
-                      key={`previous-${section.title}`}
-                      className="rounded-lg border border-border/60 bg-card p-3"
+          <div className="space-y-4">
+            <div className="mt-3 space-y-3">
+              {(outputViewModel.copySections.length > 0
+                ? outputViewModel.copySections
+                : [{ title: "Rewrite", body: output }]
+              ).map((section) => (
+                <div
+                  key={section.title}
+                  className="rounded-md border border-border/50 bg-secondary/20 p-3"
+                >
+                  <p className="text-sm font-semibold text-foreground">
+                    {section.title}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
+                    <ReactMarkdown
+                      skipHtml
+                      allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
+                      urlTransform={(url) => sanitizeUrl(url)}
+                      components={{
+                        a: ({ node, ...props }) => (
+                          <a
+                            {...props}
+                            target="_blank"
+                            rel="noreferrer noopener nofollow"
+                            className="text-primary underline-offset-4 hover:underline"
+                          />
+                        ),
+                      }}
                     >
-                      <p className="text-sm font-semibold text-foreground">
-                        {section.title}
-                      </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
-                        <ReactMarkdown
-                          skipHtml
-                          allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
-                          urlTransform={(url) => sanitizeUrl(url)}
-                          components={{
-                            a: ({ node, ...props }) => (
-                              <a
-                                {...props}
-                                target="_blank"
-                                rel="noreferrer noopener nofollow"
-                                className="text-primary underline-offset-4 hover:underline"
-                              />
-                            ),
-                          }}
-                        >
-                          {section.body}
-                        </ReactMarkdown>
-                      </p>
-                    </section>
-                  ))
-                ) : (
-                  <section className="rounded-lg border border-border/60 bg-card p-3">
-                    <p className="text-sm text-muted-foreground">
-                      Select a baseline version to compare.
-                    </p>
-                  </section>
-                )}
-              </div>
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Current
-                </p>
-                {outputViewModel.copySections.map((section) => (
-                  <section
-                    key={`current-${section.title}`}
-                    className="rounded-lg border border-border/60 bg-card p-3"
-                  >
-                    <p className="text-sm font-semibold text-foreground">
-                      {section.title}
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
-                      <ReactMarkdown
-                        skipHtml
-                        allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
-                        urlTransform={(url) => sanitizeUrl(url)}
-                        components={{
-                          a: ({ node, ...props }) => (
-                            <a
-                              {...props}
-                              target="_blank"
-                              rel="noreferrer noopener nofollow"
-                              className="text-primary underline-offset-4 hover:underline"
-                            />
-                          ),
-                        }}
-                      >
-                        {section.body}
-                      </ReactMarkdown>
-                    </p>
-                  </section>
-                ))}
-              </div>
+                      {section.body}
+                    </ReactMarkdown>
+                  </p>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="mt-3 space-y-3">
-                {(outputViewModel.copySections.length > 0
-                  ? outputViewModel.copySections
-                  : [{ title: "Rewrite", body: output }]
-                ).map((section) => (
-                  <div
-                    key={section.title}
-                    className="rounded-md border border-border/50 bg-secondary/20 p-3"
-                  >
-                    <p className="text-sm font-semibold text-foreground">
-                      {section.title}
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
-                      <ReactMarkdown
-                        skipHtml
-                        allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
-                        urlTransform={(url) => sanitizeUrl(url)}
-                        components={{
-                          a: ({ node, ...props }) => (
-                            <a
-                              {...props}
-                              target="_blank"
-                              rel="noreferrer noopener nofollow"
-                              className="text-primary underline-offset-4 hover:underline"
-                            />
-                          ),
-                        }}
-                      >
-                        {section.body}
-                      </ReactMarkdown>
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
+          </div>
         ) : (
           <div className="rounded-lg border border-border/60 bg-card p-4">
             <p className="text-sm font-semibold text-foreground">
