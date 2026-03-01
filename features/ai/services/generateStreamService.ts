@@ -23,6 +23,7 @@ import type { RewriteGenerateRequestValues } from "@/features/rewrites/validator
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 const FINALIZATION_MAX_ATTEMPTS = 3;
+const REWRITE_PERSIST_MAX_ATTEMPTS = 3;
 
 type GeneratePayload = {
   model?: string;
@@ -126,6 +127,31 @@ async function finalizeGenerateUsageWithRetry(params: {
   return { ok: false };
 }
 
+async function saveRewriteRecordWithRetry(
+  params: Parameters<typeof saveRewriteRecord>[0],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let lastError = "unknown_error";
+
+  for (let attempt = 1; attempt <= REWRITE_PERSIST_MAX_ATTEMPTS; attempt += 1) {
+    const result = await saveRewriteRecord(params);
+    if (result.ok) {
+      return { ok: true };
+    }
+
+    lastError = result.error;
+    logger.error("Rewrite record persist attempt failed.", {
+      request_id: params.requestId,
+      user_id: params.userId,
+      request_ref: params.requestRef,
+      attempt,
+      max_attempts: REWRITE_PERSIST_MAX_ATTEMPTS,
+      error: result.error,
+    });
+  }
+
+  return { ok: false, error: lastError };
+}
+
 export async function handleGenerateStream(params: {
   request: NextRequest;
   userId: string;
@@ -144,6 +170,7 @@ export async function handleGenerateStream(params: {
   }
   const { request: generateRequest, isRewriteRequest, rewriteInput } = parsedRequest;
   const rewriteRef = isRewriteRequest ? generateRewriteRequestRef() : null;
+  const rewriteCreatedAt = isRewriteRequest ? new Date().toISOString() : null;
 
   logger.info("AI stream requested.", {
     requestId,
@@ -442,7 +469,7 @@ export async function handleGenerateStream(params: {
             }
 
             if (rewriteInput && rewriteRef) {
-              const persistResult = await saveRewriteRecord({
+              const persistResult = await saveRewriteRecordWithRetry({
                 userId,
                 requestId,
                 requestRef: rewriteRef,
@@ -459,6 +486,19 @@ export async function handleGenerateStream(params: {
                   user_id: userId,
                   request_ref: rewriteRef,
                   error: persistResult.error,
+                });
+                await emitOperationalAlert({
+                  severity: "critical",
+                  source: "rewrite_persistence",
+                  message:
+                    "Rewrite completed but history persistence failed after retries.",
+                  context: {
+                    request_id: requestId,
+                    request_ref: rewriteRef,
+                    user_id: userId,
+                    rewrite_type: rewriteInput.rewriteType,
+                    error: persistResult.error,
+                  },
                 });
               }
             }
@@ -495,6 +535,7 @@ export async function handleGenerateStream(params: {
       "Cache-Control": "no-store",
       "x-request-id": requestId,
       ...(rewriteRef ? { "x-rewrite-ref": rewriteRef } : {}),
+      ...(rewriteCreatedAt ? { "x-rewrite-created-at": rewriteCreatedAt } : {}),
     },
   });
 }

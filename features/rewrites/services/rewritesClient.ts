@@ -69,5 +69,6 @@ export async function streamRewrite(
     content: result,
     requestId: response.headers.get("x-request-id"),
     requestRef: response.headers.get("x-rewrite-ref"),
+    requestCreatedAt: response.headers.get("x-rewrite-created-at"),
   };
 }

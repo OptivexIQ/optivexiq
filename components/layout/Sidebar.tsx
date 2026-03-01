@@ -54,7 +54,7 @@ export default function AppSidebar({ quotaResetLabel }: AppSidebarProps) {
     <Sidebar>
       {/* ---------------- HEADER ---------------- */}
       <SidebarHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-h-11">
           <Link href="/" className="flex items-center">
             {collapsed ? (
               <Image
@@ -83,7 +83,7 @@ export default function AppSidebar({ quotaResetLabel }: AppSidebarProps) {
       </SidebarHeader>
 
       {/* Divider */}
-      <div className="mx-3 my-2 h-px bg-sidebar-border" />
+      <div className="mx-3 h-px bg-sidebar-border" />
 
       {/* ---------------- NAVIGATION ---------------- */}
       <SidebarSection title="Dashboard">

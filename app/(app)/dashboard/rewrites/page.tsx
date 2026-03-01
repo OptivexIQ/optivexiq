@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/server";
 import { getProfile } from "@/features/saas-profile/services/profileService";
 import { isProfileComplete } from "@/features/saas-profile/validators/profileSchema";
@@ -246,18 +244,6 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
           }),
         }}
       />
-
-      <div className="rounded-xl border border-border/60 bg-card p-6">
-        <p className="text-sm text-foreground">
-          Need the full audit workflow with score diagnostics and competitor
-          benchmarking?
-        </p>
-        <div className="mt-4">
-          <Button asChild variant="outline">
-            <Link href="/dashboard/gap-engine">Run Gap Engine (Full report)</Link>
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

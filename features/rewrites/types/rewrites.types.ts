@@ -52,6 +52,7 @@ export type RewriteStreamResult = {
   content: string;
   requestId: string | null;
   requestRef: string | null;
+  requestCreatedAt: string | null;
 };
 
 export type RewriteStudioInitialData = {

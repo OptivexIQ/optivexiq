@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -178,7 +179,22 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const [requestRef, setRequestRef] = useState<string | null>(
     initialData.initialRequestRef ?? null,
   );
+  const [currentVersionCreatedAt, setCurrentVersionCreatedAt] = useState<
+    string | null
+  >(() => {
+    if (!initialData.initialRequestRef) {
+      return null;
+    }
+    return (
+      initialData.historyVersions?.find(
+        (item) => item.requestRef === initialData.initialRequestRef,
+      )?.createdAt ?? null
+    );
+  });
   const [previousOutput, setPreviousOutput] = useState("");
+  const [previousVersionCreatedAt, setPreviousVersionCreatedAt] = useState<
+    string | null
+  >(null);
   const [compareMode, setCompareMode] = useState(false);
   const [selectedBaselineRef, setSelectedBaselineRef] = useState<string | null>(
     null,
@@ -219,19 +235,27 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     .map((item) => {
       const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
       const timestamp = formatHistoryTimestamp(item.createdAt);
-      const toneLabel = item.tone ? `Tone: ${item.tone}` : "Tone: n/a";
-      const emphasisLabel =
-        item.emphasis && item.emphasis.length > 0
-          ? `Emphasis: ${item.emphasis.join(", ")}`
-          : "Emphasis: n/a";
       return {
         requestRef: item.requestRef,
-        label: `${timestamp} | ${target} | ${toneLabel} | ${emphasisLabel}`,
+        label: `${timestamp} | ${target} | ${item.requestRef}`,
       };
     });
   const selectedBaselineOutput =
     historyVersions.find((item) => item.requestRef === selectedBaselineRef)
       ?.outputMarkdown ?? previousOutput;
+  const selectedBaselineTimestamp = selectedBaselineRef
+    ? historyVersions.find((item) => item.requestRef === selectedBaselineRef)
+        ?.createdAt
+    : null;
+  const baselineTimestamp = selectedBaselineTimestamp ?? previousVersionCreatedAt;
+  const baselineTimestampLabel = baselineTimestamp
+    ? formatHistoryTimestamp(baselineTimestamp)
+    : previousOutput.trim().length > 0
+      ? "In-session baseline"
+      : "Not selected";
+  const currentTimestampLabel = currentVersionCreatedAt
+    ? formatHistoryTimestamp(currentVersionCreatedAt)
+    : "Not available";
   const canCompare =
     output.trim().length > 0 &&
     (previousOutput.trim().length > 0 || compareBaselineOptions.length > 0);
@@ -436,12 +460,14 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     });
     setOutput("");
     setPreviousOutput("");
+    setPreviousVersionCreatedAt(null);
     setCompareMode(false);
     setSelectedBaselineRef(null);
     setRefineMode(false);
     setDeltaInstructions("");
     setError(null);
     setRequestRef(null);
+    setCurrentVersionCreatedAt(null);
   };
 
   const resetControlContext = () => {
@@ -474,10 +500,12 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       return;
     }
     setPreviousOutput(output);
+    setPreviousVersionCreatedAt(currentVersionCreatedAt);
     setOutput("");
     setCompareMode(false);
     setSelectedBaselineRef(null);
     setRequestRef(null);
+    setCurrentVersionCreatedAt(null);
     setError(null);
     toast({
       title: "Rewrite duplicated",
@@ -504,9 +532,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setError(null);
     if (output.trim().length > 0) {
       setPreviousOutput(output);
+      setPreviousVersionCreatedAt(currentVersionCreatedAt);
     }
     setOutput("");
     setRequestRef(null);
+    setCurrentVersionCreatedAt(null);
     setRunning(true);
     const controller = new AbortController();
     abortRef.current = controller;
@@ -545,6 +575,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         },
       });
       setRequestRef(result.requestRef);
+      setCurrentVersionCreatedAt(result.requestCreatedAt ?? new Date().toISOString());
       toast({
         title: "Rewrite generated",
         description: "Your output is ready to copy or export.",
@@ -583,6 +614,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
     setOutput(version.outputMarkdown);
     setRequestRef(version.requestRef);
+    setCurrentVersionCreatedAt(version.createdAt);
+    setPreviousVersionCreatedAt(null);
     setCompareMode(false);
     setSelectedBaselineRef(null);
     setError(null);
@@ -606,6 +639,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }));
     setOutput(version.outputMarkdown);
     setRequestRef(version.requestRef);
+    setCurrentVersionCreatedAt(version.createdAt);
+    setPreviousVersionCreatedAt(null);
     setUseCustomIcp(
       Boolean(version.strategicContext?.icp) &&
         version.strategicContext?.icp?.trim().toLowerCase() !==
@@ -710,30 +745,41 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         onOpenHistory={() => setHistoryOpen(true)}
         onNewRewrite={resetStudio}
       />
-      <RewriteStudioControlBar
-        profileIcp={profileIcp}
-        rewriteType={request.rewriteType}
-        useCustomIcp={useCustomIcp}
-        goal={goal}
-        differentiationFocus={differentiationFocus}
-        objectionFocus={objectionFocus}
-        disabled={running}
-        onRewriteTypeChange={(rewriteType) =>
-          setRequest((previous) => ({ ...previous, rewriteType }))
-        }
-        onUseCustomIcpChange={setUseCustomIcp}
-        onCustomIcpChange={setCustomIcp}
-        customIcp={customIcp}
-        onGoalChange={setGoal}
-        onDifferentiationFocusChange={setDifferentiationFocus}
-        onObjectionFocusChange={setObjectionFocus}
-        onResetContext={resetControlContext}
-      />
+      {!compareMode ? (
+        <RewriteStudioControlBar
+          profileIcp={profileIcp}
+          rewriteType={request.rewriteType}
+          useCustomIcp={useCustomIcp}
+          goal={goal}
+          differentiationFocus={differentiationFocus}
+          objectionFocus={objectionFocus}
+          disabled={running}
+          onRewriteTypeChange={(rewriteType) =>
+            setRequest((previous) => ({ ...previous, rewriteType }))
+          }
+          onUseCustomIcpChange={setUseCustomIcp}
+          onCustomIcpChange={setCustomIcp}
+          customIcp={customIcp}
+          onGoalChange={setGoal}
+          onDifferentiationFocusChange={setDifferentiationFocus}
+          onObjectionFocusChange={setObjectionFocus}
+          onResetContext={resetControlContext}
+        />
+      ) : null}
 
       {compareMode ? (
         <RewriteComparisonPanel
           currentOutput={output}
           baselineOutput={selectedBaselineOutput}
+          sourceContent={request.content ?? ""}
+          personaRole={resolvedIcpLabel}
+          tone={strategy.tone}
+          length={strategy.length}
+          emphasis={strategy.emphasis}
+          audience={strategy.audience}
+          constraints={strategy.constraints}
+          baselineTimestampLabel={baselineTimestampLabel}
+          currentTimestampLabel={currentTimestampLabel}
           compareBaselineOptions={compareBaselineOptions}
           selectedBaselineRef={selectedBaselineRef}
           onSelectBaseline={setSelectedBaselineRef}
@@ -799,6 +845,20 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           </div>
         </div>
       )}
+
+      {!compareMode ? (
+        <div className="rounded-xl border border-border/60 bg-card p-6">
+          <p className="text-sm text-foreground">
+            Need the full audit workflow with score diagnostics and competitor
+            benchmarking?
+          </p>
+          <div className="mt-4">
+            <Button asChild variant="outline">
+              <Link href="/dashboard/gap-engine">Run Gap Engine (Full report)</Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl">
