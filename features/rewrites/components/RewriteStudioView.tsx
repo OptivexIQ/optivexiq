@@ -755,7 +755,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             : isHttpError(submissionError)
               ? submissionError.message
               : "Unable to generate rewrite.";
-        if (/shift stats contract validation/i.test(message)) {
+        if (
+          /shift stats contract validation/i.test(message) ||
+          /metrics contract validation/i.test(message)
+        ) {
           setOutput("");
         }
         setError(message);

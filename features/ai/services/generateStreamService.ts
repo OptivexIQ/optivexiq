@@ -32,6 +32,10 @@ import {
   parseRewriteShiftStatsFromText,
   type RewriteShiftStats,
 } from "@/features/rewrites/validators/rewriteShiftStatsSchema";
+import {
+  parseRewriteConfidenceFromTrustedSections,
+  type RewriteConfidence,
+} from "@/features/rewrites/validators/rewriteConfidenceSchema";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 const FINALIZATION_MAX_ATTEMPTS = 3;
@@ -172,15 +176,21 @@ async function ensureRewriteShiftStats(params: {
   requestRef: string | null;
 }): Promise<{
   stats: RewriteShiftStats | null;
+  confidence: RewriteConfidence | null;
   appendedBlock: string;
   extraInputTokens: number;
   extraOutputTokens: number;
   extraCostCents: number;
 }> {
   const parsed = parseRewriteShiftStatsFromText(params.output);
-  if (parsed) {
+  const confidence = parseRewriteConfidenceFromTrustedSections(params.output);
+  const missingStats = !parsed;
+  const missingConfidence = !confidence;
+
+  if (!missingStats && !missingConfidence) {
     return {
       stats: parsed,
+      confidence,
       appendedBlock: "",
       extraInputTokens: 0,
       extraOutputTokens: 0,
@@ -212,7 +222,10 @@ async function ensureRewriteShiftStats(params: {
       accumulatedCostCents += Math.round(repairResponse.estimatedCostUsd * 100);
 
       const repairedStats = parseRewriteShiftStatsFromText(repairResponse.content);
-      if (!repairedStats) {
+      const repairedConfidence = parseRewriteConfidenceFromTrustedSections(
+        repairResponse.content,
+      );
+      if ((missingStats && !repairedStats) || (missingConfidence && !repairedConfidence)) {
         logger.warn("rewrite.shift_stats.repair_invalid_attempt", {
           requestId: params.requestId,
           userId: params.userId,
@@ -231,11 +244,29 @@ async function ensureRewriteShiftStats(params: {
         rewriteType: params.rewriteInput.rewriteType,
         model: repairResponse.model,
         attempt,
+        missingStats,
+        missingConfidence,
       });
 
+      const resolvedStats = parsed ?? repairedStats;
+      const resolvedConfidence = confidence ?? repairedConfidence;
+      const appendLines: string[] = [];
+      if (missingStats && repairedStats) {
+        appendLines.push(formatRewriteShiftStatsBlock(repairedStats).trimEnd());
+      }
+      if (missingConfidence && resolvedConfidence) {
+        if (missingStats) {
+          appendLines.push(`- Confidence: ${resolvedConfidence}`);
+        } else {
+          appendLines.push("### Metrics Addendum");
+          appendLines.push(`- Confidence: ${resolvedConfidence}`);
+        }
+      }
+
       return {
-        stats: repairedStats,
-        appendedBlock: `\n\n${formatRewriteShiftStatsBlock(repairedStats)}`,
+        stats: resolvedStats,
+        confidence: resolvedConfidence,
+        appendedBlock: appendLines.length > 0 ? `\n\n${appendLines.join("\n")}\n` : "",
         extraInputTokens: accumulatedInputTokens,
         extraOutputTokens: accumulatedOutputTokens,
         extraCostCents: accumulatedCostCents,
@@ -260,6 +291,7 @@ async function ensureRewriteShiftStats(params: {
   });
   return {
     stats: null,
+    confidence: null,
     appendedBlock: "",
     extraInputTokens: accumulatedInputTokens,
     extraOutputTokens: accumulatedOutputTokens,
@@ -435,9 +467,9 @@ export async function handleGenerateStream(params: {
             });
             supplementalInputTokens += shiftStatsResult.extraInputTokens;
             supplementalOutputTokens += shiftStatsResult.extraOutputTokens;
-            if (!shiftStatsResult.stats) {
+            if (!shiftStatsResult.stats || !shiftStatsResult.confidence) {
               throw new Error(
-                "Rewrite output failed shift stats contract validation.",
+                "Rewrite output failed metrics contract validation.",
               );
             }
             if (shiftStatsResult.appendedBlock.length > 0) {

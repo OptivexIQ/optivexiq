@@ -16,6 +16,7 @@ export function RewriteExecutiveSummaryCard({
 }: RewriteExecutiveSummaryCardProps) {
   const model = useMemo(() => buildRewriteOutputViewModel(output), [output]);
   const bullets = model.summaryBullets;
+  const confidence = model.confidence;
   const summaryParagraph = bullets.join(" ");
   const sanitizeUrl = (url: string) => {
     if (url.startsWith("#")) {
@@ -44,10 +45,12 @@ export function RewriteExecutiveSummaryCard({
         <p className="text-base font-semibold text-foreground">
           Executive Rewrite Summary
         </p>
-        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <Scale className="h-3.5 w-3.5" />
-          Confidence: directional
-        </span>
+        {confidence ? (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Scale className="h-3.5 w-3.5" />
+            Confidence: {confidence}
+          </span>
+        ) : null}
       </div>
       <div className="mt-3 text-[15px] leading-relaxed text-foreground/90">
         <ReactMarkdown

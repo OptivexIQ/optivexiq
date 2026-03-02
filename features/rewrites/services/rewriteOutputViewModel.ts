@@ -2,6 +2,10 @@ import {
   parseRewriteShiftStatsFromText,
   type RewriteShiftStats,
 } from "@/features/rewrites/validators/rewriteShiftStatsSchema";
+import {
+  parseRewriteConfidenceFromTrustedSections,
+  type RewriteConfidence,
+} from "@/features/rewrites/validators/rewriteConfidenceSchema";
 
 export type RewriteOutputSection = {
   title: string;
@@ -13,6 +17,7 @@ export type RewriteOutputViewModel = {
   copySections: RewriteOutputSection[];
   rationaleSections: RewriteOutputSection[];
   shiftStats: RewriteShiftStats | null;
+  confidence: RewriteConfidence | null;
 };
 
 function normalize(text: string) {
@@ -65,7 +70,8 @@ function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
       (line) =>
         !/^clarity\s*shift\s*:/i.test(line) &&
         !/^objection\s*shift\s*:/i.test(line) &&
-        !/^positioning\s*shift\s*:/i.test(line),
+        !/^positioning\s*shift\s*:/i.test(line) &&
+        !/^confidence(?:\s*level)?\s*:/i.test(line),
     )
     .filter((line) => line.length > 0);
 
@@ -80,7 +86,8 @@ function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
       (line) =>
         !/^clarity\s*shift\s*:/i.test(line) &&
         !/^objection\s*shift\s*:/i.test(line) &&
-        !/^positioning\s*shift\s*:/i.test(line),
+        !/^positioning\s*shift\s*:/i.test(line) &&
+        !/^confidence(?:\s*level)?\s*:/i.test(line),
     )
     .filter((line) => line.length > 0)
     .slice(0, 3);
@@ -154,6 +161,7 @@ export function buildRewriteOutputViewModel(markdown: string): RewriteOutputView
   const sections = splitSections(markdown);
   const summaryBullets = toSummaryBullets(sections);
   const shiftStats = parseRewriteShiftStatsFromText(markdown);
+  const confidence = parseRewriteConfidenceFromTrustedSections(markdown);
 
   const rationaleRaw = sections
     .filter((section) => {
@@ -220,5 +228,6 @@ export function buildRewriteOutputViewModel(markdown: string): RewriteOutputView
     copySections,
     rationaleSections,
     shiftStats,
+    confidence,
   };
 }
