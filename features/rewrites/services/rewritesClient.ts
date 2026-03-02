@@ -4,6 +4,7 @@ import {
   type HttpError,
 } from "@/lib/api/httpClient";
 import type {
+  RewriteExportFormat,
   RewriteGenerateRequest,
   RewriteSectionMapResult,
   RewriteStreamResult,
@@ -45,7 +46,7 @@ export async function streamRewrite(
     } satisfies HttpError;
   }
 
-  const response = await fetch("/api/generate", {
+  const response = await fetch("/api/rewrites/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(parsed.data),
@@ -127,4 +128,54 @@ export async function mapRewriteSections(input: {
   }
 
   return parsedResponse.data as RewriteSectionMapResult;
+}
+
+export async function exportRewrite(input: {
+  requestRef: string;
+  format: RewriteExportFormat;
+  signal?: AbortSignal;
+}): Promise<{
+  blob: Blob;
+  filename: string;
+  contentType: string;
+}> {
+  const requestRef = input.requestRef.trim();
+  if (!requestRef) {
+    throw { status: 400, message: "Request reference is required." } satisfies HttpError;
+  }
+
+  const response = await fetch(
+    `/api/rewrites/${encodeURIComponent(requestRef)}/export?format=${encodeURIComponent(input.format)}`,
+    {
+      method: "GET",
+      signal: input.signal,
+    },
+  );
+
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+    const payload = contentType.includes("application/json")
+      ? await response.json().catch(() => null)
+      : await response.text().catch(() => "");
+    throw toHttpError(response.status, payload);
+  }
+
+  const blob = await response.blob();
+  const contentType = response.headers.get("content-type") ?? blob.type;
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filenameFromHeader = disposition.match(/filename="([^"]+)"/i)?.[1] ?? null;
+  const fallbackExtension =
+    input.format === "markdown"
+      ? "md"
+      : input.format === "text"
+        ? "txt"
+        : input.format === "html"
+          ? "html"
+          : "pdf";
+
+  return {
+    blob,
+    contentType,
+    filename: filenameFromHeader ?? `${requestRef}.${fallbackExtension}`,
+  };
 }

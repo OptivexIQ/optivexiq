@@ -26,9 +26,24 @@ const notesSchema = z
   .or(z.literal(""))
   .transform((value) => (value ? value : undefined));
 
+const idempotencyKeySchema = z
+  .string()
+  .trim()
+  .min(8, "Idempotency key is required.")
+  .max(128, "Idempotency key is too long.");
+
 export const rewriteGenerateRequestSchema = z
   .object({
     rewriteType: rewriteTypeSchema,
+    idempotencyKey: idempotencyKeySchema,
+    parentRequestRef: z
+      .string()
+      .trim()
+      .min(3)
+      .max(128)
+      .optional()
+      .or(z.literal(""))
+      .transform((value) => (value ? value : undefined)),
     websiteUrl: websiteUrlSchema,
     content: contentSchema,
     notes: notesSchema,

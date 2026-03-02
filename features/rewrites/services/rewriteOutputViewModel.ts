@@ -6,6 +6,7 @@ import {
   parseRewriteConfidenceFromTrustedSections,
   type RewriteConfidence,
 } from "@/features/rewrites/validators/rewriteConfidenceSchema";
+import { parseRewriteStructuredOutputFromMarkdown } from "@/features/rewrites/validators/rewriteStructuredOutputSchema";
 
 export type RewriteOutputSection = {
   title: string;
@@ -20,48 +21,8 @@ export type RewriteOutputViewModel = {
   confidence: RewriteConfidence | null;
 };
 
-function normalize(text: string) {
-  return text.replace(/\r\n/g, "\n").trim();
-}
-
-function splitSections(markdown: string): RewriteOutputSection[] {
-  const lines = normalize(markdown).split("\n");
-  const sections: RewriteOutputSection[] = [];
-  let currentTitle = "Rewritten Copy";
-  let currentBody: string[] = [];
-
-  const flush = () => {
-    const body = currentBody.join("\n").trim();
-    if (body.length > 0) {
-      sections.push({ title: currentTitle, body });
-    }
-    currentBody = [];
-  };
-
-  for (const line of lines) {
-    const headingMatch = line.match(/^#{1,6}\s+(.+)$/);
-    const numberedHeadingMatch = line.match(/^\d+\)\s+(.+)$/);
-    const title = headingMatch?.[1] ?? numberedHeadingMatch?.[1] ?? null;
-    if (title) {
-      flush();
-      currentTitle = title.trim();
-      continue;
-    }
-    currentBody.push(line);
-  }
-  flush();
-  return sections;
-}
-
-function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
-  const summarySection = sections.find((section) =>
-    section.title.toLowerCase().includes("summary"),
-  );
-  if (!summarySection) {
-    return [];
-  }
-
-  const bullets = summarySection.body
+function toSummaryBullets(summaryMarkdown: string): string[] {
+  return summaryMarkdown
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => /^[-*]\s+/.test(line))
@@ -73,50 +34,8 @@ function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
         !/^positioning\s*shift\s*:/i.test(line) &&
         !/^confidence(?:\s*level)?\s*:/i.test(line),
     )
-    .filter((line) => line.length > 0);
-
-  if (bullets.length > 0) {
-    return bullets.slice(0, 3);
-  }
-
-  return summarySection.body
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(
-      (line) =>
-        !/^clarity\s*shift\s*:/i.test(line) &&
-        !/^objection\s*shift\s*:/i.test(line) &&
-        !/^positioning\s*shift\s*:/i.test(line) &&
-        !/^confidence(?:\s*level)?\s*:/i.test(line),
-    )
     .filter((line) => line.length > 0)
     .slice(0, 3);
-}
-
-function extractLabeledLine(markdown: string, label: string): string | null {
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const patterns = [
-    new RegExp(
-      `^\\s*(?:[-*]\\s+)?(?:\\*\\*)?${escapedLabel}(?:\\*\\*)?\\s*:\\s*(.+)$`,
-      "gim",
-    ),
-    new RegExp(
-      `^\\s*(?:[-*]\\s+)?(?:\\*\\*)?${escapedLabel}(?:\\*\\*)?\\s*-\\s*(.+)$`,
-      "gim",
-    ),
-  ];
-
-  for (const pattern of patterns) {
-    const match = pattern.exec(markdown);
-    if (match?.[1]) {
-      const value = match[1].trim();
-      if (value.length > 0) {
-        return value;
-      }
-    }
-  }
-
-  return null;
 }
 
 function toPlainTextInline(value: string): string {
@@ -128,6 +47,40 @@ function toPlainTextInline(value: string): string {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function splitRewriteSubsections(markdown: string): RewriteOutputSection[] {
+  const lines = markdown.replace(/\r\n/g, "\n").trim().split("\n");
+  const sections: RewriteOutputSection[] = [];
+  let currentTitle = "Proposed Rewrite";
+  let currentBody: string[] = [];
+
+  const flush = () => {
+    const body = currentBody.join("\n").trim();
+    if (body.length > 0) {
+      sections.push({ title: currentTitle, body });
+    }
+    currentBody = [];
+  };
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^#{2,6}\s+(.+)$/);
+    if (headingMatch) {
+      flush();
+      currentTitle = headingMatch[1].trim();
+      continue;
+    }
+    currentBody.push(line);
+  }
+  flush();
+
+  if (sections.length === 0) {
+    return markdown.trim().length > 0
+      ? [{ title: "Proposed Rewrite", body: markdown.trim() }]
+      : [];
+  }
+
+  return sections;
 }
 
 export function normalizeRationaleParagraph(raw: string): string {
@@ -158,75 +111,28 @@ export function normalizeRationaleParagraph(raw: string): string {
 }
 
 export function buildRewriteOutputViewModel(markdown: string): RewriteOutputViewModel {
-  const sections = splitSections(markdown);
-  const summaryBullets = toSummaryBullets(sections);
   const shiftStats = parseRewriteShiftStatsFromText(markdown);
   const confidence = parseRewriteConfidenceFromTrustedSections(markdown);
+  const structured = parseRewriteStructuredOutputFromMarkdown(markdown);
 
-  const rationaleRaw = sections
-    .filter((section) => {
-      const lower = section.title.toLowerCase();
-      return lower.includes("rationale");
-    })
-    .map((section) => section.body)
-    .join(" ")
-    .trim();
-  const rationaleParagraph = normalizeRationaleParagraph(rationaleRaw);
-  const rationaleSections =
-    rationaleParagraph.length > 0
-      ? [{ title: "Rationale", body: rationaleParagraph }]
-      : [];
-
-  const copySections = sections
-    .filter((section) => {
-      const lower = section.title.toLowerCase();
-      return (
-        !lower.includes("summary") &&
-        !lower.includes("rationale")
-      );
-    })
-    .slice();
-
-  const rewriteScopedText = sections
-    .filter((section) => {
-      const lower = section.title.toLowerCase();
-      if (lower.includes("summary") || lower.includes("rationale")) {
-        return false;
-      }
-      if (lower.includes("implementation") || lower.includes("checklist")) {
-        return false;
-      }
-      if (lower.includes("strategy")) {
-        return false;
-      }
-      return lower.includes("rewrite") || lower.includes("proposed");
-    })
-    .map((section) => section.body)
-    .join("\n\n")
-    .trim();
-
-  const ctaExtractionSource =
-    rewriteScopedText.length > 0 ? rewriteScopedText : normalize(markdown);
-  const primaryCta = extractLabeledLine(ctaExtractionSource, "Primary CTA");
-  const finalCta = extractLabeledLine(ctaExtractionSource, "Final CTA");
-  const hasPrimaryCtaSection = copySections.some((section) =>
-    section.title.toLowerCase().includes("primary cta"),
-  );
-  const hasFinalCtaSection = copySections.some((section) =>
-    section.title.toLowerCase().includes("final cta"),
-  );
-
-  if (primaryCta && !hasPrimaryCtaSection) {
-    copySections.push({ title: "Primary CTA", body: primaryCta });
-  }
-  if (finalCta && !hasFinalCtaSection) {
-    copySections.push({ title: "Final CTA", body: finalCta });
+  if (!structured) {
+    return {
+      summaryBullets: [],
+      copySections: [],
+      rationaleSections: [],
+      shiftStats,
+      confidence,
+    };
   }
 
+  const rationaleParagraph = normalizeRationaleParagraph(structured.rationale);
   return {
-    summaryBullets,
-    copySections,
-    rationaleSections,
+    summaryBullets: toSummaryBullets(structured.strategySummary),
+    copySections: splitRewriteSubsections(structured.proposedRewrite),
+    rationaleSections:
+      rationaleParagraph.length > 0
+        ? [{ title: "Rationale", body: rationaleParagraph }]
+        : [],
     shiftStats,
     confidence,
   };

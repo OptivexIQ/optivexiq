@@ -44,6 +44,14 @@ type RewriteOutputPanelProps = {
   onEnterCompare: () => void;
   onRetry: () => void;
   showRunGapEngine?: boolean;
+  metadata?: {
+    experimentId?: string | null;
+    versionNumber?: number | null;
+    parentRequestRef?: string | null;
+    isWinner?: boolean;
+    winnerLabel?: string | null;
+    strategySnapshot?: string | null;
+  };
 };
 
 function filenameFor(type: RewriteType) {
@@ -102,8 +110,9 @@ export function RewriteOutputPanel({
   onEnterCompare,
   onRetry,
   showRunGapEngine = false,
+  metadata,
 }: RewriteOutputPanelProps) {
-  const canExport = output.trim().length > 0;
+  const canExport = output.trim().length > 0 && Boolean(requestRef);
   const filename = useMemo(() => filenameFor(rewriteType), [rewriteType]);
   const outputViewModel = useMemo(
     () => buildRewriteOutputViewModel(output),
@@ -129,6 +138,42 @@ export function RewriteOutputPanel({
 
   return (
     <div className="rounded-xl border border-border/60 bg-background/40 p-6 pt-3">
+      <div className="mb-4 rounded-md border border-border/60 bg-secondary/20 p-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>
+            Experiment ID:{" "}
+            <span className="font-medium text-foreground/90">
+              {metadata?.experimentId ?? "Pending"}
+            </span>
+          </span>
+          <span>
+            Version:{" "}
+            <span className="font-medium text-foreground/90">
+              {metadata?.versionNumber ?? "Pending"}
+            </span>
+          </span>
+          {metadata?.parentRequestRef ? (
+            <span>
+              Parent:{" "}
+              <span className="font-medium text-foreground/90">
+                {metadata.parentRequestRef}
+              </span>
+            </span>
+          ) : null}
+          {metadata?.isWinner ? (
+            <span className="font-medium text-foreground/90">
+              Winner{metadata.winnerLabel ? ` (${metadata.winnerLabel})` : ""}
+            </span>
+          ) : null}
+        </div>
+        {metadata?.strategySnapshot ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Strategy snapshot:{" "}
+            <span className="text-foreground/90">{metadata.strategySnapshot}</span>
+          </p>
+        ) : null}
+      </div>
+
       {running ? (
         <div className="flex flex-col flex-wrap items-start justify-between gap-3">
           <div className="text-xs text-muted-foreground">
@@ -192,10 +237,14 @@ export function RewriteOutputPanel({
         ) : output ? (
           <div className="space-y-4">
             <div className="mt-3 space-y-4">
-              {(outputViewModel.copySections.length > 0
-                ? outputViewModel.copySections
-                : [{ title: "Rewrite", body: output }]
-              ).map((section) => (
+              {outputViewModel.copySections.length === 0 ? (
+                <div className="rounded-md border border-border/50 bg-secondary/20 p-3">
+                  <p className="text-sm text-muted-foreground">
+                    Structured rewrite sections are unavailable for this output.
+                  </p>
+                </div>
+              ) : null}
+              {outputViewModel.copySections.map((section) => (
                 <div
                   key={section.title}
                   className="rounded-md border border-border/50 bg-secondary/30 p-3"

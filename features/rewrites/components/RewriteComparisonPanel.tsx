@@ -47,6 +47,11 @@ type RewriteComparisonPanelProps = {
   currentRequestRef: string | null;
   baselineTimestampLabel: string;
   currentTimestampLabel: string;
+  baselineIsWinner?: boolean;
+  currentIsWinner?: boolean;
+  onMarkBaselineWinner?: () => void | Promise<void>;
+  onMarkCurrentWinner?: () => void | Promise<void>;
+  winnerActionDisabled?: boolean;
   compareBaselineOptions: Array<{
     requestRef: string;
     label: string;
@@ -225,6 +230,11 @@ export function RewriteComparisonPanel({
   currentRequestRef,
   baselineTimestampLabel,
   currentTimestampLabel,
+  baselineIsWinner = false,
+  currentIsWinner = false,
+  onMarkBaselineWinner,
+  onMarkCurrentWinner,
+  winnerActionDisabled = false,
   compareBaselineOptions,
   selectedBaselineRef,
   originalBaselineMap,
@@ -246,21 +256,15 @@ export function RewriteComparisonPanel({
     if (isOriginalBaselineSelected) {
       return originalBaselineSections;
     }
-    return baselineViewModel.copySections.length > 0
-      ? baselineViewModel.copySections
-      : [{ title: "Rewrite", body: baselineOutput }];
+    return baselineViewModel.copySections;
   }, [
     isOriginalBaselineSelected,
     originalBaselineSections,
     baselineViewModel.copySections,
-    baselineOutput,
   ]);
   const currentSections = useMemo(
-    () =>
-      currentViewModel.copySections.length > 0
-        ? currentViewModel.copySections
-        : [{ title: "Rewrite", body: currentOutput }],
-    [currentViewModel.copySections, currentOutput],
+    () => currentViewModel.copySections,
+    [currentViewModel.copySections],
   );
   const baselineRationale = normalizeRationaleParagraph(
     baselineViewModel.rationaleSections[0]?.body?.trim() ?? "",
@@ -672,26 +676,52 @@ export function RewriteComparisonPanel({
               <p className="text-xs font-semibold text-muted-foreground">
                 {baselineVersionLabel}
               </p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">
-                  {baselineTitle}
-                </p>
-                <p className="text-xs text-muted-foreground">{baselineMeta}</p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">
+                    {baselineTitle}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{baselineMeta}</p>
+                </div>
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={baselineIsWinner ? "secondary" : "outline"}
+                    disabled={
+                      isOriginalBaselineSelected ||
+                      winnerActionDisabled ||
+                      !onMarkBaselineWinner
+                    }
+                    onClick={() => void onMarkBaselineWinner?.()}
+                  >
+                    {baselineIsWinner ? "Winner" : "Mark winner"}
+                  </Button>
+                </div>
               </div>
-            </div>
-            <div className="bg-secondary/20 px-4 py-3">
+              <div className="bg-secondary/20 px-4 py-3">
               <p className="text-xs font-semibold text-muted-foreground">
                 Version 2
               </p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">
-                  Current Generation
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {currentTimestampLabel} | {currentRequestRef ?? "No ref"}
-                </p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">
+                    Current Generation
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentTimestampLabel} | {currentRequestRef ?? "No ref"}
+                  </p>
+                </div>
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={currentIsWinner ? "secondary" : "outline"}
+                    disabled={winnerActionDisabled || !onMarkCurrentWinner}
+                    onClick={() => void onMarkCurrentWinner?.()}
+                  >
+                    {currentIsWinner ? "Winner" : "Mark winner"}
+                  </Button>
+                </div>
               </div>
-            </div>
           </div>
 
           <div className="border-t border-border/60 bg-card/10 px-4 py-3">
@@ -776,6 +806,13 @@ export function RewriteComparisonPanel({
             <div className={`min-h-0 bg-card/30 ${columnPadding}`}>
               <div className="min-h-0 max-h-[68vh] overflow-y-auto">
                 <div className={sectionGap}>
+                  {visibleRows.length === 0 ? (
+                    <div className="rounded-md border border-border/60 bg-secondary/20 p-3">
+                      <p className="text-sm text-muted-foreground">
+                        Structured sections are unavailable for the baseline version.
+                      </p>
+                    </div>
+                  ) : null}
                   {visibleRows.map((row) => (
                     <section
                       key={`previous-${row.key}`}
@@ -848,6 +885,13 @@ export function RewriteComparisonPanel({
             <div className={`min-h-0 bg-secondary/30 ${columnPadding}`}>
               <div className="min-h-0 max-h-[68vh] overflow-y-auto">
                 <div className={sectionGap}>
+                  {visibleRows.length === 0 ? (
+                    <div className="rounded-md border border-border/60 bg-secondary/20 p-3">
+                      <p className="text-sm text-muted-foreground">
+                        Structured sections are unavailable for the current version.
+                      </p>
+                    </div>
+                  ) : null}
                   {visibleRows.map((row) => (
                     <section
                       key={`current-${row.key}`}

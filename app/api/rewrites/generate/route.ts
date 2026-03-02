@@ -8,8 +8,8 @@ export async function POST(request: NextRequest) {
       request,
       userId,
       requestId,
-      routePath: "/api/generate",
-      allowRewriteRequests: false,
+      routePath: "/api/rewrites/generate",
+      requireRewriteRequest: true,
     }),
   );
 }

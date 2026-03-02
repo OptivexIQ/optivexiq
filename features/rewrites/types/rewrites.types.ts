@@ -36,6 +36,8 @@ export type RewriteStrategy = {
 
 export type RewriteGenerateRequest = {
   rewriteType: RewriteType;
+  idempotencyKey: string;
+  parentRequestRef?: string | null;
   websiteUrl?: string | null;
   content?: string | null;
   notes?: string | null;
@@ -81,6 +83,28 @@ export type RewriteStudioInitialData = {
   };
   historyVersions?: Array<{
     requestRef: string;
+    experimentGroupId?: string;
+    parentRequestRef?: string | null;
+    versionNumber?: number;
+    isWinner?: boolean;
+    winnerLabel?: string | null;
+    winnerMarkedAt?: string | null;
+    idempotencyKey?: string;
+    strategyContext?: {
+      target?: RewriteType;
+      goal?: RewriteGoal;
+      icp?: string;
+      tone?: RewriteTone;
+      length?: RewriteLength;
+      emphasis?: RewriteEmphasis[];
+      constraints?: string;
+      audience?: string;
+      focus?: {
+        differentiation?: boolean;
+        objection?: boolean;
+      };
+      schemaVersion?: number;
+    };
     rewriteType: RewriteType;
     createdAt: string;
     outputMarkdown: string;

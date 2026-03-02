@@ -26,6 +26,7 @@ import {
   generateRewriteRequestRef,
   saveRewriteRecord,
 } from "@/features/rewrites/services/rewriteHistoryService";
+import { getRewriteHistoryByIdempotencyKeyForUser } from "@/features/rewrites/services/rewriteHistoryReadService";
 import type { RewriteGenerateRequestValues } from "@/features/rewrites/validators/rewritesSchema";
 import {
   formatRewriteShiftStatsBlock,
@@ -36,6 +37,11 @@ import {
   parseRewriteConfidenceFromTrustedSections,
   type RewriteConfidence,
 } from "@/features/rewrites/validators/rewriteConfidenceSchema";
+import {
+  parseRewriteStructuredOutputFromMarkdown,
+  REWRITE_OUTPUT_SCHEMA_VERSION,
+} from "@/features/rewrites/validators/rewriteStructuredOutputSchema";
+import { emitRewriteTelemetryEvent } from "@/features/rewrites/services/rewriteTelemetryService";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 const FINALIZATION_MAX_ATTEMPTS = 3;
@@ -145,13 +151,23 @@ async function finalizeGenerateUsageWithRetry(params: {
 
 async function saveRewriteRecordWithRetry(
   params: Parameters<typeof saveRewriteRecord>[0],
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<
+  | {
+      ok: true;
+      lineage: {
+        experimentGroupId: string;
+        versionNumber: number;
+        parentRequestRef: string | null;
+      };
+    }
+  | { ok: false; error: string }
+> {
   let lastError = "unknown_error";
 
   for (let attempt = 1; attempt <= REWRITE_PERSIST_MAX_ATTEMPTS; attempt += 1) {
     const result = await saveRewriteRecord(params);
     if (result.ok) {
-      return { ok: true };
+      return { ok: true, lineage: result.lineage };
     }
 
     lastError = result.error;
@@ -303,11 +319,53 @@ export async function handleGenerateStream(params: {
   request: NextRequest;
   userId: string;
   requestId: string;
+  routePath?: string;
+  allowRewriteRequests?: boolean;
+  requireRewriteRequest?: boolean;
 }): Promise<Response> {
-  const { request, userId, requestId } = params;
+  const {
+    request,
+    userId,
+    requestId,
+    routePath = "/api/generate",
+    allowRewriteRequests = true,
+    requireRewriteRequest = false,
+  } = params;
   const startTime = Date.now();
   const body = await request.json().catch(() => null);
-  const parsedRequest = await parseGenerateRequest(body);
+  let parsedRequest: Awaited<ReturnType<typeof parseGenerateRequest>> | null =
+    null;
+
+  if (requireRewriteRequest) {
+    const rewriteParsed = rewriteGenerateRequestSchema.safeParse(body);
+    if (!rewriteParsed.success) {
+      return errorResponse("invalid_payload", "Invalid rewrite payload.", 400, {
+        requestId,
+        headers: { "x-request-id": requestId },
+      });
+    }
+    parsedRequest = {
+      request: await buildRewriteOpenAIRequest(rewriteParsed.data),
+      isRewriteRequest: true,
+      rewriteInput: rewriteParsed.data,
+    };
+  } else {
+    if (!allowRewriteRequests) {
+      const rewriteParsed = rewriteGenerateRequestSchema.safeParse(body);
+      if (rewriteParsed.success) {
+        return errorResponse(
+          "invalid_payload",
+          "Rewrite requests now use /api/rewrites/generate.",
+          400,
+          {
+            requestId,
+            headers: { "x-request-id": requestId },
+          },
+        );
+      }
+    }
+    parsedRequest = await parseGenerateRequest(body);
+  }
 
   if (!parsedRequest) {
     return errorResponse("invalid_payload", "Invalid payload.", 400, {
@@ -316,8 +374,36 @@ export async function handleGenerateStream(params: {
     });
   }
   const { request: generateRequest, isRewriteRequest, rewriteInput } = parsedRequest;
+
+  if (isRewriteRequest && rewriteInput) {
+    const existing = await getRewriteHistoryByIdempotencyKeyForUser(
+      userId,
+      rewriteInput.idempotencyKey,
+    );
+    if (existing) {
+      logger.info("rewrite.generate.idempotent_replay", {
+        requestId,
+        userId,
+        requestRef: existing.requestRef,
+        idempotencyKey: rewriteInput.idempotencyKey,
+      });
+      return new Response(existing.outputMarkdown, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-store",
+          "x-request-id": requestId,
+          "x-rewrite-ref": existing.requestRef,
+          "x-rewrite-created-at": existing.createdAt,
+          "x-idempotent-replay": "true",
+        },
+      });
+    }
+  }
+
   const rewriteRef = isRewriteRequest ? generateRewriteRequestRef() : null;
   const rewriteCreatedAt = isRewriteRequest ? new Date().toISOString() : null;
+  let completedExperimentGroupId: string | null = null;
+  let completedVersionNumber: number | null = null;
 
   logger.info("AI stream requested.", {
     requestId,
@@ -329,8 +415,21 @@ export async function handleGenerateStream(params: {
       requestId,
       userId,
       requestRef: rewriteRef,
+      experimentGroupId: null,
       rewriteType: rewriteInput?.rewriteType ?? null,
       model: generateRequest.model,
+    });
+    void emitRewriteTelemetryEvent({
+      userId,
+      requestId,
+      eventType: "rewrite_started",
+      requestRef: rewriteRef,
+      experimentGroupId: null,
+      route: routePath,
+      metadata: {
+        rewrite_type: rewriteInput?.rewriteType ?? null,
+        model: generateRequest.model,
+      },
     });
   }
 
@@ -374,7 +473,20 @@ export async function handleGenerateStream(params: {
         requestId,
         userId,
         requestRef: rewriteRef,
+        experimentGroupId: null,
         stage: "stream_start",
+      });
+      void emitRewriteTelemetryEvent({
+        userId,
+        requestId,
+        eventType: "rewrite_failed",
+        requestRef: rewriteRef,
+        experimentGroupId: null,
+        route: routePath,
+        metadata: {
+          stage: "stream_start",
+          rewrite_type: rewriteInput?.rewriteType ?? null,
+        },
       });
     }
     await rollbackGenerateUsage({
@@ -409,7 +521,20 @@ export async function handleGenerateStream(params: {
         requestId,
         userId,
         requestRef: rewriteRef,
+        experimentGroupId: null,
         stage: "stream_prime",
+      });
+      void emitRewriteTelemetryEvent({
+        userId,
+        requestId,
+        eventType: "rewrite_failed",
+        requestRef: rewriteRef,
+        experimentGroupId: null,
+        route: routePath,
+        metadata: {
+          stage: "stream_prime",
+          rewrite_type: rewriteInput?.rewriteType ?? null,
+        },
       });
     }
     await rollbackGenerateUsage({
@@ -477,6 +602,13 @@ export async function handleGenerateStream(params: {
               outputTokensSoFar += estimateTokens(shiftStatsResult.appendedBlock);
               controller.enqueue(encoder.encode(shiftStatsResult.appendedBlock));
             }
+
+            const structured = parseRewriteStructuredOutputFromMarkdown(output);
+            if (!structured) {
+              throw new Error(
+                "Rewrite output failed structured contract validation.",
+              );
+            }
           }
         } catch (error) {
           failed = true;
@@ -503,7 +635,20 @@ export async function handleGenerateStream(params: {
                   requestId,
                   userId,
                   requestRef: rewriteRef,
+                  experimentGroupId: null,
                   stage: "stream_runtime",
+                });
+                void emitRewriteTelemetryEvent({
+                  userId,
+                  requestId,
+                  eventType: "rewrite_failed",
+                  requestRef: rewriteRef,
+                  experimentGroupId: null,
+                  route: routePath,
+                  metadata: {
+                    stage: "stream_runtime",
+                    rewrite_type: rewriteInput?.rewriteType ?? null,
+                  },
                 });
               }
               await rollbackGenerateUsage({
@@ -546,7 +691,7 @@ export async function handleGenerateStream(params: {
                 await enqueueUsageFinalizationReconciliation({
                   reservationKey: requestId,
                   userId,
-                  route: "/api/generate",
+                  route: routePath,
                   exactTokens: actualTokens,
                   exactCostCents: actualCostCents,
                   errorMessage,
@@ -563,7 +708,7 @@ export async function handleGenerateStream(params: {
                   context: {
                     reservation_key: requestId,
                     user_id: userId,
-                    route: "/api/generate",
+                    route: routePath,
                     exact_tokens: actualTokens,
                     exact_cost_cents: actualCostCents,
                     error: errorMessage,
@@ -604,7 +749,7 @@ export async function handleGenerateStream(params: {
             await enqueueUsageFinalizationReconciliation({
               reservationKey: requestId,
               userId,
-              route: "/api/generate",
+              route: routePath,
               exactTokens: finalizedTokens,
               exactCostCents: finalizedCostCents,
               errorMessage: "finalization_failed_after_retries",
@@ -627,7 +772,7 @@ export async function handleGenerateStream(params: {
               context: {
                 reservation_key: requestId,
                 user_id: userId,
-                route: "/api/generate",
+                route: routePath,
                 exact_tokens: finalizedTokens,
                 exact_cost_cents: finalizedCostCents,
                 error: "finalization_failed_after_retries",
@@ -678,6 +823,42 @@ export async function handleGenerateStream(params: {
                     error: persistResult.error,
                   },
                 });
+                void emitRewriteTelemetryEvent({
+                  userId,
+                  requestId,
+                  eventType: "rewrite_failed",
+                  requestRef: rewriteRef,
+                  experimentGroupId: null,
+                  route: routePath,
+                  latencyMs: Date.now() - startTime,
+                  reservedTokens,
+                  actualTokens: finalizedTokens,
+                  metadata: {
+                    stage: "persistence",
+                    rewrite_type: rewriteInput.rewriteType,
+                  },
+                });
+              } else {
+                completedExperimentGroupId =
+                  persistResult.lineage.experimentGroupId;
+                completedVersionNumber = persistResult.lineage.versionNumber;
+                void emitRewriteTelemetryEvent({
+                  userId,
+                  requestId,
+                  eventType: "rewrite_completed",
+                  requestRef: rewriteRef,
+                  experimentGroupId: persistResult.lineage.experimentGroupId,
+                  route: routePath,
+                  latencyMs: Date.now() - startTime,
+                  reservedTokens,
+                  actualTokens: finalizedTokens,
+                  metadata: {
+                    rewrite_type: rewriteInput.rewriteType,
+                    version_number: persistResult.lineage.versionNumber,
+                    parent_request_ref: persistResult.lineage.parentRequestRef,
+                    rewrite_output_schema_version: REWRITE_OUTPUT_SCHEMA_VERSION,
+                  },
+                });
               }
             }
           }
@@ -695,7 +876,10 @@ export async function handleGenerateStream(params: {
               requestId,
               userId,
               requestRef: rewriteRef,
+              experimentGroupId: completedExperimentGroupId,
               rewriteType: rewriteInput?.rewriteType ?? null,
+              rewriteOutputSchemaVersion: REWRITE_OUTPUT_SCHEMA_VERSION,
+              versionNumber: completedVersionNumber,
               inputTokens: totalInputTokens,
               outputTokens: totalOutputTokens,
               costCents,

@@ -49,59 +49,6 @@ function sanitizeQueryValue(value: string | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function parseStudioContextFromNotes(notes: string | null | undefined) {
-  const safe = notes ?? "";
-  const parseMatch = (pattern: RegExp) => {
-    const match = safe.match(pattern);
-    return match?.[1]?.trim() ?? "";
-  };
-  const rawIcpLabel = parseMatch(/- ICP:\s*(.+)/i);
-  const icpLabel = rawIcpLabel.toLowerCase();
-  const goalLabel = parseMatch(/- Goal:\s*(.+)/i).toLowerCase();
-  const differentiationLabel = parseMatch(
-    /- Differentiation focus:\s*(.+)/i,
-  ).toLowerCase();
-  const objectionLabel = parseMatch(/- Objection focus:\s*(.+)/i).toLowerCase();
-
-  return {
-    icpLabel: rawIcpLabel,
-    goal:
-      goalLabel === "clarity"
-        ? "clarity"
-        : goalLabel === "differentiation"
-          ? "differentiation"
-          : "conversion",
-    differentiationFocus: differentiationLabel !== "off",
-    objectionFocus: objectionLabel === "on",
-  } as const;
-}
-
-function parseStrategyFromNotes(notes: string | null | undefined) {
-  const safe = notes ?? "";
-  const parseMatch = (pattern: RegExp) => {
-    const match = safe.match(pattern);
-    return match?.[1]?.trim() ?? "";
-  };
-  const tone = parseMatch(/- Tone:\s*(.+)/i);
-  const length = parseMatch(/- Length:\s*(.+)/i);
-  const emphasisRaw = parseMatch(/- Emphasis:\s*(.+)/i);
-  const emphasis =
-    emphasisRaw.length > 0 && emphasisRaw.toLowerCase() !== "none"
-      ? emphasisRaw.split(",").map((item) => item.trim()).filter(Boolean)
-      : [];
-  const constraints = parseMatch(/- Constraints:\s*(.+)/i);
-  const audience = parseMatch(/- Audience:\s*(.+)/i);
-
-  return {
-    tone,
-    length,
-    emphasis,
-    constraints: constraints.toLowerCase() === "none" ? "" : constraints,
-    audience:
-      audience.toLowerCase() === "not specified" ? "" : audience,
-  };
-}
-
 function extractUserNotesFromHistoryNotes(notes: string | null | undefined) {
   const safe = notes ?? "";
   const marker = "\n\nUser notes:\n";
@@ -109,7 +56,7 @@ function extractUserNotesFromHistoryNotes(notes: string | null | undefined) {
   if (markerIndex >= 0) {
     return safe.slice(markerIndex + marker.length).trim();
   }
-  return "";
+  return safe.trim();
 }
 
 function resolvePrefillRequest(
@@ -192,9 +139,9 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
   const historyUserNotes = extractUserNotesFromHistoryNotes(historyRecord?.notes);
   const initialStudioContext = historyRecord
     ? (() => {
-        const parsed = parseStudioContextFromNotes(historyRecord.notes);
+        const parsed = historyRecord.strategyContext;
         const profileIcp = profileResult.data.icpRole.trim().toLowerCase();
-        const parsedIcp = parsed.icpLabel.trim().toLowerCase();
+        const parsedIcp = parsed.icp.trim().toLowerCase();
         const useCustomIcp =
           parsedIcp.length > 0 && profileIcp.length > 0
             ? parsedIcp !== profileIcp
@@ -202,10 +149,10 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
 
         return {
           useCustomIcp,
-          customIcp: useCustomIcp ? parsed.icpLabel : "",
+          customIcp: useCustomIcp ? parsed.icp : "",
           goal: parsed.goal,
-          differentiationFocus: parsed.differentiationFocus,
-          objectionFocus: parsed.objectionFocus,
+          differentiationFocus: parsed.focus.differentiation,
+          objectionFocus: parsed.focus.objection,
         } as const;
       })()
     : undefined;
@@ -231,10 +178,15 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
           initialRequestRef: historyRecord?.requestRef ?? null,
           initialStudioContext,
           historyVersions: rewriteHistory.map((item) => {
-            const strategy = parseStrategyFromNotes(item.notes);
-            const context = parseStudioContextFromNotes(item.notes);
+            const strategy = item.strategyContext;
             return {
               requestRef: item.requestRef,
+              experimentGroupId: item.experimentGroupId ?? undefined,
+              parentRequestRef: item.parentRequestRef ?? undefined,
+              versionNumber: item.versionNumber,
+              isWinner: item.isWinner,
+              winnerLabel: item.winnerLabel ?? undefined,
+              winnerMarkedAt: item.winnerMarkedAt ?? undefined,
               rewriteType: item.rewriteType,
               createdAt: item.createdAt,
               outputMarkdown: item.outputMarkdown,
@@ -242,16 +194,41 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
               sourceContent: item.sourceContent,
               userNotes: extractUserNotesFromHistoryNotes(item.notes),
               strategicContext: {
-                goal: context.goal,
-                icp: context.icpLabel,
-                differentiationFocus: context.differentiationFocus,
-                objectionFocus: context.objectionFocus,
+                goal: strategy.goal,
+                icp: strategy.icp,
+                differentiationFocus: strategy.focus.differentiation,
+                objectionFocus: strategy.focus.objection,
               },
               tone: strategy.tone || undefined,
               length: strategy.length || undefined,
               emphasis: strategy.emphasis,
               constraints: strategy.constraints || undefined,
               audience: strategy.audience || undefined,
+              idempotencyKey: item.idempotencyKey,
+              strategyContext: {
+                target: strategy.target,
+                goal: strategy.goal,
+                icp: strategy.icp,
+                tone: strategy.tone as
+                  | "neutral"
+                  | "confident"
+                  | "technical"
+                  | "direct"
+                  | "founder-led"
+                  | "enterprise",
+                length: strategy.length as "short" | "standard" | "long",
+                emphasis: strategy.emphasis as (
+                  | "clarity"
+                  | "differentiation"
+                  | "objection-handling"
+                  | "pricing-clarity"
+                  | "proof-credibility"
+                )[],
+                constraints: strategy.constraints,
+                audience: strategy.audience,
+                focus: strategy.focus,
+                schemaVersion: strategy.schemaVersion,
+              },
             };
           }),
         }}

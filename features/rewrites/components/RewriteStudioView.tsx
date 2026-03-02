@@ -31,11 +31,14 @@ import {
 } from "@/features/rewrites/components/RewriteStudioControlBar";
 import { RewriteStudioHeader } from "@/features/rewrites/components/RewriteStudioHeader";
 import {
+  exportRewrite,
   mapRewriteSections,
   streamRewrite,
 } from "@/features/rewrites/services/rewritesClient";
 import { hasAnyAllowedSectionLabel } from "@/features/rewrites/services/sectionLabelUtils";
 import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
+import { buildRewriteExportDocument } from "@/features/rewrites/services/rewriteExportService";
+import { markWinnerAction } from "@/features/rewrites/actions/markWinner";
 import type {
   RewriteExportFormat,
   RewriteGenerateRequest,
@@ -55,95 +58,17 @@ const REWRITE_STUDIO_INPUT_POLICY_STORAGE_KEY =
   "optivexiq.rewrite_studio.input_policy.v1";
 const ORIGINAL_BASELINE_REF = "__original_draft__";
 
-function toMarkdownDocument(output: string) {
-  return output.endsWith("\n") ? output : `${output}\n`;
-}
-
-function toPlainTextDocument(markdown: string) {
-  return toMarkdownDocument(markdown)
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/\*(.*?)\*/g, "$1")
-    .replace(/`{1,3}(.*?)`{1,3}/g, "$1")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)");
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function toHtmlDocument(markdown: string) {
-  const escaped = escapeHtml(toMarkdownDocument(markdown));
-  return [
-    "<!doctype html>",
-    '<html lang="en">',
-    "<head>",
-    '  <meta charset="utf-8" />',
-    '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
-    "  <title>Rewrite Export</title>",
-    "  <style>",
-    "    body { font-family: Inter, Arial, sans-serif; margin: 32px; color: #111827; line-height: 1.6; }",
-    "    pre { white-space: pre-wrap; word-break: break-word; margin: 0; }",
-    "  </style>",
-    "</head>",
-    "<body>",
-    `  <pre>${escaped}</pre>`,
-    "</body>",
-    "</html>",
-    "",
-  ].join("\n");
-}
-
-function toStructuredMarkdownDocument(
-  output: string,
-  rewriteType: RewriteGenerateRequest["rewriteType"],
-) {
-  const model = buildRewriteOutputViewModel(output);
-  const lines: string[] = [];
-  lines.push(`# ${rewriteType === "pricing" ? "Pricing" : "Homepage"} Rewrite`);
-  lines.push("");
-  lines.push("## Executive Rewrite Summary");
-  if (model.summaryBullets.length > 0) {
-    for (const bullet of model.summaryBullets.slice(0, 3)) {
-      lines.push(`- ${bullet}`);
-    }
-  } else {
-    lines.push("- Summary not available for this rewrite.");
+function createIdempotencyKey() {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
   }
-  lines.push("");
-  lines.push("## Rewritten Copy");
-  const copySections =
-    model.copySections.length > 0
-      ? model.copySections
-      : [{ title: "Rewrite", body: output }];
-  for (const section of copySections) {
-    lines.push(`### ${section.title}`);
-    lines.push(section.body);
-    lines.push("");
-  }
-
-  lines.push("## Strategic Rationale");
-  if (model.rationaleSections.length > 0) {
-    for (const section of model.rationaleSections) {
-      lines.push(`### ${section.title}`);
-      lines.push(section.body);
-      lines.push("");
-    }
-  } else {
-    lines.push("Not available for this rewrite.");
-    lines.push("");
-  }
-
-  return lines.join("\n").trimEnd() + "\n";
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function downloadContent(filename: string, type: string, content: string) {
-  const blob = new Blob([content], { type });
+function downloadBlob(filename: string, blob: Blob) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = filename;
@@ -151,8 +76,8 @@ function downloadContent(filename: string, type: string, content: string) {
   URL.revokeObjectURL(link.href);
 }
 
-function printPdfDocument(markdown: string) {
-  const html = toHtmlDocument(markdown);
+async function printHtmlBlob(blob: Blob) {
+  const html = await blob.text();
   const win = window.open("", "_blank", "noopener,noreferrer");
   if (!win) {
     throw new Error("Popup blocked. Enable popups to export PDF.");
@@ -183,6 +108,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const abortRef = useRef<AbortController | null>(null);
   const [request, setRequest] = useState<RewriteGenerateRequest>({
     rewriteType: "homepage",
+    idempotencyKey: createIdempotencyKey(),
     websiteUrl: initialData.defaultWebsiteUrl,
     content: "",
     notes: "",
@@ -252,14 +178,14 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     constraints: "",
     audience: "",
   });
+  const [historyVersions, setHistoryVersions] = useState(
+    initialData.historyVersions ?? [],
+  );
+  const [winnerMutationRunning, setWinnerMutationRunning] = useState(false);
 
   const selectedIcpLabel = useCustomIcp ? customIcp.trim() : profileIcp;
   const resolvedIcpLabel =
     selectedIcpLabel.trim().length > 0 ? selectedIcpLabel : "Custom ICP";
-  const historyVersions = useMemo(
-    () => initialData.historyVersions ?? [],
-    [initialData.historyVersions],
-  );
   const currentVersionSourceContent =
     requestRef != null
       ? (historyVersions.find((item) => item.requestRef === requestRef)
@@ -323,6 +249,34 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const canCompare =
     output.trim().length > 0 &&
     (previousOutput.trim().length > 0 || baselineOptions.length > 0);
+  const currentVersionRecord = requestRef
+    ? historyVersions.find((item) => item.requestRef === requestRef)
+    : null;
+  const baselineVersionRecord =
+    selectedBaselineRef && selectedBaselineRef !== ORIGINAL_BASELINE_REF
+      ? historyVersions.find((item) => item.requestRef === selectedBaselineRef)
+      : null;
+  const strategySnapshot = useMemo(() => {
+    const parts: string[] = [];
+    const targetLabel =
+      request.rewriteType === "pricing" ? "Pricing" : "Homepage";
+    parts.push(`Target ${targetLabel}`);
+    parts.push(`Goal ${goal}`);
+    parts.push(`ICP ${resolvedIcpLabel}`);
+    parts.push(`Tone ${strategy.tone}`);
+    parts.push(`Length ${strategy.length}`);
+    if (strategy.emphasis.length > 0) {
+      parts.push(`Emphasis ${strategy.emphasis.join(", ")}`);
+    }
+    return parts.join(" | ");
+  }, [
+    request.rewriteType,
+    goal,
+    resolvedIcpLabel,
+    strategy.tone,
+    strategy.length,
+    strategy.emphasis,
+  ]);
   const outputViewModel = useMemo(
     () => buildRewriteOutputViewModel(output),
     [output],
@@ -644,6 +598,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const resetStudio = () => {
     setRequest({
       rewriteType: "homepage",
+      idempotencyKey: createIdempotencyKey(),
       websiteUrl: initialData.defaultWebsiteUrl,
       content: "",
       notes: "",
@@ -701,6 +656,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setSelectedBaselineRef(null);
     setRequestRef(null);
     setCurrentVersionCreatedAt(null);
+    setRequest((previous) => ({
+      ...previous,
+      idempotencyKey: createIdempotencyKey(),
+    }));
     setOriginalBaselineMap(null);
     setOriginalBaselineMapLoading(false);
     setOriginalBaselineMapError(null);
@@ -751,9 +710,22 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     abortRef.current = controller;
 
     try {
+      const activeIdempotencyKey =
+        (request.idempotencyKey?.trim().length ?? 0) > 0
+          ? request.idempotencyKey
+          : createIdempotencyKey();
+      if (activeIdempotencyKey !== request.idempotencyKey) {
+        setRequest((previous) => ({
+          ...previous,
+          idempotencyKey: activeIdempotencyKey,
+        }));
+      }
       const userNotes = request.notes?.trim() ?? "";
+      const parentRequestRef = requestRef;
       const submissionRequest: RewriteGenerateRequest = {
         ...request,
+        idempotencyKey: activeIdempotencyKey,
+        parentRequestRef: parentRequestRef ?? undefined,
         notes:
           refineMode && deltaInstructions.trim().length > 0
             ? [
@@ -787,6 +759,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       setCurrentVersionCreatedAt(
         result.requestCreatedAt ?? new Date().toISOString(),
       );
+      setRequest((previous) => ({
+        ...previous,
+        idempotencyKey: createIdempotencyKey(),
+      }));
       toast({
         title: "Rewrite generated",
         description: "Your output is ready to copy or export.",
@@ -805,7 +781,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               : "Unable to generate rewrite.";
         if (
           /shift stats contract validation/i.test(message) ||
-          /metrics contract validation/i.test(message)
+          /metrics contract validation/i.test(message) ||
+          /structured contract validation/i.test(message)
         ) {
           setOutput("");
         }
@@ -832,6 +809,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setRequest((previous) => ({
       ...previous,
       rewriteType: version.rewriteType,
+      idempotencyKey: createIdempotencyKey(),
       websiteUrl: version.websiteUrl ?? previous.websiteUrl,
       content: version.sourceContent ?? "",
       notes: version.userNotes ?? "",
@@ -910,6 +888,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setRequest((previous) => ({
       ...previous,
       rewriteType: version.rewriteType,
+      idempotencyKey: createIdempotencyKey(),
       websiteUrl: version.websiteUrl ?? previous.websiteUrl,
       content: version.sourceContent ?? "",
       notes: version.userNotes ?? "",
@@ -982,42 +961,67 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(
-      toStructuredMarkdownDocument(output, request.rewriteType),
-    );
+    const markdown = buildRewriteExportDocument({
+      rewriteType: request.rewriteType,
+      outputMarkdown: output,
+      format: "markdown",
+    }).content;
+    await navigator.clipboard.writeText(markdown);
     toast({ title: "Copied", description: "Rewrite copied as markdown." });
   };
 
-  const handleExport = (format: RewriteExportFormat) => {
-    const base = `${request.rewriteType}-rewrite`;
-    const structuredMarkdown = toStructuredMarkdownDocument(
-      output,
-      request.rewriteType,
-    );
-    if (format === "markdown") {
-      downloadContent(`${base}.md`, "text/markdown", structuredMarkdown);
-      return;
+  const handleExport = async (format: RewriteExportFormat) => {
+    if (!requestRef) {
+      throw new Error("Save or generate this rewrite before exporting.");
     }
 
-    if (format === "text") {
-      downloadContent(
-        `${base}.txt`,
-        "text/plain",
-        toPlainTextDocument(structuredMarkdown),
-      );
-      return;
-    }
-
+    const exported = await exportRewrite({ requestRef, format });
     if (format === "pdf") {
-      printPdfDocument(structuredMarkdown);
+      await printHtmlBlob(exported.blob);
       return;
     }
+    downloadBlob(exported.filename, exported.blob);
+  };
 
-    downloadContent(
-      `${base}.html`,
-      "text/html",
-      toHtmlDocument(structuredMarkdown),
-    );
+  const handleMarkWinner = async (winnerRequestRef: string) => {
+    setWinnerMutationRunning(true);
+    try {
+      const result = await markWinnerAction({ requestRef: winnerRequestRef });
+      if (result.error !== null) {
+        setError(result.error);
+        toast({
+          title: "Unable to mark winner",
+          description: result.error,
+        });
+        return;
+      }
+
+      setHistoryVersions((previous) =>
+        previous.map((version) =>
+          version.experimentGroupId === result.experimentGroupId
+            ? {
+                ...version,
+                isWinner: version.requestRef === result.requestRef,
+                winnerLabel:
+                  version.requestRef === result.requestRef
+                    ? (result.winnerLabel ?? undefined)
+                    : undefined,
+                winnerMarkedAt:
+                  version.requestRef === result.requestRef
+                    ? result.winnerMarkedAt
+                    : undefined,
+              }
+            : version,
+        ),
+      );
+
+      toast({
+        title: "Winner marked",
+        description: "Winning version updated for this experiment.",
+      });
+    } finally {
+      setWinnerMutationRunning(false);
+    }
   };
 
   return (
@@ -1063,6 +1067,19 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           currentRequestRef={requestRef}
           baselineTimestampLabel={baselineTimestampLabel}
           currentTimestampLabel={currentTimestampLabel}
+          baselineIsWinner={Boolean(baselineVersionRecord?.isWinner)}
+          currentIsWinner={Boolean(currentVersionRecord?.isWinner)}
+          onMarkBaselineWinner={
+            baselineVersionRecord
+              ? () => handleMarkWinner(baselineVersionRecord.requestRef)
+              : undefined
+          }
+          onMarkCurrentWinner={
+            currentVersionRecord
+              ? () => handleMarkWinner(currentVersionRecord.requestRef)
+              : undefined
+          }
+          winnerActionDisabled={winnerMutationRunning || running}
           compareBaselineOptions={baselineOptions}
           selectedBaselineRef={selectedBaselineRef}
           originalBaselineMap={originalBaselineMap}
@@ -1147,7 +1164,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                     Analysis & Output
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {outputViewModel.confidence ? (
                     <span>Confidence Score: {outputViewModel.confidence}</span>
                   ) : null}
@@ -1195,11 +1212,18 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                 requestRef={requestRef}
                 error={error}
                 showRunGapEngine
+                metadata={{
+                  experimentId: currentVersionRecord?.experimentGroupId ?? null,
+                  versionNumber: currentVersionRecord?.versionNumber ?? null,
+                  parentRequestRef:
+                    currentVersionRecord?.parentRequestRef ?? null,
+                  isWinner: Boolean(currentVersionRecord?.isWinner),
+                  winnerLabel: currentVersionRecord?.winnerLabel ?? null,
+                  strategySnapshot,
+                }}
                 onCopy={() => void handleCopy()}
                 onExport={(format) => {
-                  try {
-                    handleExport(format);
-                  } catch (exportError) {
+                  void handleExport(format).catch((exportError: unknown) => {
                     const message =
                       exportError instanceof Error
                         ? exportError.message
@@ -1209,7 +1233,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                       title: "Export failed",
                       description: message,
                     });
-                  }
+                  });
                 }}
                 onOpenHistory={handleOpenHistory}
                 onDuplicate={handleDuplicate}
@@ -1258,6 +1282,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                     <Badge variant="secondary">Saved</Badge>
                     {item.tone ? (
                       <Badge variant="secondary">{item.tone}</Badge>
+                    ) : null}
+                    {item.isWinner ? (
+                      <Badge variant="secondary">Winner</Badge>
                     ) : null}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">

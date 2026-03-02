@@ -6,7 +6,7 @@ import {
   assertCanGenerate,
   type QuotaError,
 } from "@/features/usage/services/quotaEnforcer";
-import { getQuotaActionForPath } from "@/middleware/guardPolicy";
+import { getQuotaActionForPath, isRewriteExportPath } from "@/middleware/guardPolicy";
 import { logger } from "@/lib/logger";
 
 function isQuotaError(error: unknown): error is QuotaError {
@@ -30,7 +30,8 @@ export async function planGuard(
 ): Promise<PlanGuardResult> {
   const timestamp = new Date().toISOString();
   const action = getQuotaActionForPath(pathname);
-  if (!action) {
+  const requiresEntitlementOnly = isRewriteExportPath(pathname);
+  if (!action && !requiresEntitlementOnly) {
     return null;
   }
 
@@ -62,6 +63,10 @@ export async function planGuard(
   }
 
   await ensureBillingPeriodValid(userId);
+
+  if (requiresEntitlementOnly && !action) {
+    return null;
+  }
 
   try {
     if (action === "generate") {
