@@ -248,7 +248,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const selectedIcpLabel = useCustomIcp ? customIcp.trim() : profileIcp;
   const resolvedIcpLabel =
     selectedIcpLabel.trim().length > 0 ? selectedIcpLabel : "Custom ICP";
-  const historyVersions = initialData.historyVersions ?? [];
+  const historyVersions = useMemo(
+    () => initialData.historyVersions ?? [],
+    [initialData.historyVersions],
+  );
   const currentVersionSourceContent =
     requestRef != null
       ? historyVersions.find((item) => item.requestRef === requestRef)
@@ -260,25 +263,32 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }
     return request.content?.trim().length ? request.content : "";
   }, [requestRef, currentVersionSourceContent, request.content]);
-  const compareBaselineOptions = historyVersions
-    .filter((item) => item.requestRef !== requestRef)
-    .map((item) => {
-      const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
-      return {
-        requestRef: item.requestRef,
-        label: `${target} | ${item.requestRef}`,
-      };
-    });
-  const baselineOptions =
-    comparisonSourceContent.trim().length > 0
-      ? [
-          {
-            requestRef: ORIGINAL_BASELINE_REF,
-            label: "Original Draft | Source content",
-          },
-          ...compareBaselineOptions,
-        ]
-      : compareBaselineOptions;
+  const compareBaselineOptions = useMemo(
+    () =>
+      historyVersions
+        .filter((item) => item.requestRef !== requestRef)
+        .map((item) => {
+          const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
+          return {
+            requestRef: item.requestRef,
+            label: `${target} | ${item.requestRef}`,
+          };
+        }),
+    [historyVersions, requestRef],
+  );
+  const baselineOptions = useMemo(
+    () =>
+      comparisonSourceContent.trim().length > 0
+        ? [
+            {
+              requestRef: ORIGINAL_BASELINE_REF,
+              label: "Original Draft | Source content",
+            },
+            ...compareBaselineOptions,
+          ]
+        : compareBaselineOptions,
+    [comparisonSourceContent, compareBaselineOptions],
+  );
   const isOriginalBaselineSelected =
     selectedBaselineRef === ORIGINAL_BASELINE_REF;
   const selectedBaselineOutput =
