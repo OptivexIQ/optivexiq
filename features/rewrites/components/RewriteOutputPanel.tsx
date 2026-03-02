@@ -11,8 +11,8 @@ import {
   FileCode2,
   FileType2,
   FileText,
+  History,
   Loader2,
-  Save,
   Sparkles,
   SplitSquareHorizontal,
 } from "lucide-react";
@@ -38,7 +38,7 @@ type RewriteOutputPanelProps = {
   error: string | null;
   onCopy: () => void | Promise<void>;
   onExport: (format: RewriteExportFormat) => void;
-  onSaveVersion: () => void;
+  onOpenHistory: () => void;
   onDuplicate: () => void;
   onRefine: () => void;
   onEnterCompare: () => void;
@@ -96,7 +96,7 @@ export function RewriteOutputPanel({
   error,
   onCopy,
   onExport,
-  onSaveVersion,
+  onOpenHistory,
   onDuplicate,
   onRefine,
   onEnterCompare,
@@ -265,11 +265,10 @@ export function RewriteOutputPanel({
           <Button
             variant="outline"
             size="xs"
-            onClick={onSaveVersion}
-            disabled={!canExport}
+            onClick={onOpenHistory}
           >
-            <Save className="h-4 w-4" />
-            Save version
+            <History className="h-4 w-4" />
+            Version history
           </Button>
           <Button
             variant="outline"

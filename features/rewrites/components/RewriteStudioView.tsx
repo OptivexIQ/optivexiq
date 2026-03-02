@@ -686,20 +686,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setObjectionFocus(false);
   };
 
-  const handleSaveVersion = () => {
-    if (output.trim().length === 0) {
-      setError("No rewrite output available to save.");
-      return;
-    }
-    if (!requestRef) {
-      setError("Generate a rewrite first, then save to version history.");
-      return;
-    }
+  const handleOpenHistory = () => {
     setHistoryOpen(true);
-    toast({
-      title: "Version saved",
-      description: "Saved versions are available in Version History.",
-    });
   };
 
   const handleDuplicate = () => {
@@ -1223,7 +1211,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                     });
                   }
                 }}
-                onSaveVersion={handleSaveVersion}
+                onOpenHistory={handleOpenHistory}
                 onDuplicate={handleDuplicate}
                 onRefine={handleRefine}
                 onEnterCompare={() => {
