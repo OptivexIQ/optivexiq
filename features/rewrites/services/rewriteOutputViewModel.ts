@@ -105,7 +105,7 @@ function toPlainTextInline(value: string): string {
     .trim();
 }
 
-function normalizeRationaleParagraph(raw: string): string {
+export function normalizeRationaleParagraph(raw: string): string {
   const text = toPlainTextInline(raw)
     .replace(/(?:^|\s)[-*]\s+/g, " ")
     .replace(/(?:^|\s)\d+[.)]\s+/g, " ")

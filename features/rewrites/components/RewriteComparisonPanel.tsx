@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   ArrowLeftRight,
+  Brain,
   Check,
   Copy,
   Download,
@@ -27,7 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
+import {
+  buildRewriteOutputViewModel,
+  normalizeRationaleParagraph,
+} from "@/features/rewrites/services/rewriteOutputViewModel";
 import type { RewriteSectionMapResult } from "@/features/rewrites/types/rewrites.types";
 
 type RewriteComparisonPanelProps = {
@@ -171,20 +175,28 @@ function getSectionPriority(title: string) {
     return 10;
   if (lower.includes("hero") || lower.includes("headline")) return 20;
   if (lower.includes("primary cta")) return 20;
-  if (lower.includes("problem / solution") || lower.includes("problem solution"))
+  if (
+    lower.includes("problem / solution") ||
+    lower.includes("problem solution")
+  )
     return 40;
   if (lower.includes("features")) return 50;
   if (lower.includes("how it works")) return 60;
   if (lower.includes("product showcase") || lower.includes("demo")) return 65;
-  if (lower.includes("benefits / results") || lower.includes("benefits")) return 70;
-  if (lower.includes("testimonials / case studies") || lower.includes("testimonials"))
+  if (lower.includes("benefits / results") || lower.includes("benefits"))
+    return 70;
+  if (
+    lower.includes("testimonials / case studies") ||
+    lower.includes("testimonials")
+  )
     return 75;
   if (lower.includes("use cases")) return 80;
   if (lower.includes("integrations")) return 85;
   if (lower.includes("pricing")) return 90;
   if (lower.includes("social proof")) return 95;
   if (lower.includes("faq")) return 100;
-  if (lower.includes("final cta") || lower.includes("secondary cta")) return 110;
+  if (lower.includes("final cta") || lower.includes("secondary cta"))
+    return 110;
   if (lower.includes("rationale")) return 115;
   if (lower.includes("other")) return 120;
   if (lower.includes("implementation")) return 130;
@@ -250,6 +262,25 @@ export function RewriteComparisonPanel({
         : [{ title: "Rewrite", body: currentOutput }],
     [currentViewModel.copySections, currentOutput],
   );
+  const baselineRationale = normalizeRationaleParagraph(
+    baselineViewModel.rationaleSections[0]?.body?.trim() ?? "",
+  );
+  const currentRationale = normalizeRationaleParagraph(
+    currentViewModel.rationaleSections[0]?.body?.trim() ?? "",
+  );
+  const baselineRawRationale =
+    baselineViewModel.rationaleSections[0]?.body?.trim() ?? "";
+  const currentRawRationale =
+    currentViewModel.rationaleSections[0]?.body?.trim() ?? "";
+  const baselineRationaleFallback = isOriginalBaselineSelected
+    ? "Unavailable for original draft baseline."
+    : baselineRawRationale.length === 0
+      ? "Not generated for this version."
+      : "Suppressed because rationale did not meet quality constraints.";
+  const currentRationaleFallback =
+    currentRawRationale.length === 0
+      ? "Not generated for this version."
+      : "Suppressed because rationale did not meet quality constraints.";
   const [showUnchangedSections, setShowUnchangedSections] = useState(false);
   const [density, setDensity] = useState<"comfortable" | "compact">(
     "comfortable",
@@ -742,149 +773,226 @@ export function RewriteComparisonPanel({
           </div>
 
           <div className="grid gap-0 lg:grid-cols-2">
-            <div
-              className={`max-h-[68vh] overflow-y-auto bg-card/30 ${columnPadding}`}
-            >
-              <div className={sectionGap}>
-                {visibleRows.map((row) => (
-                  <section
-                    key={`previous-${row.key}`}
-                    data-compare-row-key={row.key}
-                    className={`rounded-lg ${rowPadding} ${
-                      row.changed
-                        ? "border border-primary/30 bg-card"
-                        : "bg-card/70"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-foreground">
-                        {row.title}
-                      </p>
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="ghost"
-                        className="hover:bg-transparent"
-                        onClick={() =>
-                          void handleCopySection(
-                            `previous-${row.key}`,
-                            row.previousBody,
-                          )
-                        }
-                        disabled={!row.hasPrevious}
-                      >
-                        {copiedKey === `previous-${row.key}` ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="mt-2 text-sm leading-relaxed text-foreground/90">
-                      {row.hasPrevious ? (
-                        <ReactMarkdown
-                          skipHtml
-                          allowedElements={
-                            ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+            <div className={`min-h-0 bg-card/30 ${columnPadding}`}>
+              <div className="min-h-0 max-h-[68vh] overflow-y-auto">
+                <div className={sectionGap}>
+                  {visibleRows.map((row) => (
+                    <section
+                      key={`previous-${row.key}`}
+                      data-compare-row-key={row.key}
+                      className={`rounded-lg ${rowPadding} ${
+                        row.changed
+                          ? "border border-primary/30 bg-card"
+                          : "bg-card/70"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground">
+                          {row.title}
+                        </p>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="ghost"
+                          className="hover:bg-transparent"
+                          onClick={() =>
+                            void handleCopySection(
+                              `previous-${row.key}`,
+                              row.previousBody,
+                            )
                           }
-                          urlTransform={(url) => sanitizeUrl(url)}
-                          components={{
-                            a: ({ node, ...props }) => (
-                              <a
-                                {...props}
-                                target="_blank"
-                                rel="noreferrer noopener nofollow"
-                                className="text-primary underline-offset-4 hover:underline"
-                              />
-                            ),
-                          }}
+                          disabled={!row.hasPrevious}
                         >
-                          {row.previousBody}
-                        </ReactMarkdown>
-                      ) : (
-                        <div className="rounded-md border border-dashed border-border/60 bg-secondary/20 p-2">
-                          <p className="text-sm text-muted-foreground">
-                            Not present in previous draft.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                ))}
+                          {copiedKey === `previous-${row.key}` ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-foreground/90">
+                        {row.hasPrevious ? (
+                          <ReactMarkdown
+                            skipHtml
+                            allowedElements={
+                              ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+                            }
+                            urlTransform={(url) => sanitizeUrl(url)}
+                            components={{
+                              a: ({ node, ...props }) => (
+                                <a
+                                  {...props}
+                                  target="_blank"
+                                  rel="noreferrer noopener nofollow"
+                                  className="text-primary underline-offset-4 hover:underline"
+                                />
+                              ),
+                            }}
+                          >
+                            {row.previousBody}
+                          </ReactMarkdown>
+                        ) : (
+                          <div className="rounded-md border border-dashed border-border/60 bg-secondary/20 p-2">
+                            <p className="text-sm text-muted-foreground">
+                              Not present in previous draft.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div
-              className={`max-h-[68vh] overflow-y-auto bg-secondary/30 ${columnPadding}`}
-            >
-              <div className={sectionGap}>
-                {visibleRows.map((row) => (
-                  <section
-                    key={`current-${row.key}`}
-                    data-compare-row-key={row.key}
-                    className={`rounded-lg ${rowPadding} ${
-                      row.changed
-                        ? "border border-primary/40 bg-card/90"
-                        : "bg-card/80"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-foreground">
-                        {row.title}
-                      </p>
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="ghost"
-                        className="hover:bg-transparent"
-                        onClick={() =>
-                          void handleCopySection(
-                            `current-${row.key}`,
-                            row.currentBody,
-                          )
-                        }
-                        disabled={!row.hasCurrent}
-                      >
-                        {copiedKey === `current-${row.key}` ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="mt-2 text-sm leading-relaxed text-foreground/90">
-                      {row.hasCurrent ? (
-                        <ReactMarkdown
-                          skipHtml
-                          allowedElements={
-                            ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+            <div className={`min-h-0 bg-secondary/30 ${columnPadding}`}>
+              <div className="min-h-0 max-h-[68vh] overflow-y-auto">
+                <div className={sectionGap}>
+                  {visibleRows.map((row) => (
+                    <section
+                      key={`current-${row.key}`}
+                      data-compare-row-key={row.key}
+                      className={`rounded-lg ${rowPadding} ${
+                        row.changed
+                          ? "border border-primary/40 bg-card/90"
+                          : "bg-card/80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground">
+                          {row.title}
+                        </p>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="ghost"
+                          className="hover:bg-transparent"
+                          onClick={() =>
+                            void handleCopySection(
+                              `current-${row.key}`,
+                              row.currentBody,
+                            )
                           }
-                          urlTransform={(url) => sanitizeUrl(url)}
-                          components={{
-                            a: ({ node, ...props }) => (
-                              <a
-                                {...props}
-                                target="_blank"
-                                rel="noreferrer noopener nofollow"
-                                className="text-primary underline-offset-4 hover:underline"
-                              />
-                            ),
-                          }}
+                          disabled={!row.hasCurrent}
                         >
-                          {row.currentBody}
-                        </ReactMarkdown>
-                      ) : (
-                        <div className="rounded-md border border-dashed border-border/60 bg-secondary/20 p-2">
-                          <p className="text-sm text-muted-foreground">
-                            Not present in current generation.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                ))}
+                          {copiedKey === `current-${row.key}` ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-foreground/90">
+                        {row.hasCurrent ? (
+                          <ReactMarkdown
+                            skipHtml
+                            allowedElements={
+                              ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+                            }
+                            urlTransform={(url) => sanitizeUrl(url)}
+                            components={{
+                              a: ({ node, ...props }) => (
+                                <a
+                                  {...props}
+                                  target="_blank"
+                                  rel="noreferrer noopener nofollow"
+                                  className="text-primary underline-offset-4 hover:underline"
+                                />
+                              ),
+                            }}
+                          >
+                            {row.currentBody}
+                          </ReactMarkdown>
+                        ) : (
+                          <div className="rounded-md border border-dashed border-border/60 bg-secondary/20 p-2">
+                            <p className="text-sm text-muted-foreground">
+                              Not present in current generation.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  ))}
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="grid gap-6 bg-card/10 p-4 lg:grid-cols-2">
+            <section className="rounded-2xl border border-[hsl(216_55%_38%/.62)] bg-linear-to-br from-[hsl(218_48%_13%)] via-[hsl(0_1%_1%)] to-[hsl(210_38%_10%)] p-6 shadow-[0_14px_36px_hsl(216_62%_8%/.46)]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Brain className="h-4 w-4" />
+                  <p className="text-sm font-semibold text-[hsl(216_38%_93%)]">
+                    Strategic Rationale
+                  </p>
+                </div>
+              </div>
+              {baselineRationale.length > 0 ? (
+                <div className="mt-2 text-sm leading-relaxed text-foreground/90">
+                  <ReactMarkdown
+                    skipHtml
+                    allowedElements={
+                      ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+                    }
+                    urlTransform={(url) => sanitizeUrl(url)}
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a
+                          {...props}
+                          target="_blank"
+                          rel="noreferrer noopener nofollow"
+                          className="text-primary underline-offset-4 hover:underline"
+                        />
+                      ),
+                    }}
+                  >
+                    {baselineRationale}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {baselineRationaleFallback}
+                </p>
+              )}
+            </section>
+            <section className="rounded-2xl border border-[hsl(216_55%_38%/.62)] bg-linear-to-br from-[hsl(218_48%_13%)] via-[hsl(0_1%_1%)] to-[hsl(210_38%_10%)] p-6 shadow-[0_14px_36px_hsl(216_62%_8%/.46)]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Brain className="h-4 w-4" />
+                  <p className="text-sm font-semibold text-[hsl(216_38%_93%)]">
+                    Strategic Rationale
+                  </p>
+                </div>
+              </div>
+              {currentRationale.length > 0 ? (
+                <div className="mt-2 text-sm leading-relaxed text-foreground/90">
+                  <ReactMarkdown
+                    skipHtml
+                    allowedElements={
+                      ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+                    }
+                    urlTransform={(url) => sanitizeUrl(url)}
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a
+                          {...props}
+                          target="_blank"
+                          rel="noreferrer noopener nofollow"
+                          className="text-primary underline-offset-4 hover:underline"
+                        />
+                      ),
+                    }}
+                  >
+                    {currentRationale}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {currentRationaleFallback}
+                </p>
+              )}
+            </section>
           </div>
         </div>
       </div>
