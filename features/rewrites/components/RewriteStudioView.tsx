@@ -1118,20 +1118,36 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                         <button
                           type="button"
                           aria-label="Rewrite studio status"
-                          className="inline-flex h-4 w-4 items-center justify-center"
+                          className="inline-flex h-5 w-5 items-center justify-center"
                         >
-                          <span
-                            className={[
-                              "h-2 w-2 rounded-full",
-                              studioStatus === "processing"
-                                ? "animate-pulse bg-amber-500"
-                                : studioStatus === "ready"
-                                  ? "animate-pulse bg-emerald-500"
-                                  : studioStatus === "offline"
-                                    ? "bg-slate-500"
-                                    : "bg-rose-500",
-                            ].join(" ")}
-                          />
+                          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                            <span
+                              className={[
+                                "absolute inset-0 rounded-full",
+                                studioStatus === "processing"
+                                  ? "bg-amber-500/30"
+                                  : studioStatus === "ready"
+                                    ? "bg-emerald-500/30"
+                                    : studioStatus === "offline"
+                                      ? "bg-slate-500/30"
+                                      : "bg-rose-500/30",
+                                "animate-[pulse_2.8s_cubic-bezier(0.4,0,0.2,1)_infinite]",
+                              ].join(" ")}
+                              aria-hidden="true"
+                            />
+                            <span
+                              className={[
+                                "h-2 w-2 rounded-full",
+                                studioStatus === "processing"
+                                  ? "bg-amber-500"
+                                  : studioStatus === "ready"
+                                    ? "bg-emerald-500"
+                                    : studioStatus === "offline"
+                                      ? "bg-slate-500"
+                                      : "bg-rose-500",
+                              ].join(" ")}
+                            />
+                          </span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="text-xs">
