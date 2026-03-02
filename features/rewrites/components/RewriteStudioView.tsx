@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -216,12 +222,13 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     string | null
   >(null);
   const [enforceSectionLabels, setEnforceSectionLabels] = useState(false);
-  const originalBaselineMapCacheRef = useRef<Map<string, RewriteSectionMapResult>>(
-    new Map(),
-  );
+  const originalBaselineMapCacheRef = useRef<
+    Map<string, RewriteSectionMapResult>
+  >(new Map());
   const [refineMode, setRefineMode] = useState(false);
   const [deltaInstructions, setDeltaInstructions] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const profileIcp = initialData.profileIcpRole.trim() || "Profile ICP";
   const [useCustomIcp, setUseCustomIcp] = useState(
     initialData.initialStudioContext?.useCustomIcp ?? false,
@@ -255,8 +262,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   );
   const currentVersionSourceContent =
     requestRef != null
-      ? historyVersions.find((item) => item.requestRef === requestRef)
-          ?.sourceContent ?? null
+      ? (historyVersions.find((item) => item.requestRef === requestRef)
+          ?.sourceContent ?? null)
       : null;
   const comparisonSourceContent = useMemo(() => {
     if (requestRef != null) {
@@ -269,7 +276,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       historyVersions
         .filter((item) => item.requestRef !== requestRef)
         .map((item) => {
-          const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
+          const target =
+            item.rewriteType === "pricing" ? "Pricing" : "Homepage";
           return {
             requestRef: item.requestRef,
             label: `${target} | ${item.requestRef}`,
@@ -292,16 +300,16 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   );
   const isOriginalBaselineSelected =
     selectedBaselineRef === ORIGINAL_BASELINE_REF;
-  const selectedBaselineOutput =
-    isOriginalBaselineSelected
-      ? comparisonSourceContent
-      : historyVersions.find((item) => item.requestRef === selectedBaselineRef)
-            ?.outputMarkdown ?? previousOutput;
+  const selectedBaselineOutput = isOriginalBaselineSelected
+    ? comparisonSourceContent
+    : (historyVersions.find((item) => item.requestRef === selectedBaselineRef)
+        ?.outputMarkdown ?? previousOutput);
   const selectedBaselineTimestamp = selectedBaselineRef
     ? historyVersions.find((item) => item.requestRef === selectedBaselineRef)
         ?.createdAt
     : null;
-  const baselineTimestamp = selectedBaselineTimestamp ?? previousVersionCreatedAt;
+  const baselineTimestamp =
+    selectedBaselineTimestamp ?? previousVersionCreatedAt;
   const baselineTimestampLabel = isOriginalBaselineSelected
     ? "Original input"
     : baselineTimestamp
@@ -315,6 +323,58 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const canCompare =
     output.trim().length > 0 &&
     (previousOutput.trim().length > 0 || baselineOptions.length > 0);
+  const outputViewModel = useMemo(
+    () => buildRewriteOutputViewModel(output),
+    [output],
+  );
+  const studioStatus = useMemo(() => {
+    if (!isOnline) {
+      return "offline" as const;
+    }
+    if (running) {
+      return "processing" as const;
+    }
+    if (error) {
+      return "error" as const;
+    }
+    return "ready" as const;
+  }, [isOnline, running, error]);
+  const studioStatusTooltip = useMemo(() => {
+    if (studioStatus === "processing") {
+      return "Processing: rewrite generation in progress.";
+    }
+    if (studioStatus === "offline") {
+      return "Offline: reconnect to run rewrite requests.";
+    }
+    if (studioStatus === "error") {
+      return "Error: last request returned an error.";
+    }
+    return "Ready: rewrite studio is available.";
+  }, [studioStatus]);
+  const studioStatusToneClass = useMemo(() => {
+    if (studioStatus === "processing") {
+      return "text-amber-500";
+    }
+    if (studioStatus === "offline") {
+      return "text-slate-500";
+    }
+    if (studioStatus === "error") {
+      return "text-rose-500";
+    }
+    return "text-emerald-500";
+  }, [studioStatus]);
+
+  useEffect(() => {
+    setIsOnline(window.navigator.onLine);
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -404,9 +464,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
       const modifierPressed = event.metaKey || event.ctrlKey;
       const isCompareToggle =
-        modifierPressed &&
-        event.altKey &&
-        event.key.toLowerCase() === "c";
+        modifierPressed && event.altKey && event.key.toLowerCase() === "c";
 
       if (!isCompareToggle || isTypingTarget(event.target) || !canCompare) {
         return;
@@ -738,7 +796,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         },
       });
       setRequestRef(result.requestRef);
-      setCurrentVersionCreatedAt(result.requestCreatedAt ?? new Date().toISOString());
+      setCurrentVersionCreatedAt(
+        result.requestCreatedAt ?? new Date().toISOString(),
+      );
       toast({
         title: "Rewrite generated",
         description: "Your output is ready to copy or export.",
@@ -1024,82 +1084,148 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           onExitCompare={() => setCompareMode(false)}
         />
       ) : (
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <RewriteInputPanel
-            value={request}
-            strategy={strategy}
-            refineMode={refineMode}
-            deltaInstructions={deltaInstructions}
-            running={running}
-            enforceSectionLabels={enforceSectionLabels}
-            onChange={setRequest}
-            onStrategyChange={setStrategy}
-            onEnforceSectionLabelsChange={setEnforceSectionLabels}
-            onDeltaInstructionsChange={setDeltaInstructions}
-            onSubmit={() => void handleSubmit()}
-            onCancel={handleCancel}
-          />
-          <div className="space-y-4">
-            <RewriteExecutiveSummaryCard
-              output={output}
-              compareMode={compareMode}
-            />
-            <RewriteShiftStatsCards output={output} running={running} />
-            <RewriteOutputPanel
-              rewriteType={request.rewriteType}
+        <div className="grid gap-0 overflow-hidden rounded-xl border border-border/60 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.45fr)]">
+          <section className="space-y-4 bg-card/30 p-6">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground/80">
+                Source Input
+              </p>
+              <div className="h-px bg-border/60" />
+            </div>
+            <RewriteInputPanel
+              value={request}
+              strategy={strategy}
+              refineMode={refineMode}
+              deltaInstructions={deltaInstructions}
               running={running}
-              output={output}
-              canCompare={canCompare}
-              requestRef={requestRef}
-              error={error}
-              onCopy={() => void handleCopy()}
-              onExport={(format) => {
-                try {
-                  handleExport(format);
-                } catch (exportError) {
-                  const message =
-                    exportError instanceof Error
-                      ? exportError.message
-                      : "Unable to export rewrite.";
-                  setError(message);
-                  toast({
-                    title: "Export failed",
-                    description: message,
-                  });
-                }
-              }}
-              onSaveVersion={handleSaveVersion}
-              onDuplicate={handleDuplicate}
-              onRefine={handleRefine}
-              onEnterCompare={() => {
-                if (!selectedBaselineRef && baselineOptions.length > 0) {
-                  setSelectedBaselineRef(baselineOptions[0].requestRef);
-                }
-                setCompareMode(true);
-              }}
-              onRetry={() => void handleSubmit()}
+              enforceSectionLabels={enforceSectionLabels}
+              onChange={setRequest}
+              onStrategyChange={setStrategy}
+              onEnforceSectionLabelsChange={setEnforceSectionLabels}
+              onDeltaInstructionsChange={setDeltaInstructions}
+              onSubmit={() => void handleSubmit()}
+              onCancel={handleCancel}
             />
-            <RewriteStrategicRationaleCard
-              output={output}
-              compareMode={compareMode}
-            />
-          </div>
+          </section>
+
+          <section className="space-y-4 border-t border-border/60 bg-background p-6 lg:border-t-0 lg:border-l lg:border-border/60">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="Rewrite studio status"
+                          className="inline-flex h-4 w-4 items-center justify-center"
+                        >
+                          <span
+                            className={[
+                              "h-2 w-2 rounded-full",
+                              studioStatus === "processing"
+                                ? "animate-pulse bg-amber-500"
+                                : studioStatus === "ready"
+                                  ? "animate-pulse bg-emerald-500"
+                                  : studioStatus === "offline"
+                                    ? "bg-slate-500"
+                                    : "bg-rose-500",
+                            ].join(" ")}
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {studioStatusTooltip}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground/80">
+                    Analysis & Output
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                  {outputViewModel.confidence ? (
+                    <span>Confidence Score: {outputViewModel.confidence}</span>
+                  ) : null}
+                  <span className={studioStatusToneClass}>
+                    {studioStatus === "processing"
+                      ? "Processing"
+                      : studioStatus === "offline"
+                        ? "Offline"
+                        : studioStatus === "error"
+                          ? "Error"
+                          : "Ready"}
+                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="Status details"
+                          className={`inline-flex h-4 w-4 items-center justify-center ${studioStatusToneClass}`}
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {studioStatusTooltip}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <div className="h-px bg-border/60" />
+            </div>
+
+            <div className="space-y-4">
+              <RewriteExecutiveSummaryCard
+                output={output}
+                compareMode={compareMode}
+              />
+              <RewriteShiftStatsCards output={output} running={running} />
+              <RewriteOutputPanel
+                rewriteType={request.rewriteType}
+                running={running}
+                output={output}
+                canCompare={canCompare}
+                requestRef={requestRef}
+                error={error}
+                showRunGapEngine
+                onCopy={() => void handleCopy()}
+                onExport={(format) => {
+                  try {
+                    handleExport(format);
+                  } catch (exportError) {
+                    const message =
+                      exportError instanceof Error
+                        ? exportError.message
+                        : "Unable to export rewrite.";
+                    setError(message);
+                    toast({
+                      title: "Export failed",
+                      description: message,
+                    });
+                  }
+                }}
+                onSaveVersion={handleSaveVersion}
+                onDuplicate={handleDuplicate}
+                onRefine={handleRefine}
+                onEnterCompare={() => {
+                  if (!selectedBaselineRef && baselineOptions.length > 0) {
+                    setSelectedBaselineRef(baselineOptions[0].requestRef);
+                  }
+                  setCompareMode(true);
+                }}
+                onRetry={() => void handleSubmit()}
+              />
+              <RewriteStrategicRationaleCard
+                output={output}
+                compareMode={compareMode}
+              />
+            </div>
+          </section>
         </div>
       )}
-
-      {!compareMode ? (
-        <div className="rounded-xl border border-border/60 bg-card p-6">
-          <p className="text-sm text-foreground">
-            Need the full audit workflow with score diagnostics and competitor
-            benchmarking?
-          </p>
-          <div className="mt-4">
-            <Button asChild variant="outline">
-              <Link href="/dashboard/gap-engine">Run Gap Engine (Full report)</Link>
-            </Button>
-          </div>
-        </div>
-      ) : null}
 
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl">

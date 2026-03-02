@@ -153,16 +153,8 @@ export function RewriteInputPanel({
 
   return (
     <TooltipProvider>
-      <div className="rounded-xl border border-border/60 bg-card p-6">
-        <p className="text-sm font-semibold text-foreground/85">
-          Rewrite request
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Provide a website URL, pasted copy, or both. URL or content is
-          required.
-        </p>
-
-        <div className="mt-4 grid gap-4">
+      <div className="rounded-xl bg-transparent">
+        <div className="grid gap-4">
           <div>
             <p className="mb-2 text-sm font-medium text-foreground/85">
               Website URL

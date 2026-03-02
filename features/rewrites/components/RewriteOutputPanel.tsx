@@ -43,6 +43,7 @@ type RewriteOutputPanelProps = {
   onRefine: () => void;
   onEnterCompare: () => void;
   onRetry: () => void;
+  showRunGapEngine?: boolean;
 };
 
 function filenameFor(type: RewriteType) {
@@ -100,6 +101,7 @@ export function RewriteOutputPanel({
   onRefine,
   onEnterCompare,
   onRetry,
+  showRunGapEngine = false,
 }: RewriteOutputPanelProps) {
   const canExport = output.trim().length > 0;
   const filename = useMemo(() => filenameFor(rewriteType), [rewriteType]);
@@ -126,95 +128,14 @@ export function RewriteOutputPanel({
   };
 
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-6">
-      <div className="flex flex-col flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground/85">
-            Rewrite output
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {running ? "Streaming in progress..." : "Markdown-ready output"}
-          </p>
+    <div className="rounded-xl border border-border/60 bg-background/40 p-6 pt-3">
+      {running ? (
+        <div className="flex flex-col flex-wrap items-start justify-between gap-3">
+          <div className="text-xs text-muted-foreground">
+            Streaming in progress...
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onSaveVersion}
-            disabled={!canExport}
-          >
-            <Save className="h-4 w-4" />
-            Save version
-          </Button>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onDuplicate}
-            disabled={!canExport}
-          >
-            <Sparkles className="h-4 w-4" />
-            Duplicate
-          </Button>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onRefine}
-            disabled={!canExport}
-          >
-            <Sparkles className="h-4 w-4" />
-            Refine
-          </Button>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onEnterCompare}
-            disabled={!canExport || !canCompare}
-          >
-            <SplitSquareHorizontal className="h-4 w-4" />
-            Compare
-          </Button>
-          <Button
-            variant="secondary"
-            size="xs"
-            onClick={() => void handleCopy()}
-            disabled={!canExport}
-          >
-            {copied ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-            {copied ? "Copied" : "Copy"}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="xs" disabled={!canExport}>
-                <Download className="h-4 w-4" />
-                Export
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onSelect={() => onExport("markdown")}>
-                <FileText className="h-4 w-4" />
-                Markdown (.md)
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onExport("text")}>
-                <FileText className="h-4 w-4" />
-                Plain text (.txt)
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onExport("html")}>
-                <FileCode2 className="h-4 w-4" />
-                HTML (.html)
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onExport("pdf")}>
-                <FileType2 className="h-4 w-4" />
-                PDF (.pdf)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      ) : null}
 
       {error ? (
         <div className="mt-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
@@ -243,26 +164,26 @@ export function RewriteOutputPanel({
         </div>
       ) : null}
 
-      <div className="mt-4 h-135 overflow-y-auto rounded-lg border border-border/60 bg-secondary/30 p-4">
+      <div className="mt-4 h-135 overflow-y-auto bg-transparent">
         {running && !output ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Generating rewrite...
             </div>
-            <div className="animate-pulse space-y-3 rounded-lg border border-border/60 bg-card p-4">
+            <div className="animate-pulse space-y-4 rounded-lg border border-border/60 bg-card">
               <div className="h-4 w-48 rounded bg-muted/60" />
               <div className="h-3 w-full rounded bg-muted/40" />
               <div className="h-3 w-5/6 rounded bg-muted/40" />
               <div className="h-3 w-4/6 rounded bg-muted/40" />
             </div>
-            <div className="animate-pulse space-y-3 rounded-lg border border-border/60 bg-card p-4">
+            <div className="animate-pulse space-y-4 rounded-lg border border-border/60 bg-card">
               <div className="h-4 w-32 rounded bg-muted/60" />
               <div className="h-3 w-full rounded bg-muted/40" />
               <div className="h-3 w-11/12 rounded bg-muted/40" />
               <div className="h-3 w-3/4 rounded bg-muted/40" />
             </div>
-            <div className="animate-pulse space-y-3 rounded-lg border border-border/60 bg-card p-4">
+            <div className="animate-pulse space-y-4 rounded-lg border border-border/60 bg-card">
               <div className="h-4 w-40 rounded bg-muted/60" />
               <div className="h-3 w-full rounded bg-muted/40" />
               <div className="h-3 w-10/12 rounded bg-muted/40" />
@@ -270,14 +191,14 @@ export function RewriteOutputPanel({
           </div>
         ) : output ? (
           <div className="space-y-4">
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 space-y-4">
               {(outputViewModel.copySections.length > 0
                 ? outputViewModel.copySections
                 : [{ title: "Rewrite", body: output }]
               ).map((section) => (
                 <div
                   key={section.title}
-                  className="rounded-md border border-border/50 bg-secondary/20 p-3"
+                  className="rounded-md border border-border/50 bg-secondary/30 p-3"
                 >
                   <p className="text-sm font-semibold text-foreground">
                     {section.title}
@@ -337,6 +258,95 @@ export function RewriteOutputPanel({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>Filename: {filename}</span>
         <span>Request: {requestRef ?? "N/A"}</span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onSaveVersion}
+            disabled={!canExport}
+          >
+            <Save className="h-4 w-4" />
+            Save version
+          </Button>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onDuplicate}
+            disabled={!canExport}
+          >
+            <Sparkles className="h-4 w-4" />
+            Duplicate
+          </Button>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onRefine}
+            disabled={!canExport}
+          >
+            <Sparkles className="h-4 w-4" />
+            Refine
+          </Button>
+          <Button
+            variant="secondary"
+            size="xs"
+            onClick={() => void handleCopy()}
+            disabled={!canExport}
+          >
+            {copied ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {showRunGapEngine ? (
+            <Button asChild variant="outline" size="xs">
+              <Link href="/dashboard/gap-engine">Run Gap Engine</Link>
+            </Button>
+          ) : null}
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onEnterCompare}
+            disabled={!canExport || !canCompare}
+          >
+            <SplitSquareHorizontal className="h-4 w-4" />
+            Compare versions
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="xs" disabled={!canExport}>
+                <Download className="h-4 w-4" />
+                Export
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onSelect={() => onExport("markdown")}>
+                <FileText className="h-4 w-4" />
+                Markdown (.md)
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onExport("text")}>
+                <FileText className="h-4 w-4" />
+                Plain text (.txt)
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onExport("html")}>
+                <FileCode2 className="h-4 w-4" />
+                HTML (.html)
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onExport("pdf")}>
+                <FileType2 className="h-4 w-4" />
+                PDF (.pdf)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );
