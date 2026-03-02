@@ -127,7 +127,7 @@ export function RewriteOutputPanel({
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-foreground/85">
             Rewrite output
@@ -139,22 +139,34 @@ export function RewriteOutputPanel({
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
+            size="xs"
             onClick={onSaveVersion}
             disabled={!canExport}
           >
             <Save className="h-4 w-4" />
             Save version
           </Button>
-          <Button variant="outline" onClick={onDuplicate} disabled={!canExport}>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onDuplicate}
+            disabled={!canExport}
+          >
             <Sparkles className="h-4 w-4" />
             Duplicate
           </Button>
-          <Button variant="outline" onClick={onRefine} disabled={!canExport}>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onRefine}
+            disabled={!canExport}
+          >
             <Sparkles className="h-4 w-4" />
             Refine
           </Button>
           <Button
             variant="outline"
+            size="xs"
             onClick={onEnterCompare}
             disabled={!canExport || !canCompare}
           >
@@ -163,6 +175,7 @@ export function RewriteOutputPanel({
           </Button>
           <Button
             variant="secondary"
+            size="xs"
             onClick={() => void handleCopy()}
             disabled={!canExport}
           >
@@ -175,7 +188,7 @@ export function RewriteOutputPanel({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={!canExport}>
+              <Button variant="outline" size="xs" disabled={!canExport}>
                 <Download className="h-4 w-4" />
                 Export
                 <ChevronDown className="h-4 w-4" />
@@ -272,7 +285,9 @@ export function RewriteOutputPanel({
                   <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
                     <ReactMarkdown
                       skipHtml
-                      allowedElements={ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]}
+                      allowedElements={
+                        ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+                      }
                       urlTransform={(url) => sanitizeUrl(url)}
                       components={{
                         a: ({ node, ...props }) => (

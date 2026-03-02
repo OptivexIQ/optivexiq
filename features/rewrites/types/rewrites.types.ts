@@ -96,5 +96,7 @@ export type RewriteStudioInitialData = {
     tone?: string;
     length?: string;
     emphasis?: string[];
+    constraints?: string;
+    audience?: string;
   }>;
 };

@@ -190,7 +190,7 @@ export function RewriteInputPanel({
               </p>
               <Button
                 type="button"
-                size="sm"
+                size="xs"
                 variant="outline"
                 disabled={running}
                 onClick={() => {

@@ -789,6 +789,56 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setRequestRef(version.requestRef);
     setCurrentVersionCreatedAt(version.createdAt);
     setPreviousVersionCreatedAt(null);
+    setUseCustomIcp(
+      Boolean(version.strategicContext?.icp) &&
+        version.strategicContext?.icp?.trim().toLowerCase() !==
+          profileIcp.trim().toLowerCase(),
+    );
+    setCustomIcp(
+      version.strategicContext?.icp &&
+        version.strategicContext.icp.trim().toLowerCase() !==
+          profileIcp.trim().toLowerCase()
+        ? version.strategicContext.icp
+        : "",
+    );
+    setGoal(version.strategicContext?.goal ?? "conversion");
+    setDifferentiationFocus(
+      version.strategicContext?.differentiationFocus ?? true,
+    );
+    setObjectionFocus(version.strategicContext?.objectionFocus ?? false);
+    setStrategy((previous) => ({
+      ...previous,
+      tone:
+        version.tone === "neutral" ||
+        version.tone === "confident" ||
+        version.tone === "technical" ||
+        version.tone === "direct" ||
+        version.tone === "founder-led" ||
+        version.tone === "enterprise"
+          ? version.tone
+          : "neutral",
+      length:
+        version.length === "short" ||
+        version.length === "standard" ||
+        version.length === "long"
+          ? version.length
+          : "standard",
+      emphasis:
+        version.emphasis
+          ?.filter(
+            (item): item is RewriteStrategy["emphasis"][number] =>
+              item === "clarity" ||
+              item === "differentiation" ||
+              item === "objection-handling" ||
+              item === "pricing-clarity" ||
+              item === "proof-credibility",
+          )
+          .slice(0, 5) ?? [],
+      constraints: version.constraints ?? "",
+      audience: version.audience ?? "",
+    }));
+    setRefineMode(false);
+    setDeltaInstructions("");
     setCompareMode(false);
     setSelectedBaselineRef(null);
     setOriginalBaselineMap(null);
@@ -844,13 +894,13 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         version.tone === "founder-led" ||
         version.tone === "enterprise"
           ? version.tone
-          : previous.tone,
+          : "neutral",
       length:
         version.length === "short" ||
         version.length === "standard" ||
         version.length === "long"
           ? version.length
-          : previous.length,
+          : "standard",
       emphasis:
         version.emphasis
           ?.filter(
@@ -861,7 +911,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               item === "pricing-clarity" ||
               item === "proof-credibility",
           )
-          .slice(0, 5) ?? previous.emphasis,
+          .slice(0, 5) ?? [],
+      constraints: version.constraints ?? "",
+      audience: version.audience ?? "",
     }));
     setRefineMode(false);
     setDeltaInstructions("");

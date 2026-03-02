@@ -48,6 +48,8 @@ function toPersistedNotes(input: RewriteGenerateRequestValues): string | null {
             ? input.rewriteStrategy.emphasis.join(", ")
             : "none"
         }`,
+        `- Constraints: ${input.rewriteStrategy.constraints?.trim() || "none"}`,
+        `- Audience: ${input.rewriteStrategy.audience?.trim() || "not specified"}`,
       ]
     : [];
 

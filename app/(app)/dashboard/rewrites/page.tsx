@@ -89,17 +89,27 @@ function parseStrategyFromNotes(notes: string | null | undefined) {
     emphasisRaw.length > 0 && emphasisRaw.toLowerCase() !== "none"
       ? emphasisRaw.split(",").map((item) => item.trim()).filter(Boolean)
       : [];
+  const constraints = parseMatch(/- Constraints:\s*(.+)/i);
+  const audience = parseMatch(/- Audience:\s*(.+)/i);
 
-  return { tone, length, emphasis };
+  return {
+    tone,
+    length,
+    emphasis,
+    constraints: constraints.toLowerCase() === "none" ? "" : constraints,
+    audience:
+      audience.toLowerCase() === "not specified" ? "" : audience,
+  };
 }
 
 function extractUserNotesFromHistoryNotes(notes: string | null | undefined) {
   const safe = notes ?? "";
   const marker = "\n\nUser notes:\n";
   const markerIndex = safe.indexOf(marker);
-  return markerIndex >= 0
-    ? safe.slice(markerIndex + marker.length).trim()
-    : safe.trim();
+  if (markerIndex >= 0) {
+    return safe.slice(markerIndex + marker.length).trim();
+  }
+  return "";
 }
 
 function resolvePrefillRequest(
@@ -240,6 +250,8 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
               tone: strategy.tone || undefined,
               length: strategy.length || undefined,
               emphasis: strategy.emphasis,
+              constraints: strategy.constraints || undefined,
+              audience: strategy.audience || undefined,
             };
           }),
         }}
