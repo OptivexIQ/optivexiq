@@ -12,7 +12,8 @@ function normalizeShiftValue(value: string) {
   const normalized = value.trim();
   if (/^(?:strong|moderate|weak)$/i.test(normalized)) {
     return {
-      value: normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase(),
+      value:
+        normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase(),
       trend: "neutral" as const,
     };
   }
@@ -29,7 +30,12 @@ function normalizeShiftValue(value: string) {
 
   return {
     value: `${numeric > 0 ? "+" : ""}${numeric}%`,
-    trend: numeric > 0 ? ("up" as const) : numeric < 0 ? ("down" as const) : ("neutral" as const),
+    trend:
+      numeric > 0
+        ? ("up" as const)
+        : numeric < 0
+          ? ("down" as const)
+          : ("neutral" as const),
   };
 }
 
@@ -45,7 +51,7 @@ export function RewriteShiftStatsCards({
     return (
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-xl border border-border/60 bg-card p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="text-sm font-semibold text-muted-foreground">
             Clarity Shift
           </p>
           <p className="mt-2 text-2xl font-semibold leading-none text-muted-foreground">
@@ -54,7 +60,7 @@ export function RewriteShiftStatsCards({
           <p className="mt-2 text-xs text-muted-foreground">{helperText}</p>
         </div>
         <div className="rounded-xl border border-border/60 bg-card p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="text-sm font-semibold text-muted-foreground">
             Objection Shift
           </p>
           <p className="mt-2 text-2xl font-semibold leading-none text-muted-foreground">
@@ -63,7 +69,7 @@ export function RewriteShiftStatsCards({
           <p className="mt-2 text-xs text-muted-foreground">{helperText}</p>
         </div>
         <div className="rounded-xl border border-border/60 bg-card p-4 sm:col-span-2 xl:col-span-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="text-sm font-semibold text-muted-foreground">
             Positioning Shift
           </p>
           <p className="mt-2 text-2xl font-semibold leading-none text-muted-foreground">
@@ -131,4 +137,3 @@ export function RewriteShiftStatsCards({
     </div>
   );
 }
-

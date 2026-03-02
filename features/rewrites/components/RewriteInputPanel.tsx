@@ -118,9 +118,7 @@ export function RewriteInputPanel({
             <Info className="h-3.5 w-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs text-xs">
-          {hint}
-        </TooltipContent>
+        <TooltipContent className="max-w-xs text-xs">{hint}</TooltipContent>
       </Tooltip>
     </span>
   );
@@ -156,272 +154,277 @@ export function RewriteInputPanel({
   return (
     <TooltipProvider>
       <div className="rounded-xl border border-border/60 bg-card p-6">
-      <p className="text-sm font-semibold text-foreground/85">
-        Rewrite request
-      </p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Provide a website URL, pasted copy, or both. URL or content is required.
-      </p>
+        <p className="text-sm font-semibold text-foreground/85">
+          Rewrite request
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Provide a website URL, pasted copy, or both. URL or content is
+          required.
+        </p>
 
-      <div className="mt-4 grid gap-4">
-        <div>
-          <p className="mb-2 text-sm font-medium text-foreground/85">
-            Website URL
-          </p>
-          <Input
-            disabled={running}
-            placeholder="https://example.com"
-            value={value.websiteUrl ?? ""}
-            onChange={(event) =>
-              onChange(updateField(value, "websiteUrl", event.target.value))
-            }
-          />
-        </div>
+        <div className="mt-4 grid gap-4">
+          <div>
+            <p className="mb-2 text-sm font-medium text-foreground/85">
+              Website URL
+            </p>
+            <Input
+              disabled={running}
+              placeholder="https://example.com"
+              value={value.websiteUrl ?? ""}
+              onChange={(event) =>
+                onChange(updateField(value, "websiteUrl", event.target.value))
+              }
+            />
+          </div>
 
-        <div>
-          <p className="mb-2 text-sm font-medium text-foreground/85">
-            Pasted content
-          </p>
-          <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-secondary/20 p-3">
+          <div>
+            <p className="mb-2 text-sm font-medium text-foreground/85">
+              Pasted content
+            </p>
+            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-secondary/20 p-3">
               <p className="text-xs text-muted-foreground">
                 <InfoHelp
                   label="Use labeled sections for higher compare quality"
                   hint={sectionLabelHint}
                 />
               </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={running}
-              onClick={() => {
-                const current = value.content ?? "";
-                const next =
-                  current.trim().length > 0
-                    ? `${current.trimEnd()}\n\n${sectionTemplate}`
-                    : sectionTemplate;
-                onChange(updateField(value, "content", next));
-              }}
-            >
-              Insert section template
-            </Button>
-            <label className="inline-flex items-center gap-2 text-xs text-foreground/85">
-              <Switch
-                checked={enforceSectionLabels}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
                 disabled={running}
-                onCheckedChange={(checked) =>
-                  onEnforceSectionLabelsChange(Boolean(checked))
-                }
-              />
-              Enforce section labels (recommended for team workflows)
-            </label>
-          </div>
-          <Textarea
-            disabled={running}
-            rows={10}
-            placeholder="Paste current homepage or pricing copy."
-            value={value.content ?? ""}
+                onClick={() => {
+                  const current = value.content ?? "";
+                  const next =
+                    current.trim().length > 0
+                      ? `${current.trimEnd()}\n\n${sectionTemplate}`
+                      : sectionTemplate;
+                  onChange(updateField(value, "content", next));
+                }}
+              >
+                Insert section template
+              </Button>
+              <label className="inline-flex items-center gap-2 text-xs text-foreground/85">
+                <Switch
+                  checked={enforceSectionLabels}
+                  disabled={running}
+                  onCheckedChange={(checked) =>
+                    onEnforceSectionLabelsChange(Boolean(checked))
+                  }
+                />
+                Enforce section labels (recommended for team workflows)
+              </label>
+            </div>
+            <Textarea
+              disabled={running}
+              rows={10}
+              placeholder="Paste current homepage or pricing copy."
+              value={value.content ?? ""}
               onChange={(event) =>
                 onChange(updateField(value, "content", event.target.value))
               }
-          />
-          {showSectionLabelWarning ? (
-            <p className="mt-2 text-xs text-amber-500">
-              Section labels not detected. Compare quality may be reduced.
-            </p>
-          ) : null}
-        </div>
+            />
+            {showSectionLabelWarning ? (
+              <p className="mt-2 text-xs text-amber-500">
+                Section labels not detected. Compare quality may be reduced.
+              </p>
+            ) : null}
+          </div>
 
-        <div>
-          <p className="text-sm font-semibold text-foreground/90">
-            Rewrite Strategy
-          </p>
-          <div className="mt-3 grid gap-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="mb-2 text-sm font-medium text-foreground/85">
-                  Tone
-                </p>
-                <Select
-                  value={strategy.tone}
-                  onValueChange={(next) =>
-                    onStrategyChange({ ...strategy, tone: next as RewriteTone })
-                  }
-                  disabled={running}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TONE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div>
+            <p className="text-sm font-semibold text-foreground/90">
+              Rewrite Strategy
+            </p>
+            <div className="mt-3 grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground/85">
+                    Tone
+                  </p>
+                  <Select
+                    value={strategy.tone}
+                    onValueChange={(next) =>
+                      onStrategyChange({
+                        ...strategy,
+                        tone: next as RewriteTone,
+                      })
+                    }
+                    disabled={running}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TONE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground/85">
+                    Audience (optional)
+                  </p>
+                  <Select
+                    value={
+                      strategy.audience && strategy.audience.length > 0
+                        ? strategy.audience
+                        : "unspecified"
+                    }
+                    onValueChange={(next) =>
+                      onStrategyChange({
+                        ...strategy,
+                        audience: next === "unspecified" ? "" : next,
+                      })
+                    }
+                    disabled={running}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unspecified">Not specified</SelectItem>
+                      {AUDIENCE_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
               <div>
                 <p className="mb-2 text-sm font-medium text-foreground/85">
-                  Audience (optional)
+                  Length
                 </p>
-                <Select
-                  value={
-                    strategy.audience && strategy.audience.length > 0
-                      ? strategy.audience
-                      : "unspecified"
-                  }
-                  onValueChange={(next) =>
+                <div className="flex flex-wrap gap-2">
+                  {LENGTH_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={
+                        strategy.length === option.value ? "default" : "outline"
+                      }
+                      size="sm"
+                      disabled={running}
+                      onClick={() =>
+                        onStrategyChange({ ...strategy, length: option.value })
+                      }
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-medium text-foreground/85">
+                  Emphasis
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {EMPHASIS_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      size="sm"
+                      variant={
+                        strategy.emphasis.includes(option.value)
+                          ? "default"
+                          : "outline"
+                      }
+                      disabled={running}
+                      onClick={() => toggleEmphasis(option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-medium text-foreground/85">
+                  <InfoHelp
+                    label="Constraints (optional, hard requirements)"
+                    hint='Non-negotiables the rewrite must follow. Example: "Avoid discount language. Keep claims under 12 words."'
+                  />
+                </p>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Non-negotiables the rewrite must follow (must include/avoid).
+                </p>
+                <Textarea
+                  disabled={running}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Must include/avoid..."
+                  value={strategy.constraints ?? ""}
+                  onChange={(event) =>
                     onStrategyChange({
                       ...strategy,
-                      audience: next === "unspecified" ? "" : next,
+                      constraints: event.target.value,
                     })
                   }
-                  disabled={running}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unspecified">Not specified</SelectItem>
-                    {AUDIENCE_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-sm font-medium text-foreground/85">
-                Length
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {LENGTH_OPTIONS.map((option) => (
-                  <Button
-                    key={option.value}
-                    type="button"
-                    variant={
-                      strategy.length === option.value ? "default" : "outline"
-                    }
-                    size="sm"
-                    disabled={running}
-                    onClick={() =>
-                      onStrategyChange({ ...strategy, length: option.value })
-                    }
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-sm font-medium text-foreground/85">
-                Emphasis
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {EMPHASIS_OPTIONS.map((option) => (
-                  <Button
-                    key={option.value}
-                    type="button"
-                    size="sm"
-                    variant={
-                      strategy.emphasis.includes(option.value)
-                        ? "default"
-                        : "outline"
-                    }
-                    disabled={running}
-                    onClick={() => toggleEmphasis(option.value)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-sm font-medium text-foreground/85">
-                <InfoHelp
-                  label="Constraints (optional, hard requirements)"
-                  hint='Non-negotiables the rewrite must follow. Example: "Avoid discount language. Keep claims under 12 words."'
                 />
-              </p>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Non-negotiables the rewrite must follow (must include/avoid).
-              </p>
-              <Textarea
-                disabled={running}
-                rows={3}
-                maxLength={500}
-                placeholder="Must include/avoid..."
-                value={strategy.constraints ?? ""}
-                onChange={(event) =>
-                  onStrategyChange({
-                    ...strategy,
-                    constraints: event.target.value,
-                  })
-                }
-              />
+              </div>
             </div>
-
           </div>
-        </div>
 
-        <div>
-          <p className="mb-2 text-sm font-medium text-foreground/85">
-            <InfoHelp
-              label="Context notes (optional, guidance)"
-              hint='Background context to guide tone and emphasis. Example: "Launching to RevOps teams after Product Hunt week."'
-            />
-          </p>
-          <p className="mb-2 text-xs text-muted-foreground">
-            Background context and priorities to guide tone and emphasis.
-          </p>
-          <Textarea
-            disabled={running}
-            rows={3}
-            placeholder="Business context, goals, objections, or campaign nuance."
-            value={value.notes ?? ""}
-            onChange={(event) =>
-              onChange(updateField(value, "notes", event.target.value))
-            }
-          />
-        </div>
-
-        {refineMode ? (
-          <div id="rewrite-delta-instructions">
+          <div>
             <p className="mb-2 text-sm font-medium text-foreground/85">
-              Delta instructions (refine)
+              <InfoHelp
+                label="Context notes (optional, guidance)"
+                hint='Background context to guide tone and emphasis. Example: "Launching to RevOps teams after Product Hunt week."'
+              />
+            </p>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Background context and priorities to guide tone and emphasis.
             </p>
             <Textarea
               disabled={running}
               rows={3}
-              placeholder="Specify exactly what to improve from the current rewrite."
-              value={deltaInstructions}
-              onChange={(event) => onDeltaInstructionsChange(event.target.value)}
+              placeholder="Business context, goals, objections, or campaign nuance."
+              value={value.notes ?? ""}
+              onChange={(event) =>
+                onChange(updateField(value, "notes", event.target.value))
+              }
             />
           </div>
-        ) : null}
-      </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
-        <Button onClick={onSubmit} disabled={running}>
-          {running ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          {running ? "Generating..." : "Generate rewrite"}
-        </Button>
-        {running ? (
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
+          {refineMode ? (
+            <div id="rewrite-delta-instructions">
+              <p className="mb-2 text-sm font-medium text-foreground/85">
+                Delta instructions (refine)
+              </p>
+              <Textarea
+                disabled={running}
+                rows={3}
+                placeholder="Specify exactly what to improve from the current rewrite."
+                value={deltaInstructions}
+                onChange={(event) =>
+                  onDeltaInstructionsChange(event.target.value)
+                }
+              />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button onClick={onSubmit} disabled={running}>
+            {running ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {running ? "Generating..." : "Generate rewrite"}
           </Button>
-        ) : null}
-      </div>
+          {running ? (
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          ) : null}
+        </div>
       </div>
     </TooltipProvider>
   );
