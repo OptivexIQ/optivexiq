@@ -5,10 +5,25 @@ import {
 } from "@/lib/api/httpClient";
 import type {
   RewriteGenerateRequest,
+  RewriteSectionMapResult,
   RewriteStreamResult,
   RewriteStreamOptions,
 } from "@/features/rewrites/types/rewrites.types";
 import { rewriteGenerateRequestSchema } from "@/features/rewrites/validators/rewritesSchema";
+import { rewriteSectionMapRequestSchema } from "@/features/rewrites/validators/rewriteSectionMapSchema";
+import { z } from "zod";
+
+const rewriteSectionMapResultSchema = z.object({
+  source: z.enum(["deterministic", "ai"]),
+  sections: z.array(
+    z.object({
+      title: z.string().min(1).max(64),
+      body: z.string().min(1).max(10000),
+    }),
+  ),
+  warnings: z.array(z.string()).default([]),
+  model: z.string().nullable(),
+});
 
 function toHttpError(status: number, payload: unknown): HttpError {
   return {
@@ -71,4 +86,45 @@ export async function streamRewrite(
     requestRef: response.headers.get("x-rewrite-ref"),
     requestCreatedAt: response.headers.get("x-rewrite-created-at"),
   };
+}
+
+export async function mapRewriteSections(input: {
+  rewriteType: RewriteGenerateRequest["rewriteType"];
+  requestRef?: string | null;
+  content: string;
+  signal?: AbortSignal;
+}): Promise<RewriteSectionMapResult> {
+  const parsed = rewriteSectionMapRequestSchema.safeParse({
+    rewriteType: input.rewriteType,
+    requestRef: input.requestRef ?? undefined,
+    content: input.content,
+  });
+  if (!parsed.success) {
+    throw {
+      status: 400,
+      message: parsed.error.issues[0]?.message ?? "Invalid section map input.",
+    } satisfies HttpError;
+  }
+
+  const response = await fetch("/api/rewrites/section-map", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(parsed.data),
+    signal: input.signal,
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw toHttpError(response.status, payload);
+  }
+
+  const parsedResponse = rewriteSectionMapResultSchema.safeParse(payload);
+  if (!parsedResponse.success) {
+    throw {
+      status: 500,
+      message: "Invalid section map response.",
+    } satisfies HttpError;
+  }
+
+  return parsedResponse.data as RewriteSectionMapResult;
 }

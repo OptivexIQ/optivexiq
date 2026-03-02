@@ -55,6 +55,16 @@ export type RewriteStreamResult = {
   requestCreatedAt: string | null;
 };
 
+export type RewriteSectionMapResult = {
+  source: "deterministic" | "ai";
+  sections: Array<{
+    title: string;
+    body: string;
+  }>;
+  warnings: string[];
+  model: string | null;
+};
+
 export type RewriteStudioInitialData = {
   defaultWebsiteUrl: string;
   planLabel: string;

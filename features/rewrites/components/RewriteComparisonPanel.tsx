@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
+import type { RewriteSectionMapResult } from "@/features/rewrites/types/rewrites.types";
 
 type RewriteComparisonPanelProps = {
   currentOutput: string;
@@ -47,9 +48,13 @@ type RewriteComparisonPanelProps = {
     label: string;
   }>;
   selectedBaselineRef: string | null;
+  originalBaselineMap: RewriteSectionMapResult | null;
+  originalBaselineMapLoading: boolean;
+  originalBaselineMapError: string | null;
   onSelectBaseline: (requestRef: string) => void;
   onExitCompare: () => void;
 };
+const ORIGINAL_BASELINE_REF = "__original_draft__";
 
 const ALLOWED_MARKDOWN_ELEMENTS = [
   "h1",
@@ -106,6 +111,48 @@ function normalizeSectionKey(title: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+  const aliases: Record<string, string> = {
+    "hero-section": "hero",
+    headline: "hero",
+    subheadline: "hero",
+    "primary-cta": "hero",
+    "secondary-cta": "hero",
+
+    "problem-solution": "problem-solution",
+    "problem-solution-section": "problem-solution",
+    "problem-and-solution": "problem-solution",
+    "pain-point": "problem-solution",
+    "pain-points": "problem-solution",
+    "value-proposition": "problem-solution",
+
+    "product-demo": "product-showcase",
+    demo: "product-showcase",
+
+    "benefits-results": "benefits-results",
+    benefits: "benefits-results",
+    results: "benefits-results",
+    "before-after": "benefits-results",
+
+    "testimonials-case-studies": "testimonials-case-studies",
+    testimonials: "testimonials-case-studies",
+    testimonial: "testimonials-case-studies",
+    "case-study": "testimonials-case-studies",
+    "case-studies": "testimonials-case-studies",
+
+    "use-case": "use-cases",
+    ecosystem: "integrations",
+
+    "trusted-by": "social-proof",
+    "trust-badges": "social-proof",
+    proof: "social-proof",
+
+    "pricing-section": "pricing",
+    "final-cta-section": "final-cta",
+  };
+  if (aliases[normalized]) {
+    return aliases[normalized];
+  }
+
   if (
     normalized === "faq" ||
     normalized === "faqs" ||
@@ -122,14 +169,25 @@ function getSectionPriority(title: string) {
   const lower = title.toLowerCase();
   if (lower.includes("executive summary") || lower.includes("summary"))
     return 10;
-  if (lower.includes("headline")) return 20;
-  if (lower.includes("subheadline")) return 30;
-  if (lower.includes("primary cta")) return 40;
-  if (lower.includes("final cta") || lower.includes("secondary cta")) return 50;
-  if (lower.includes("supporting")) return 60;
-  if (lower.includes("pricing")) return 70;
-  if (lower.includes("rationale")) return 80;
-  if (lower.includes("implementation")) return 90;
+  if (lower.includes("hero") || lower.includes("headline")) return 20;
+  if (lower.includes("primary cta")) return 20;
+  if (lower.includes("problem / solution") || lower.includes("problem solution"))
+    return 40;
+  if (lower.includes("features")) return 50;
+  if (lower.includes("how it works")) return 60;
+  if (lower.includes("product showcase") || lower.includes("demo")) return 65;
+  if (lower.includes("benefits / results") || lower.includes("benefits")) return 70;
+  if (lower.includes("testimonials / case studies") || lower.includes("testimonials"))
+    return 75;
+  if (lower.includes("use cases")) return 80;
+  if (lower.includes("integrations")) return 85;
+  if (lower.includes("pricing")) return 90;
+  if (lower.includes("social proof")) return 95;
+  if (lower.includes("faq")) return 100;
+  if (lower.includes("final cta") || lower.includes("secondary cta")) return 110;
+  if (lower.includes("rationale")) return 115;
+  if (lower.includes("other")) return 120;
+  if (lower.includes("implementation")) return 130;
   return 100;
 }
 
@@ -157,19 +215,34 @@ export function RewriteComparisonPanel({
   currentTimestampLabel,
   compareBaselineOptions,
   selectedBaselineRef,
+  originalBaselineMap,
+  originalBaselineMapLoading,
+  originalBaselineMapError,
   onSelectBaseline,
   onExitCompare,
 }: RewriteComparisonPanelProps) {
   const currentViewModel = buildRewriteOutputViewModel(currentOutput);
   const baselineViewModel = buildRewriteOutputViewModel(baselineOutput);
   const hasBaselineOptions = compareBaselineOptions.length > 0;
-  const baselineSections = useMemo(
-    () =>
-      baselineViewModel.copySections.length > 0
-        ? baselineViewModel.copySections
-        : [{ title: "Rewrite", body: baselineOutput }],
-    [baselineViewModel.copySections, baselineOutput],
+  const isOriginalBaselineSelected =
+    selectedBaselineRef === ORIGINAL_BASELINE_REF;
+  const originalBaselineSections = useMemo(
+    () => originalBaselineMap?.sections ?? [],
+    [originalBaselineMap],
   );
+  const baselineSections = useMemo(() => {
+    if (isOriginalBaselineSelected) {
+      return originalBaselineSections;
+    }
+    return baselineViewModel.copySections.length > 0
+      ? baselineViewModel.copySections
+      : [{ title: "Rewrite", body: baselineOutput }];
+  }, [
+    isOriginalBaselineSelected,
+    originalBaselineSections,
+    baselineViewModel.copySections,
+    baselineOutput,
+  ]);
   const currentSections = useMemo(
     () =>
       currentViewModel.copySections.length > 0
@@ -182,6 +255,15 @@ export function RewriteComparisonPanel({
     "comfortable",
   );
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const baselineVersionLabel = isOriginalBaselineSelected
+    ? "Version 0"
+    : "Version 1";
+  const baselineTitle = isOriginalBaselineSelected
+    ? "Original Draft"
+    : "Previous Draft";
+  const baselineMeta = isOriginalBaselineSelected
+    ? "Source content"
+    : `${baselineTimestampLabel} | ${selectedBaselineRef ?? "No ref"}`;
 
   const alignedRows = useMemo(() => {
     const previousByKey = new Map(
@@ -269,9 +351,8 @@ export function RewriteComparisonPanel({
     const lines: string[] = [];
     lines.push("# Compare Versions");
     lines.push("");
-    lines.push(`- Version 1: Previous Draft`);
-    lines.push(`- Timestamp: ${baselineTimestampLabel}`);
-    lines.push(`- Ref: ${selectedBaselineRef ?? "No ref"}`);
+    lines.push(`- ${baselineVersionLabel}: ${baselineTitle}`);
+    lines.push(`- Baseline: ${baselineMeta}`);
     lines.push(`- Version 2: Current Generation`);
     lines.push(`- Timestamp: ${currentTimestampLabel}`);
     lines.push(`- Ref: ${currentRequestRef ?? "No ref"}`);
@@ -430,16 +511,35 @@ export function RewriteComparisonPanel({
                 </span>
               </div>
               {sourceContent.trim().length > 0 ? (
-                <blockquote className="mt-3 rounded-md border border-border/60 bg-secondary/20 p-3 text-sm italic text-foreground/90">
-                  {sourceContent}
+                <blockquote className="mt-3 h-28 overflow-hidden rounded-md border border-border/60 bg-secondary/20 p-3 text-sm italic text-foreground/90">
+                  <p className="line-clamp-4 whitespace-pre-wrap wrap-break-words">
+                    {sourceContent}
+                  </p>
                 </blockquote>
               ) : (
-                <div className="mt-3 rounded-md border border-border/60 bg-secondary/20 p-3">
+                <div className="mt-3 h-28 overflow-hidden rounded-md border border-border/60 bg-secondary/20 p-3">
                   <p className="text-sm text-muted-foreground">
                     No pasted source content was provided for this rewrite.
                   </p>
                 </div>
               )}
+              {isOriginalBaselineSelected &&
+              sourceContent.trim().length > 0 &&
+              originalBaselineSections.length === 0 ? (
+                <p
+                  className={`mt-2 text-xs ${
+                    originalBaselineMapLoading
+                      ? "text-muted-foreground"
+                      : "text-amber-500"
+                  }`}
+                >
+                  {originalBaselineMapLoading
+                    ? "Mapping original draft sections..."
+                    : (originalBaselineMapError ??
+                      originalBaselineMap?.warnings[0] ??
+                      "Section mapping unavailable. Add explicit section labels or retry.")}
+                </p>
+              ) : null}
             </section>
 
             <section className="bg-transparent">
@@ -449,7 +549,7 @@ export function RewriteComparisonPanel({
               <div className="mt-3 space-y-3">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">
-                    Persona Role
+                    ICP
                   </p>
                   <div className="mt-1 rounded-md border border-border/60 bg-secondary/20 px-3 py-2">
                     <p className="text-sm text-foreground/90">
@@ -459,7 +559,7 @@ export function RewriteComparisonPanel({
                 </div>
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">
-                    Tone &amp; Voice
+                    Tone
                   </p>
                   <div className="mt-1 rounded-md border border-border/60 bg-secondary/20 px-3 py-2">
                     <p className="text-sm text-foreground/90">
@@ -469,30 +569,7 @@ export function RewriteComparisonPanel({
                 </div>
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">
-                    Key Value Pillars
-                  </p>
-                  <div className="mt-1 rounded-md border border-border/60 bg-secondary/20 px-3 py-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {emphasis.length > 0 ? (
-                        emphasis.map((item) => (
-                          <span
-                            key={item}
-                            className="rounded bg-secondary/40 px-2 py-0.5 text-xs text-foreground/85"
-                          >
-                            {toDisplayLabel(item)}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          None
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Constraint: Length
+                    Length
                   </p>
                   <div className="mt-1 rounded-md border border-border/60 bg-secondary/20 px-3 py-2">
                     <p className="text-sm text-foreground/90">
@@ -500,6 +577,25 @@ export function RewriteComparisonPanel({
                     </p>
                   </div>
                 </div>
+                {emphasis.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Emphasis
+                    </p>
+                    <div className="mt-1 rounded-md border border-border/60 bg-secondary/20 px-3 py-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {emphasis.map((item) => (
+                          <span
+                            key={item}
+                            className="rounded bg-secondary/40 px-2 py-0.5 text-xs text-foreground/85"
+                          >
+                            {toDisplayLabel(item)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 {audience && audience.trim().length > 0 ? (
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">
@@ -543,15 +639,13 @@ export function RewriteComparisonPanel({
           <div className="grid lg:grid-cols-2">
             <div className="bg-card px-4 py-3">
               <p className="text-xs font-semibold text-muted-foreground">
-                Version 1
+                {baselineVersionLabel}
               </p>
               <div className="mt-1 flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground">
-                  Previous Draft
+                  {baselineTitle}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {baselineTimestampLabel} | {selectedBaselineRef ?? "No ref"}
-                </p>
+                <p className="text-xs text-muted-foreground">{baselineMeta}</p>
               </div>
             </div>
             <div className="bg-secondary/20 px-4 py-3">
@@ -669,7 +763,8 @@ export function RewriteComparisonPanel({
                       <Button
                         type="button"
                         size="xs"
-                        variant="outline"
+                        variant="ghost"
+                        className="hover:bg-transparent"
                         onClick={() =>
                           void handleCopySection(
                             `previous-${row.key}`,
@@ -683,9 +778,6 @@ export function RewriteComparisonPanel({
                         ) : (
                           <Copy className="h-4 w-4" />
                         )}
-                        {copiedKey === `previous-${row.key}`
-                          ? "Copied"
-                          : "Copy"}
                       </Button>
                     </div>
                     <div className="mt-2 text-sm leading-relaxed text-foreground/90">
@@ -743,7 +835,8 @@ export function RewriteComparisonPanel({
                       <Button
                         type="button"
                         size="xs"
-                        variant="outline"
+                        variant="ghost"
+                        className="hover:bg-transparent"
                         onClick={() =>
                           void handleCopySection(
                             `current-${row.key}`,
@@ -757,7 +850,6 @@ export function RewriteComparisonPanel({
                         ) : (
                           <Copy className="h-4 w-4" />
                         )}
-                        {copiedKey === `current-${row.key}` ? "Copied" : "Copy"}
                       </Button>
                     </div>
                     <div className="mt-2 text-sm leading-relaxed text-foreground/90">
@@ -799,4 +891,3 @@ export function RewriteComparisonPanel({
     </section>
   );
 }
-

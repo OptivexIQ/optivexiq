@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import type {
   RewriteEmphasis,
   RewriteGenerateRequest,
@@ -24,6 +25,11 @@ import type {
   RewriteStrategy,
   RewriteTone,
 } from "@/features/rewrites/types/rewrites.types";
+import {
+  buildSectionTemplate,
+  getAllowedSectionLabels,
+  hasAnyAllowedSectionLabel,
+} from "@/features/rewrites/services/sectionLabelUtils";
 
 type RewriteInputPanelProps = {
   value: RewriteGenerateRequest;
@@ -31,8 +37,10 @@ type RewriteInputPanelProps = {
   refineMode: boolean;
   deltaInstructions: string;
   running: boolean;
+  enforceSectionLabels: boolean;
   onChange: (value: RewriteGenerateRequest) => void;
   onStrategyChange: (value: RewriteStrategy) => void;
+  onEnforceSectionLabelsChange: (value: boolean) => void;
   onDeltaInstructionsChange: (value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
@@ -81,8 +89,10 @@ export function RewriteInputPanel({
   refineMode,
   deltaInstructions,
   running,
+  enforceSectionLabels,
   onChange,
   onStrategyChange,
+  onEnforceSectionLabelsChange,
   onDeltaInstructionsChange,
   onSubmit,
   onCancel,
@@ -114,6 +124,34 @@ export function RewriteInputPanel({
       </Tooltip>
     </span>
   );
+  const sectionTemplate = buildSectionTemplate();
+  const starterLabels = [
+    "Hero",
+    "Problem / Solution",
+    "Features",
+    "How It Works",
+    "Testimonials / Case Studies",
+    "Pricing",
+    "FAQ",
+    "Final CTA",
+  ];
+  const additionalSupportedLabels = getAllowedSectionLabels().filter(
+    (label) => !starterLabels.includes(label),
+  );
+  const sectionLabelHint = [
+    `Starter labels: ${starterLabels.map((label) => `${label}:`).join(" ")}`,
+    additionalSupportedLabels.length > 0
+      ? `Additional supported labels: ${additionalSupportedLabels.join(", ")}.`
+      : null,
+    "You can also use other section names if they fit your page.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const hasSectionLabels = hasAnyAllowedSectionLabel(value.content ?? "");
+  const showSectionLabelWarning =
+    (value.content ?? "").trim().length > 0 &&
+    !hasSectionLabels &&
+    !enforceSectionLabels;
 
   return (
     <TooltipProvider>
@@ -144,15 +182,54 @@ export function RewriteInputPanel({
           <p className="mb-2 text-sm font-medium text-foreground/85">
             Pasted content
           </p>
+          <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-secondary/20 p-3">
+              <p className="text-xs text-muted-foreground">
+                <InfoHelp
+                  label="Use labeled sections for higher compare quality"
+                  hint={sectionLabelHint}
+                />
+              </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={running}
+              onClick={() => {
+                const current = value.content ?? "";
+                const next =
+                  current.trim().length > 0
+                    ? `${current.trimEnd()}\n\n${sectionTemplate}`
+                    : sectionTemplate;
+                onChange(updateField(value, "content", next));
+              }}
+            >
+              Insert section template
+            </Button>
+            <label className="inline-flex items-center gap-2 text-xs text-foreground/85">
+              <Switch
+                checked={enforceSectionLabels}
+                disabled={running}
+                onCheckedChange={(checked) =>
+                  onEnforceSectionLabelsChange(Boolean(checked))
+                }
+              />
+              Enforce section labels (recommended for team workflows)
+            </label>
+          </div>
           <Textarea
             disabled={running}
             rows={10}
             placeholder="Paste current homepage or pricing copy."
             value={value.content ?? ""}
-            onChange={(event) =>
-              onChange(updateField(value, "content", event.target.value))
-            }
+              onChange={(event) =>
+                onChange(updateField(value, "content", event.target.value))
+              }
           />
+          {showSectionLabelWarning ? (
+            <p className="mt-2 text-xs text-amber-500">
+              Section labels not detected. Compare quality may be reduced.
+            </p>
+          ) : null}
         </div>
 
         <div>

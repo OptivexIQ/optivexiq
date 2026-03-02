@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,11 +23,16 @@ import {
   type StudioGoal,
 } from "@/features/rewrites/components/RewriteStudioControlBar";
 import { RewriteStudioHeader } from "@/features/rewrites/components/RewriteStudioHeader";
-import { streamRewrite } from "@/features/rewrites/services/rewritesClient";
+import {
+  mapRewriteSections,
+  streamRewrite,
+} from "@/features/rewrites/services/rewritesClient";
+import { hasAnyAllowedSectionLabel } from "@/features/rewrites/services/sectionLabelUtils";
 import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
 import type {
   RewriteExportFormat,
   RewriteGenerateRequest,
+  RewriteSectionMapResult,
   RewriteStrategy,
   RewriteStudioInitialData,
 } from "@/features/rewrites/types/rewrites.types";
@@ -39,6 +44,9 @@ const REWRITE_STUDIO_CONTEXT_STORAGE_KEY =
   "optivexiq.rewrite_studio.context.v1";
 const REWRITE_STUDIO_STRATEGY_STORAGE_KEY =
   "optivexiq.rewrite_studio.strategy.v1";
+const REWRITE_STUDIO_INPUT_POLICY_STORAGE_KEY =
+  "optivexiq.rewrite_studio.input_policy.v1";
+const ORIGINAL_BASELINE_REF = "__original_draft__";
 
 function toMarkdownDocument(output: string) {
   return output.endsWith("\n") ? output : `${output}\n`;
@@ -199,6 +207,17 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const [selectedBaselineRef, setSelectedBaselineRef] = useState<string | null>(
     null,
   );
+  const [originalBaselineMap, setOriginalBaselineMap] =
+    useState<RewriteSectionMapResult | null>(null);
+  const [originalBaselineMapLoading, setOriginalBaselineMapLoading] =
+    useState(false);
+  const [originalBaselineMapError, setOriginalBaselineMapError] = useState<
+    string | null
+  >(null);
+  const [enforceSectionLabels, setEnforceSectionLabels] = useState(false);
+  const originalBaselineMapCacheRef = useRef<Map<string, RewriteSectionMapResult>>(
+    new Map(),
+  );
   const [refineMode, setRefineMode] = useState(false);
   const [deltaInstructions, setDeltaInstructions] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -230,6 +249,17 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const resolvedIcpLabel =
     selectedIcpLabel.trim().length > 0 ? selectedIcpLabel : "Custom ICP";
   const historyVersions = initialData.historyVersions ?? [];
+  const currentVersionSourceContent =
+    requestRef != null
+      ? historyVersions.find((item) => item.requestRef === requestRef)
+          ?.sourceContent ?? null
+      : null;
+  const comparisonSourceContent = useMemo(() => {
+    if (requestRef != null) {
+      return currentVersionSourceContent ?? "";
+    }
+    return request.content?.trim().length ? request.content : "";
+  }, [requestRef, currentVersionSourceContent, request.content]);
   const compareBaselineOptions = historyVersions
     .filter((item) => item.requestRef !== requestRef)
     .map((item) => {
@@ -239,25 +269,105 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         label: `${target} | ${item.requestRef}`,
       };
     });
+  const baselineOptions =
+    comparisonSourceContent.trim().length > 0
+      ? [
+          {
+            requestRef: ORIGINAL_BASELINE_REF,
+            label: "Original Draft | Source content",
+          },
+          ...compareBaselineOptions,
+        ]
+      : compareBaselineOptions;
+  const isOriginalBaselineSelected =
+    selectedBaselineRef === ORIGINAL_BASELINE_REF;
   const selectedBaselineOutput =
-    historyVersions.find((item) => item.requestRef === selectedBaselineRef)
-      ?.outputMarkdown ?? previousOutput;
+    isOriginalBaselineSelected
+      ? comparisonSourceContent
+      : historyVersions.find((item) => item.requestRef === selectedBaselineRef)
+            ?.outputMarkdown ?? previousOutput;
   const selectedBaselineTimestamp = selectedBaselineRef
     ? historyVersions.find((item) => item.requestRef === selectedBaselineRef)
         ?.createdAt
     : null;
   const baselineTimestamp = selectedBaselineTimestamp ?? previousVersionCreatedAt;
-  const baselineTimestampLabel = baselineTimestamp
-    ? formatHistoryTimestamp(baselineTimestamp)
-    : previousOutput.trim().length > 0
-      ? "In-session baseline"
-      : "Not selected";
+  const baselineTimestampLabel = isOriginalBaselineSelected
+    ? "Original input"
+    : baselineTimestamp
+      ? formatHistoryTimestamp(baselineTimestamp)
+      : previousOutput.trim().length > 0
+        ? "In-session baseline"
+        : "Not selected";
   const currentTimestampLabel = currentVersionCreatedAt
     ? formatHistoryTimestamp(currentVersionCreatedAt)
     : "Not available";
   const canCompare =
     output.trim().length > 0 &&
-    (previousOutput.trim().length > 0 || compareBaselineOptions.length > 0);
+    (previousOutput.trim().length > 0 || baselineOptions.length > 0);
+
+  useEffect(() => {
+    if (
+      !compareMode ||
+      !isOriginalBaselineSelected ||
+      comparisonSourceContent.trim().length === 0
+    ) {
+      setOriginalBaselineMap(null);
+      setOriginalBaselineMapLoading(false);
+      setOriginalBaselineMapError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const cacheKey = `${request.rewriteType}|${
+      requestRef ?? "unsaved"
+    }|${comparisonSourceContent}`;
+    const cached = originalBaselineMapCacheRef.current.get(cacheKey);
+    if (cached) {
+      setOriginalBaselineMap(cached);
+      setOriginalBaselineMapLoading(false);
+      setOriginalBaselineMapError(null);
+      return () => controller.abort();
+    }
+
+    setOriginalBaselineMapLoading(true);
+    setOriginalBaselineMapError(null);
+    void mapRewriteSections({
+      rewriteType: request.rewriteType,
+      requestRef,
+      content: comparisonSourceContent,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        originalBaselineMapCacheRef.current.set(cacheKey, result);
+        setOriginalBaselineMap(result);
+      })
+      .catch((mapError: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const message =
+          mapError instanceof Error
+            ? mapError.message
+            : isHttpError(mapError)
+              ? mapError.message
+              : "Unable to map original draft sections.";
+        setOriginalBaselineMapError(message);
+        setOriginalBaselineMap(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setOriginalBaselineMapLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [
+    compareMode,
+    isOriginalBaselineSelected,
+    comparisonSourceContent,
+    request.rewriteType,
+    requestRef,
+  ]);
 
   useEffect(() => {
     const isTypingTarget = (target: EventTarget | null) => {
@@ -294,8 +404,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       event.preventDefault();
       setCompareMode((previous) => {
         const next = !previous;
-        if (next && !selectedBaselineRef && compareBaselineOptions.length > 0) {
-          setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
+        if (next && !selectedBaselineRef && baselineOptions.length > 0) {
+          setSelectedBaselineRef(baselineOptions[0].requestRef);
         }
         return next;
       });
@@ -303,7 +413,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canCompare, compareBaselineOptions, compareMode, selectedBaselineRef]);
+  }, [baselineOptions, canCompare, compareMode, selectedBaselineRef]);
 
   useEffect(() => {
     if (initialData.initialStudioContext) {
@@ -409,6 +519,24 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   }, []);
 
   useEffect(() => {
+    const raw = window.localStorage.getItem(
+      REWRITE_STUDIO_INPUT_POLICY_STORAGE_KEY,
+    );
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { enforceSectionLabels?: boolean };
+      if (typeof parsed.enforceSectionLabels === "boolean") {
+        setEnforceSectionLabels(parsed.enforceSectionLabels);
+      }
+    } catch {
+      window.localStorage.removeItem(REWRITE_STUDIO_INPUT_POLICY_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
     const payload = {
       rewriteType: request.rewriteType,
       useCustomIcp,
@@ -436,6 +564,13 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       JSON.stringify(strategy),
     );
   }, [strategy]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      REWRITE_STUDIO_INPUT_POLICY_STORAGE_KEY,
+      JSON.stringify({ enforceSectionLabels }),
+    );
+  }, [enforceSectionLabels]);
 
   const resetStudio = () => {
     setRequest({
@@ -467,6 +602,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setError(null);
     setRequestRef(null);
     setCurrentVersionCreatedAt(null);
+    setOriginalBaselineMap(null);
+    setOriginalBaselineMapLoading(false);
+    setOriginalBaselineMapError(null);
+    setEnforceSectionLabels(false);
   };
 
   const resetControlContext = () => {
@@ -505,6 +644,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setSelectedBaselineRef(null);
     setRequestRef(null);
     setCurrentVersionCreatedAt(null);
+    setOriginalBaselineMap(null);
+    setOriginalBaselineMapLoading(false);
+    setOriginalBaselineMapError(null);
     setError(null);
     toast({
       title: "Rewrite duplicated",
@@ -525,6 +667,17 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const handleSubmit = async () => {
     if (useCustomIcp && customIcp.trim().length === 0) {
       setError("Custom ICP is required when ICP is set to Custom.");
+      return;
+    }
+
+    if (
+      enforceSectionLabels &&
+      (request.content?.trim().length ?? 0) > 0 &&
+      !hasAnyAllowedSectionLabel(request.content ?? "")
+    ) {
+      setError(
+        "Section labels are required. Add at least one labeled section (for example: Hero: ...).",
+      );
       return;
     }
 
@@ -611,12 +764,22 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       return;
     }
 
+    setRequest((previous) => ({
+      ...previous,
+      rewriteType: version.rewriteType,
+      websiteUrl: version.websiteUrl ?? previous.websiteUrl,
+      content: version.sourceContent ?? "",
+      notes: version.userNotes ?? "",
+    }));
     setOutput(version.outputMarkdown);
     setRequestRef(version.requestRef);
     setCurrentVersionCreatedAt(version.createdAt);
     setPreviousVersionCreatedAt(null);
     setCompareMode(false);
     setSelectedBaselineRef(null);
+    setOriginalBaselineMap(null);
+    setOriginalBaselineMapLoading(false);
+    setOriginalBaselineMapError(null);
     setError(null);
     setHistoryOpen(false);
   };
@@ -690,6 +853,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setDeltaInstructions("");
     setCompareMode(false);
     setSelectedBaselineRef(null);
+    setOriginalBaselineMap(null);
+    setOriginalBaselineMapLoading(false);
+    setOriginalBaselineMapError(null);
     setError(null);
     setHistoryOpen(false);
     toast({
@@ -770,7 +936,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         <RewriteComparisonPanel
           currentOutput={output}
           baselineOutput={selectedBaselineOutput}
-          sourceContent={request.content ?? ""}
+          sourceContent={comparisonSourceContent}
           personaRole={resolvedIcpLabel}
           tone={strategy.tone}
           length={strategy.length}
@@ -780,8 +946,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           currentRequestRef={requestRef}
           baselineTimestampLabel={baselineTimestampLabel}
           currentTimestampLabel={currentTimestampLabel}
-          compareBaselineOptions={compareBaselineOptions}
+          compareBaselineOptions={baselineOptions}
           selectedBaselineRef={selectedBaselineRef}
+          originalBaselineMap={originalBaselineMap}
+          originalBaselineMapLoading={originalBaselineMapLoading}
+          originalBaselineMapError={originalBaselineMapError}
           onSelectBaseline={setSelectedBaselineRef}
           onExitCompare={() => setCompareMode(false)}
         />
@@ -793,8 +962,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             refineMode={refineMode}
             deltaInstructions={deltaInstructions}
             running={running}
+            enforceSectionLabels={enforceSectionLabels}
             onChange={setRequest}
             onStrategyChange={setStrategy}
+            onEnforceSectionLabelsChange={setEnforceSectionLabels}
             onDeltaInstructionsChange={setDeltaInstructions}
             onSubmit={() => void handleSubmit()}
             onCancel={handleCancel}
@@ -831,8 +1002,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               onDuplicate={handleDuplicate}
               onRefine={handleRefine}
               onEnterCompare={() => {
-                if (!selectedBaselineRef && compareBaselineOptions.length > 0) {
-                  setSelectedBaselineRef(compareBaselineOptions[0].requestRef);
+                if (!selectedBaselineRef && baselineOptions.length > 0) {
+                  setSelectedBaselineRef(baselineOptions[0].requestRef);
                 }
                 setCompareMode(true);
               }}
