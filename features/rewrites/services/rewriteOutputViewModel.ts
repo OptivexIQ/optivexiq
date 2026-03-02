@@ -1,3 +1,8 @@
+import {
+  parseRewriteShiftStatsFromText,
+  type RewriteShiftStats,
+} from "@/features/rewrites/validators/rewriteShiftStatsSchema";
+
 export type RewriteOutputSection = {
   title: string;
   body: string;
@@ -7,6 +12,7 @@ export type RewriteOutputViewModel = {
   summaryBullets: string[];
   copySections: RewriteOutputSection[];
   rationaleSections: RewriteOutputSection[];
+  shiftStats: RewriteShiftStats | null;
 };
 
 function normalize(text: string) {
@@ -55,6 +61,12 @@ function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
     .map((line) => line.trim())
     .filter((line) => /^[-*]\s+/.test(line))
     .map((line) => line.replace(/^[-*]\s+/, "").trim())
+    .filter(
+      (line) =>
+        !/^clarity\s*shift\s*:/i.test(line) &&
+        !/^objection\s*shift\s*:/i.test(line) &&
+        !/^positioning\s*shift\s*:/i.test(line),
+    )
     .filter((line) => line.length > 0);
 
   if (bullets.length > 0) {
@@ -64,6 +76,12 @@ function toSummaryBullets(sections: RewriteOutputSection[]): string[] {
   return summarySection.body
     .split("\n")
     .map((line) => line.trim())
+    .filter(
+      (line) =>
+        !/^clarity\s*shift\s*:/i.test(line) &&
+        !/^objection\s*shift\s*:/i.test(line) &&
+        !/^positioning\s*shift\s*:/i.test(line),
+    )
     .filter((line) => line.length > 0)
     .slice(0, 3);
 }
@@ -135,6 +153,7 @@ export function normalizeRationaleParagraph(raw: string): string {
 export function buildRewriteOutputViewModel(markdown: string): RewriteOutputViewModel {
   const sections = splitSections(markdown);
   const summaryBullets = toSummaryBullets(sections);
+  const shiftStats = parseRewriteShiftStatsFromText(markdown);
 
   const rationaleRaw = sections
     .filter((section) => {
@@ -200,5 +219,6 @@ export function buildRewriteOutputViewModel(markdown: string): RewriteOutputView
     summaryBullets,
     copySections,
     rationaleSections,
+    shiftStats,
   };
 }

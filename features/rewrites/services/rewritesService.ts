@@ -70,6 +70,10 @@ function buildSystemPrompt(type: RewriteGenerateRequestValues["rewriteType"]) {
     "- The rationale must be a single narrative paragraph.",
     "- Rationale length must be 2-4 sentences and roughly 50-110 words.",
     "- Do not use bullet points or numbering inside the rationale.",
+    "- Include these exact shift lines in Strategy summary using strict formats:",
+    "  - Clarity Shift: signed percentage (example: +42%)",
+    "  - Objection Shift: signed percentage (example: -18%)",
+    "  - Positioning Shift: one of Strong | Moderate | Weak | Improving | Needs Work",
     "- In the Proposed rewrite section, include explicit labeled lines for 'Primary CTA' and 'Final CTA'.",
     "- If source content contains an end-of-page CTA/final CTA, rewrite and include it explicitly under 'Final CTA'.",
     "Output sections:",
@@ -127,6 +131,41 @@ export async function buildRewriteOpenAIRequest(
     messages: [
       { role: "system", content: buildSystemPrompt(input.rewriteType) },
       { role: "user", content: buildUserPrompt(input, context) },
+    ],
+  };
+}
+
+export function buildRewriteShiftStatsRepairRequest(params: {
+  rewriteType: RewriteGenerateRequestValues["rewriteType"];
+  sourceContent?: string | null;
+  outputMarkdown: string;
+}): OpenAIRequest {
+  return {
+    model: "gpt-4o-mini",
+    temperature: 0.1,
+    maxTokens: 180,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "You validate rewrite output metrics for SaaS copy analysis.",
+          "Return ONLY three lines with no markdown heading and no extra text.",
+          "Line 1: Clarity Shift: signed percentage (e.g., +42%)",
+          "Line 2: Objection Shift: signed percentage (e.g., -18%)",
+          "Line 3: Positioning Shift: one of Strong | Moderate | Weak | Improving | Needs Work",
+          "Do not output bullet points, numbering, prose, or explanations.",
+        ].join("\n"),
+      },
+      {
+        role: "user",
+        content: [
+          `Rewrite type: ${params.rewriteType}`,
+          params.sourceContent?.trim()
+            ? `Source content:\n${params.sourceContent.trim()}`
+            : "Source content: not provided",
+          `Generated rewrite markdown:\n${params.outputMarkdown}`,
+        ].join("\n\n"),
+      },
     ],
   };
 }

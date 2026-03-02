@@ -17,6 +17,7 @@ import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPa
 import { RewriteComparisonPanel } from "@/features/rewrites/components/RewriteComparisonPanel";
 import { RewriteExecutiveSummaryCard } from "@/features/rewrites/components/RewriteExecutiveSummaryCard";
 import { RewriteOutputPanel } from "@/features/rewrites/components/RewriteOutputPanel";
+import { RewriteShiftStatsCards } from "@/features/rewrites/components/RewriteShiftStatsCards";
 import { RewriteStrategicRationaleCard } from "@/features/rewrites/components/RewriteStrategicRationaleCard";
 import {
   RewriteStudioControlBar,
@@ -754,6 +755,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             : isHttpError(submissionError)
               ? submissionError.message
               : "Unable to generate rewrite.";
+        if (/shift stats contract validation/i.test(message)) {
+          setOutput("");
+        }
         setError(message);
       }
     } finally {
@@ -985,6 +989,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               output={output}
               compareMode={compareMode}
             />
+            <RewriteShiftStatsCards output={output} running={running} />
             <RewriteOutputPanel
               rewriteType={request.rewriteType}
               running={running}

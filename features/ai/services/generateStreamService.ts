@@ -1,4 +1,8 @@
-import { streamChatCompletion, type OpenAIRequest } from "@/features/ai/client/openaiClient";
+import {
+  runChatCompletion,
+  streamChatCompletion,
+  type OpenAIRequest,
+} from "@/features/ai/client/openaiClient";
 import { streamTextChunks } from "@/features/ai/streaming/streamHandler";
 import { logger } from "@/lib/logger";
 import { estimateTokens } from "@/features/ai/client/tokenEstimator";
@@ -14,12 +18,20 @@ import { emitOperationalAlert } from "@/lib/ops/criticalAlertService";
 import { errorResponse } from "@/lib/api/errorResponse";
 import type { NextRequest } from "next/server";
 import { rewriteGenerateRequestSchema } from "@/features/rewrites/validators/rewritesSchema";
-import { buildRewriteOpenAIRequest } from "@/features/rewrites/services/rewritesService";
+import {
+  buildRewriteOpenAIRequest,
+  buildRewriteShiftStatsRepairRequest,
+} from "@/features/rewrites/services/rewritesService";
 import {
   generateRewriteRequestRef,
   saveRewriteRecord,
 } from "@/features/rewrites/services/rewriteHistoryService";
 import type { RewriteGenerateRequestValues } from "@/features/rewrites/validators/rewritesSchema";
+import {
+  formatRewriteShiftStatsBlock,
+  parseRewriteShiftStatsFromText,
+  type RewriteShiftStats,
+} from "@/features/rewrites/validators/rewriteShiftStatsSchema";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 const FINALIZATION_MAX_ATTEMPTS = 3;
@@ -150,6 +162,109 @@ async function saveRewriteRecordWithRetry(
   }
 
   return { ok: false, error: lastError };
+}
+
+async function ensureRewriteShiftStats(params: {
+  output: string;
+  rewriteInput: RewriteGenerateRequestValues;
+  requestId: string;
+  userId: string;
+  requestRef: string | null;
+}): Promise<{
+  stats: RewriteShiftStats | null;
+  appendedBlock: string;
+  extraInputTokens: number;
+  extraOutputTokens: number;
+  extraCostCents: number;
+}> {
+  const parsed = parseRewriteShiftStatsFromText(params.output);
+  if (parsed) {
+    return {
+      stats: parsed,
+      appendedBlock: "",
+      extraInputTokens: 0,
+      extraOutputTokens: 0,
+      extraCostCents: 0,
+    };
+  }
+
+  logger.warn("rewrite.shift_stats.missing", {
+    requestId: params.requestId,
+    userId: params.userId,
+    requestRef: params.requestRef,
+    rewriteType: params.rewriteInput.rewriteType,
+  });
+
+  let accumulatedInputTokens = 0;
+  let accumulatedOutputTokens = 0;
+  let accumulatedCostCents = 0;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const repairRequest = buildRewriteShiftStatsRepairRequest({
+        rewriteType: params.rewriteInput.rewriteType,
+        sourceContent: params.rewriteInput.content,
+        outputMarkdown: params.output,
+      });
+      const repairResponse = await runChatCompletion(repairRequest);
+      accumulatedInputTokens += repairResponse.promptTokens;
+      accumulatedOutputTokens += repairResponse.completionTokens;
+      accumulatedCostCents += Math.round(repairResponse.estimatedCostUsd * 100);
+
+      const repairedStats = parseRewriteShiftStatsFromText(repairResponse.content);
+      if (!repairedStats) {
+        logger.warn("rewrite.shift_stats.repair_invalid_attempt", {
+          requestId: params.requestId,
+          userId: params.userId,
+          requestRef: params.requestRef,
+          rewriteType: params.rewriteInput.rewriteType,
+          attempt,
+          maxAttempts: 2,
+        });
+        continue;
+      }
+
+      logger.info("rewrite.shift_stats.repaired", {
+        requestId: params.requestId,
+        userId: params.userId,
+        requestRef: params.requestRef,
+        rewriteType: params.rewriteInput.rewriteType,
+        model: repairResponse.model,
+        attempt,
+      });
+
+      return {
+        stats: repairedStats,
+        appendedBlock: `\n\n${formatRewriteShiftStatsBlock(repairedStats)}`,
+        extraInputTokens: accumulatedInputTokens,
+        extraOutputTokens: accumulatedOutputTokens,
+        extraCostCents: accumulatedCostCents,
+      };
+    } catch (error) {
+      logger.error("rewrite.shift_stats.repair_failed_attempt", error, {
+        requestId: params.requestId,
+        userId: params.userId,
+        requestRef: params.requestRef,
+        rewriteType: params.rewriteInput.rewriteType,
+        attempt,
+        maxAttempts: 2,
+      });
+    }
+  }
+
+  logger.error("rewrite.shift_stats.repair_exhausted", {
+    requestId: params.requestId,
+    userId: params.userId,
+    requestRef: params.requestRef,
+    rewriteType: params.rewriteInput.rewriteType,
+  });
+  return {
+    stats: null,
+    appendedBlock: "",
+    extraInputTokens: accumulatedInputTokens,
+    extraOutputTokens: accumulatedOutputTokens,
+    extraCostCents: accumulatedCostCents,
+  };
 }
 
 export async function handleGenerateStream(params: {
@@ -284,6 +399,8 @@ export async function handleGenerateStream(params: {
       let finalized = false;
       let output = firstChunk;
       let outputTokensSoFar = estimateTokens(firstChunk);
+      let supplementalInputTokens = 0;
+      let supplementalOutputTokens = 0;
       const abortHandler = () => {
         closed = true;
         aborted = true;
@@ -306,6 +423,28 @@ export async function handleGenerateStream(params: {
             output += chunk;
             outputTokensSoFar += estimateTokens(chunk);
             controller.enqueue(encoder.encode(chunk));
+          }
+
+          if (!closed && isRewriteRequest && rewriteInput) {
+            const shiftStatsResult = await ensureRewriteShiftStats({
+              output,
+              rewriteInput,
+              requestId,
+              userId,
+              requestRef: rewriteRef,
+            });
+            supplementalInputTokens += shiftStatsResult.extraInputTokens;
+            supplementalOutputTokens += shiftStatsResult.extraOutputTokens;
+            if (!shiftStatsResult.stats) {
+              throw new Error(
+                "Rewrite output failed shift stats contract validation.",
+              );
+            }
+            if (shiftStatsResult.appendedBlock.length > 0) {
+              output += shiftStatsResult.appendedBlock;
+              outputTokensSoFar += estimateTokens(shiftStatsResult.appendedBlock);
+              controller.enqueue(encoder.encode(shiftStatsResult.appendedBlock));
+            }
           }
         } catch (error) {
           failed = true;
@@ -345,18 +484,20 @@ export async function handleGenerateStream(params: {
             if (aborted) {
               logger.info("AI stream aborted.", { requestId });
               const inputTokens = estimateTokens(generateRequest);
+              const totalInputTokens = inputTokens + supplementalInputTokens;
               const outputTokens = Math.max(0, outputTokensSoFar);
+              const totalOutputTokens = outputTokens + supplementalOutputTokens;
               const actualTokens = Math.min(
                 reservedTokens,
-                inputTokens + outputTokens,
+                totalInputTokens + totalOutputTokens,
               );
               const actualCostCents = Math.min(
                 reservedCostCents,
                 Math.round(
                   estimateCost({
                     model: generateRequest.model,
-                    inputTokens,
-                    outputTokens,
+                    inputTokens: totalInputTokens,
+                    outputTokens: totalOutputTokens,
                   }) * 100,
                 ),
               );
@@ -405,14 +546,19 @@ export async function handleGenerateStream(params: {
           finalized = true;
 
           const inputTokens = estimateTokens(generateRequest);
+          const totalInputTokens = inputTokens + supplementalInputTokens;
           const outputTokens = estimateTokens(output);
+          const totalOutputTokens = outputTokens + supplementalOutputTokens;
           const costUsd = estimateCost({
             model: generateRequest.model,
-            inputTokens,
-            outputTokens,
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
           });
           const costCents = Math.round(costUsd * 100);
-          const finalizedTokens = Math.min(reservedTokens, inputTokens + outputTokens);
+          const finalizedTokens = Math.min(
+            reservedTokens,
+            totalInputTokens + totalOutputTokens,
+          );
           const finalizedCostCents = Math.min(reservedCostCents, costCents);
           const finalization = await finalizeGenerateUsageWithRetry({
             userId,
@@ -476,8 +622,8 @@ export async function handleGenerateStream(params: {
                 input: rewriteInput,
                 outputMarkdown: output,
                 model: generateRequest.model,
-                tokensInput: inputTokens,
-                tokensOutput: outputTokens,
+                tokensInput: totalInputTokens,
+                tokensOutput: totalOutputTokens,
                 costCents,
               });
               if (!persistResult.ok) {
@@ -507,8 +653,8 @@ export async function handleGenerateStream(params: {
           logger.info("AI stream finalized.", {
             requestId,
             durationMs: Date.now() - startTime,
-            inputTokens,
-            outputTokens,
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
             costCents,
             finalizationMode: finalization.mode,
           });
@@ -518,8 +664,8 @@ export async function handleGenerateStream(params: {
               userId,
               requestRef: rewriteRef,
               rewriteType: rewriteInput?.rewriteType ?? null,
-              inputTokens,
-              outputTokens,
+              inputTokens: totalInputTokens,
+              outputTokens: totalOutputTokens,
               costCents,
               durationMs: Date.now() - startTime,
             });
