@@ -113,21 +113,42 @@ export function buildPositioningMap(input: {
       : null;
   const baseX = clampScore(overlapYouAverage ?? input.clarityScore);
   const baseY = clampScore(input.differentiationScore);
+  const hasSufficientCompetitiveSignal =
+    input.competitors.length >= 2 && input.messagingOverlap.length >= 2;
 
-  const competitorPoints = input.competitors.map((item, index) => {
-    const overlap = resolveOverlapByName(overlapByCompetitor, item.name);
-    const x = clampScore(overlap?.competitors ?? 55);
-    const overlapGap = Math.max(0, x - baseX);
-    const offset = (index % 4) * 3;
-    const y = clampScore(
-      Math.max(
-        15,
-        78 -
-          overlapGap * 0.35 -
-          input.gapAnalysis.differentiationGaps.length * 5 -
-          offset,
-      ),
+  if (!hasSufficientCompetitiveSignal) {
+    return {
+      status: "insufficient_signal",
+      reason_code: "insufficient_competitor_density",
+      minimum_competitors_required: 2,
+    } as unknown as PositioningMapData;
+  }
+
+  const mappedCompetitors = input.competitors
+    .map((item) => {
+      const overlap = resolveOverlapByName(overlapByCompetitor, item.name);
+      return overlap ? { item, overlap } : null;
+    })
+    .filter(
+      (
+        row,
+      ): row is {
+        item: CompetitorInsight;
+        overlap: { competitor: string; you: number; competitors: number };
+      } => row !== null,
     );
+
+  if (mappedCompetitors.length < 2) {
+    return {
+      status: "insufficient_signal",
+      reason_code: "incomplete_competitor_overlap_mapping",
+      minimum_mapped_competitors_required: 2,
+    } as unknown as PositioningMapData;
+  }
+
+  const competitorPoints = mappedCompetitors.map(({ item, overlap }) => {
+    const x = clampScore(overlap.competitors);
+    const y = clampScore(100 - Math.max(0, overlap.competitors - overlap.you));
     return {
       label: item.name,
       x,
@@ -155,8 +176,8 @@ export function buildPositioningMap(input: {
       ...competitorPoints,
     ],
     insights: [
-      ...input.gapAnalysis.opportunities.slice(0, 2),
-      ...input.gapAnalysis.risks.slice(0, 2),
+      ...input.gapAnalysis.opportunities.slice(0, 2).map((item) => `opportunity:${item}`),
+      ...input.gapAnalysis.risks.slice(0, 2).map((item) => `risk:${item}`),
     ],
   };
 }

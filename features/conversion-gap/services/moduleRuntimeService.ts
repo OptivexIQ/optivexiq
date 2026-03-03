@@ -1,6 +1,5 @@
 import { runChatCompletion } from "@/features/ai/client/openaiClient";
 import {
-  extractJsonObject,
   parseJsonStrict,
 } from "@/features/ai/streaming/structuredOutputParser";
 import { logger } from "@/lib/logger";
@@ -67,9 +66,7 @@ export async function runValidatedModule<T>(moduleData: {
     totalOutputTokens += response.completionTokens;
 
     const strictParsed = parseJsonStrict<unknown>(response.content);
-    const extracted = extractJsonObject(response.content);
-    const fallback = parseJsonStrict<unknown>(extracted);
-    const candidate = strictParsed.data ?? fallback.data;
+    const candidate = strictParsed.data;
 
     if (candidate) {
       const validated = moduleData.schema.safeParse(candidate);

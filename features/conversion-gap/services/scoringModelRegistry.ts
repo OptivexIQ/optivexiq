@@ -7,6 +7,8 @@ export type ScoringModel = {
 };
 
 export const CANONICAL_SCORING_MODEL_VERSION = "2026-02-23.v1";
+export const CANONICAL_SCORING_WEIGHTS_VERSION = "2026-03-03.v1";
+export const CANONICAL_RISK_MODEL_VERSION = "v2.1";
 
 export const CANONICAL_SCORING_MODEL: ScoringModel = {
   clarityWeight: 0.24,
@@ -15,4 +17,3 @@ export const CANONICAL_SCORING_MODEL: ScoringModel = {
   competitiveOverlapWeight: 0.16,
   pricingExposureWeight: 0.16,
 };
-

@@ -4,8 +4,14 @@ import { getFreeSnapshotById } from "@/features/free-snapshot/services/freeSnaps
 import { freeConversionSnapshotSchema } from "@/features/free-snapshot/validators/freeSnapshotSchema";
 import { generateSnapshotPdf } from "@/features/free-snapshot/pdf/generateSnapshotPdf";
 import { calculateScore } from "@/features/conversion-gap/services/scoringEngine";
-import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
+import {
+  CANONICAL_RISK_MODEL_VERSION,
+  CANONICAL_SCORING_MODEL_VERSION,
+  CANONICAL_SCORING_WEIGHTS_VERSION,
+} from "@/features/conversion-gap/services/scoringModelRegistry";
 import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
+import { CANONICAL_TAXONOMY_VERSION } from "@/features/conversion-gap/services/taxonomyOverlapScoringService";
+import { CURRENT_REPORT_SCHEMA_VERSION } from "@/features/reports/services/reportSchemaAdapterService";
 
 function toCanonicalReport(
   snapshotId: string,
@@ -17,8 +23,9 @@ function toCanonicalReport(
   const gapB = snapshot.topObjectionGap;
   const score = Math.round((snapshot.clarityScore + snapshot.positioningScore) / 2);
   const insufficientEvidence =
-    "insufficient data: legacy record missing structured evidence for this field.";
+    "insufficient signal depth: structured evidence is unavailable for this field.";
   const baseReport: ConversionGapReport = {
+    reportSchemaVersion: CURRENT_REPORT_SCHEMA_VERSION,
     canonicalSchemaVersion: CANONICAL_REPORT_SCHEMA_VERSION,
     id: snapshotId,
     company: websiteUrl,
@@ -35,6 +42,9 @@ function toCanonicalReport(
     confidenceScore: score,
     threatLevel: "low",
     scoringModelVersion: CANONICAL_SCORING_MODEL_VERSION,
+    riskModelVersion: CANONICAL_RISK_MODEL_VERSION,
+    taxonomyVersion: CANONICAL_TAXONOMY_VERSION,
+    scoringWeightsVersion: CANONICAL_SCORING_WEIGHTS_VERSION,
     scoringBreakdown: {
       clarity: 0,
       differentiation: 0,
@@ -52,6 +62,61 @@ function toCanonicalReport(
       primaryGap: gapA,
       primaryRisk: snapshot.riskEstimate,
       primaryOpportunity: snapshot.quickWins[0] ?? "Apply quick wins to reduce conversion friction.",
+    },
+    sectionConfidence: {
+      positioning: score,
+      objections: Math.max(
+        0,
+        100 - Math.round((snapshot.positioningScore + snapshot.clarityScore) / 2),
+      ),
+      differentiation: snapshot.positioningScore,
+      scoring: score,
+      narrative: Math.min(100, Math.max(0, Math.round(snapshot.executiveSummary.length / 2))),
+    },
+    diagnosticEvidence: {
+      positioningClarity: [
+        {
+          claim: gapA,
+          evidence: [snapshot.topMessagingGap],
+          derivedFrom: ["homepage"],
+          confidenceScore: snapshot.positioningScore,
+        },
+      ],
+      objectionCoverage: [
+        {
+          claim: snapshot.topObjectionGap,
+          evidence: [snapshot.riskEstimate],
+          derivedFrom: ["homepage"],
+          confidenceScore: Math.max(
+            0,
+            100 - Math.round((snapshot.positioningScore + snapshot.clarityScore) / 2),
+          ),
+        },
+      ],
+      competitiveOverlap: [
+        {
+          claim: snapshot.topMessagingGap,
+          evidence: [snapshot.riskEstimate],
+          derivedFrom: ["homepage"],
+          confidenceScore: score,
+        },
+      ],
+      riskPrioritization: [
+        {
+          claim: snapshot.riskEstimate,
+          evidence: [snapshot.topMessagingGap, snapshot.topObjectionGap],
+          derivedFrom: ["homepage"],
+          confidenceScore: score,
+        },
+      ],
+      narrativeDiagnosis: [
+        {
+          claim: snapshot.executiveSummary,
+          evidence: [snapshot.executiveSummary],
+          derivedFrom: ["homepage"],
+          confidenceScore: score,
+        },
+      ],
     },
     messagingOverlap: {
       items: [],
@@ -180,6 +245,14 @@ function toCanonicalReport(
       copy: win,
       iconName: "default",
     })),
+    competitive_section: {
+      status: "ready",
+      reason_code: null,
+      evidence: ["snapshot: limited competitive evidence set"],
+      evidence_count: 1,
+      signal_density_score: 35,
+      extraction_confidence: 35,
+    },
     revenueImpact: {
       pipelineAtRisk: 0,
       estimatedLiftPercent: Math.max(5, Math.round(snapshot.clarityScore * 0.15)),

@@ -23,6 +23,9 @@ type ReportJobRow = {
 
 const PROCESSING_LOCK_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_REPORT_JOB_ATTEMPTS = 6;
+const DEFAULT_WORKER_INTERVAL_MS = 60_000;
+let fallbackSchedulerStarted = false;
+let fallbackSchedulerHandle: ReturnType<typeof setInterval> | null = null;
 
 export async function enqueueReportJob(input: {
   reportId: string;
@@ -61,7 +64,46 @@ export async function enqueueReportJob(input: {
     return { ok: false, error: "report_job_enqueue_failed" };
   }
 
+  dispatchReportWorker("report_job_enqueued");
+  ensureReportWorkerFallbackScheduler();
+
   return { ok: true };
+}
+
+export function dispatchReportWorker(reason: string) {
+  ensureReportWorkerFallbackScheduler();
+  void runReportJobWorker(1).catch((error) => {
+    logger.error("report.worker_dispatch_failed", error, {
+      reason,
+    });
+  });
+}
+
+export function ensureReportWorkerFallbackScheduler() {
+  if (fallbackSchedulerStarted) {
+    return;
+  }
+  const intervalMs = Number.parseInt(
+    process.env.REPORT_WORKER_FALLBACK_INTERVAL_MS ?? "",
+    10,
+  );
+  const safeIntervalMs =
+    Number.isFinite(intervalMs) && intervalMs >= 10_000
+      ? intervalMs
+      : DEFAULT_WORKER_INTERVAL_MS;
+
+  fallbackSchedulerHandle = setInterval(() => {
+    void runReportJobWorker(1).catch((error) => {
+      logger.error("report.worker_fallback_scheduler_failed", error, {
+        interval_ms: safeIntervalMs,
+      });
+    });
+  }, safeIntervalMs);
+  fallbackSchedulerHandle.unref?.();
+  fallbackSchedulerStarted = true;
+  logger.info("report.worker_fallback_scheduler_started", {
+    interval_ms: safeIntervalMs,
+  });
 }
 
 function isExpiredLock(lockedAt: string | null): boolean {

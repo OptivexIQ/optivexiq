@@ -11,6 +11,25 @@ function hasMeaningfulText(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function hasEvidenceBoundConclusions(
+  value: ConversionGapReport["diagnosticEvidence"][keyof ConversionGapReport["diagnosticEvidence"]],
+): boolean {
+  if (value.length === 0) {
+    return false;
+  }
+  return value.every(
+    (item) =>
+      hasMeaningfulText(item.claim) &&
+      item.evidence.length > 0 &&
+      item.evidence.every(hasMeaningfulText) &&
+      item.derivedFrom.length > 0 &&
+      item.derivedFrom.every(hasMeaningfulText) &&
+      Number.isFinite(item.confidenceScore) &&
+      item.confidenceScore >= 0 &&
+      item.confidenceScore <= 100,
+  );
+}
+
 function hasMeaningfulCompetitiveMatrix(
   value: ConversionGapReport["competitiveMatrix"],
 ): boolean {
@@ -123,15 +142,61 @@ function hasMeaningfulCompetitiveInsights(
   );
 }
 
+function hasCompetitiveSectionMetadata(
+  value: ConversionGapReport["competitive_section"],
+): boolean {
+  const hasValidStatus =
+    value.status === "ready" || value.status === "insufficient_signal";
+  const hasValidCounts =
+    Number.isFinite(value.evidence_count) &&
+    value.evidence_count >= 0 &&
+    Number.isFinite(value.signal_density_score) &&
+    value.signal_density_score >= 0 &&
+    value.signal_density_score <= 100 &&
+    Number.isFinite(value.extraction_confidence) &&
+    value.extraction_confidence >= 0 &&
+    value.extraction_confidence <= 100;
+
+  if (!hasValidStatus || !hasValidCounts) {
+    return false;
+  }
+
+  if (value.status === "insufficient_signal") {
+    return (
+      value.reason_code !== null &&
+      value.evidence_count === 0 &&
+      value.evidence.length === 0
+    );
+  }
+
+  return value.evidence_count > 0;
+}
+
 function hasMeaningfulCompetitorSynthesis(
   value: ConversionGapReport["competitor_synthesis"],
 ): boolean {
+  const whiteSpaceValid = (value.whiteSpaceOpportunities ?? []).every(
+    (item) =>
+      hasMeaningfulText(item.claim) &&
+      item.missingAcross >= 2 &&
+      item.evidence.length > 0 &&
+      item.evidence.every(hasMeaningfulText),
+  );
+
   return (
     hasMeaningfulText(value.coreDifferentiationTension) &&
     hasMeaningfulText(value.messagingOverlapRisk.explanation) &&
     hasMeaningfulText(value.substitutionRiskNarrative) &&
     hasMeaningfulText(value.counterPositioningVector) &&
-    hasMeaningfulText(value.pricingDefenseNarrative)
+    hasMeaningfulText(value.pricingDefenseNarrative) &&
+    hasMeaningfulText(value.taxonomyVersion) &&
+    !!value.companyTaxonomy &&
+    Array.isArray(value.competitorTaxonomies) &&
+    value.competitorTaxonomies.length > 0 &&
+    Array.isArray(value.overlapByCompetitor) &&
+    value.overlapByCompetitor.length > 0 &&
+    !!value.dimensionalOverlap &&
+    whiteSpaceValid
   );
 }
 
@@ -144,6 +209,22 @@ export function assertCanonicalSectionCompleteness(
 
   if (report.canonicalSchemaVersion !== CANONICAL_REPORT_SCHEMA_VERSION) {
     return { ok: false, reason: "invalid_canonical_schema_version" };
+  }
+
+  if (
+    !hasMeaningfulText(report.riskModelVersion) ||
+    !hasMeaningfulText(report.taxonomyVersion) ||
+    !hasMeaningfulText(report.scoringWeightsVersion)
+  ) {
+    return { ok: false, reason: "missing_model_version_metadata" };
+  }
+
+  if (
+    !report.reproducibilityChecksum ||
+    !report.sectionHashes ||
+    !report.evidenceProvenance
+  ) {
+    return { ok: false, reason: "missing_reproducibility_or_provenance" };
   }
 
   if (report.executiveNarrative.trim().length === 0) {
@@ -165,8 +246,7 @@ export function assertCanonicalSectionCompleteness(
   }
 
   const hasMessagingOverlap =
-    (report.messagingOverlap.items.length > 0 ||
-      report.messagingOverlap.insight.trim().length > 0) &&
+    report.messagingOverlap.items.length > 0 &&
     report.messagingOverlap.insight.trim().length > 0 &&
     report.messagingOverlap.ctaLabel.trim().length > 0;
   if (!hasMessagingOverlap) {
@@ -181,11 +261,42 @@ export function assertCanonicalSectionCompleteness(
     return { ok: false, reason: "missing_differentiation_insights_section" };
   }
 
-  if (!hasMeaningfulCompetitiveInsights(report.competitiveInsights)) {
+  if (!hasCompetitiveSectionMetadata(report.competitive_section)) {
+    return { ok: false, reason: "invalid_competitive_section_metadata" };
+  }
+
+  if (
+    report.competitive_section.status === "ready" &&
+    !hasMeaningfulCompetitiveInsights(report.competitiveInsights)
+  ) {
     return { ok: false, reason: "missing_competitive_insights_section" };
   }
 
-  if (!hasMeaningfulCompetitorSynthesis(report.competitor_synthesis)) {
+  const hasSectionConfidence =
+    Number.isFinite(report.sectionConfidence.positioning) &&
+    Number.isFinite(report.sectionConfidence.objections) &&
+    Number.isFinite(report.sectionConfidence.differentiation) &&
+    Number.isFinite(report.sectionConfidence.scoring) &&
+    Number.isFinite(report.sectionConfidence.narrative);
+  if (!hasSectionConfidence) {
+    return { ok: false, reason: "missing_section_confidence" };
+  }
+
+  const evidence = report.diagnosticEvidence;
+  const hasDiagnosticEvidence =
+    hasEvidenceBoundConclusions(evidence.positioningClarity) &&
+    hasEvidenceBoundConclusions(evidence.objectionCoverage) &&
+    hasEvidenceBoundConclusions(evidence.competitiveOverlap) &&
+    hasEvidenceBoundConclusions(evidence.riskPrioritization) &&
+    hasEvidenceBoundConclusions(evidence.narrativeDiagnosis);
+  if (!hasDiagnosticEvidence) {
+    return { ok: false, reason: "missing_diagnostic_evidence" };
+  }
+
+  if (
+    report.competitive_section.status === "ready" &&
+    !hasMeaningfulCompetitorSynthesis(report.competitor_synthesis)
+  ) {
     return { ok: false, reason: "missing_competitor_synthesis_section" };
   }
 

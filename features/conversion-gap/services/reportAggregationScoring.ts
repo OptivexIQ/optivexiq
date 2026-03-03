@@ -1,4 +1,5 @@
 import type { GapAnalysisOutput } from "@/features/conversion-gap/types/gap.types";
+import type { ObjectionAnalysisOutput } from "@/features/objection-engine/ai/objectionAnalysisModule";
 
 export function clampScore(value: number) {
   if (!Number.isFinite(value)) {
@@ -64,4 +65,45 @@ export function normalizeCompanyName(company: string, websiteUrl: string) {
   } catch {
     throw new Error("company_resolution_failed");
   }
+}
+
+function severityWeight(value: "low" | "medium" | "high" | "critical"): number {
+  if (value === "critical") {
+    return 1;
+  }
+  if (value === "high") {
+    return 0.75;
+  }
+  if (value === "medium") {
+    return 0.5;
+  }
+  return 0.25;
+}
+
+export function computeDeterministicObjectionCoverageScore(
+  analysis: Pick<
+    ObjectionAnalysisOutput,
+    "identifiedObjections" | "missingObjections" | "mitigationGuidance"
+  >,
+): number {
+  const identifiedCount = analysis.identifiedObjections.length;
+  const missingCount = analysis.missingObjections.length;
+  const total = identifiedCount + missingCount;
+
+  if (total <= 0) {
+    return 0;
+  }
+
+  const baseCoverage = (identifiedCount / total) * 100;
+  const weightedMissing =
+    analysis.missingObjections.length > 0
+      ? analysis.missingObjections.reduce(
+          (sum, item) => sum + severityWeight(item.severity),
+          0,
+        ) / analysis.missingObjections.length
+      : 0;
+  const missingPenalty = weightedMissing * 30;
+  const mitigationBonus = Math.min(12, analysis.mitigationGuidance.length * 2);
+
+  return clampScore(baseCoverage - missingPenalty + mitigationBonus);
 }

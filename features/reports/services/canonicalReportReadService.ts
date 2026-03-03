@@ -7,12 +7,18 @@ import type { GapReportExecutionPayload } from "@/features/reports/types/reportE
 import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import { getUserSettings } from "@/features/settings/services/userSettingsService";
+import {
+  adaptLegacyReportData,
+  CURRENT_REPORT_SCHEMA_VERSION,
+  readReportSchemaVersion,
+} from "@/features/reports/services/reportSchemaAdapterService";
 
 type GapReportRow = {
   id: string;
   user_id: string;
   created_at: string | null;
   report_data: unknown;
+  report_schema_version?: number | null;
 };
 
 type GapReportExecutionRow = GapReportRow & {
@@ -65,6 +71,51 @@ export function parseStoredReportData(
 export function validateGapReport(value: unknown): ConversionGapReport | null {
   const parsed = conversionGapReportSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
+}
+
+function getGapReportValidationIssues(value: unknown): Array<{
+  path: string;
+  message: string;
+  code: string;
+}> {
+  const parsed = conversionGapReportSchema.safeParse(value);
+  if (parsed.success) {
+    return [];
+  }
+  return parsed.error.issues.map((issue) => ({
+    path: issue.path.join("."),
+    message: issue.message,
+    code: issue.code,
+  }));
+}
+
+function parseWithSchemaAdapter(params: {
+  row: GapReportRow;
+}): {
+  report: ConversionGapReport | null;
+  legacyMigrated: boolean;
+  issues: Array<{ path: string; message: string; code: string }>;
+  effectiveSchemaVersion: number;
+} {
+  const schemaVersion = readReportSchemaVersion(
+    params.row.report_data,
+    params.row.report_schema_version,
+  );
+  const shouldAdapt = schemaVersion < CURRENT_REPORT_SCHEMA_VERSION;
+  const source = shouldAdapt
+    ? adaptLegacyReportData({
+        reportData: params.row.report_data,
+        reportId: params.row.id,
+        createdAt: params.row.created_at,
+      })
+    : params.row.report_data;
+  const report = parseStoredReportData(source);
+  return {
+    report,
+    legacyMigrated: shouldAdapt,
+    issues: report ? [] : getGapReportValidationIssues(source),
+    effectiveSchemaVersion: schemaVersion,
+  };
 }
 
 function isReportExpired(createdAt: string | null, retentionDays: number) {
@@ -149,7 +200,7 @@ export async function getCanonicalGapReportForUser(
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("conversion_gap_reports")
-      .select("id, user_id, created_at, report_data")
+      .select("id, user_id, created_at, report_data, report_schema_version")
       .eq("id", reportId)
       .eq("report_type", "full")
       .eq("user_id", userId)
@@ -194,11 +245,15 @@ export async function getCanonicalGapReportForUser(
       return { status: "error", message: "Report data missing." };
     }
 
-    const report = parseStoredReportData(row.report_data);
+    const parsed = parseWithSchemaAdapter({ row });
+    const report = parsed.report;
     if (!report) {
       logger.error("Gap report report_data failed schema validation.", {
         report_id: reportId,
         user_id: userId,
+        legacy_migrated: parsed.legacyMigrated,
+        schema_version: parsed.effectiveSchemaVersion,
+        issues: parsed.issues,
       });
       return { status: "error", message: "Report data invalid." };
     }
@@ -206,6 +261,10 @@ export async function getCanonicalGapReportForUser(
     return {
       status: "ok",
       report,
+      metadata: {
+        legacy_migrated: parsed.legacyMigrated,
+        report_schema_version: parsed.effectiveSchemaVersion,
+      },
     };
   } catch (error) {
     logger.error("Failed to fetch canonical gap report.", error, {
@@ -225,7 +284,7 @@ export async function getCanonicalGapReportExecutionForUser(
     const { data, error } = await supabase
       .from("conversion_gap_reports")
       .select(
-        "id, user_id, created_at, status, execution_stage, execution_progress, started_at, updated_at, completed_at, report_data, gap_analysis",
+        "id, user_id, created_at, status, execution_stage, execution_progress, started_at, updated_at, completed_at, report_data, report_schema_version, gap_analysis",
       )
       .eq("id", reportId)
       .eq("report_type", "full")
@@ -264,6 +323,13 @@ export async function getCanonicalGapReportExecutionForUser(
       startedAt: typeof row.started_at === "string" ? row.started_at : null,
       updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
       completedAt: typeof row.completed_at === "string" ? row.completed_at : null,
+      metadata: {
+        legacy_migrated: false,
+        report_schema_version:
+          typeof row.report_schema_version === "number"
+            ? row.report_schema_version
+            : null,
+      },
     };
 
     if (status === "queued" || status === "running" || status === "retrying") {
@@ -301,11 +367,15 @@ export async function getCanonicalGapReportExecutionForUser(
       return { status: "error", message: "Report data missing." };
     }
 
-    const canonical = parseStoredReportData(row.report_data);
+    const parsed = parseWithSchemaAdapter({ row });
+    const canonical = parsed.report;
     if (!canonical) {
       logger.error("Gap report report_data failed schema validation.", {
         report_id: reportId,
         user_id: userId,
+        legacy_migrated: parsed.legacyMigrated,
+        schema_version: parsed.effectiveSchemaVersion,
+        issues: parsed.issues,
       });
       return { status: "error", message: "Report data invalid." };
     }
@@ -317,6 +387,10 @@ export async function getCanonicalGapReportExecutionForUser(
         ...baseExecution,
         error: null,
         report: canonical,
+        metadata: {
+          legacy_migrated: parsed.legacyMigrated,
+          report_schema_version: parsed.effectiveSchemaVersion,
+        },
       },
     };
   } catch (error) {

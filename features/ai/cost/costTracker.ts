@@ -7,6 +7,7 @@ type CostParams = {
 const modelRates: Record<string, { input: number; output: number }> = {
   "gpt-4o-mini": { input: 0.00015, output: 0.0006 },
   "gpt-4o": { input: 0.005, output: 0.015 },
+  "text-embedding-3-small": { input: 0.00002, output: 0 },
 };
 
 export function estimateCost({ model, inputTokens, outputTokens }: CostParams) {

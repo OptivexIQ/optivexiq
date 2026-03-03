@@ -29,6 +29,9 @@ const envSchema = z.object({
   // Application
   NODE_ENV: z.enum(["development", "production", "test"]).optional(),
   ENABLE_SUPABASE_STARTUP_CHECKS: z.enum(["true", "false"]).optional(),
+  REPORT_WORKER_FALLBACK_INTERVAL_MS: z.string().optional(),
+  NEXT_PUBLIC_ENABLE_REPORT_EVIDENCE_PANEL: z.enum(["true", "false"]).optional(),
+  WHITE_SPACE_EMBEDDING_DISTANCE_MIN: z.string().optional(),
   NEXT_PUBLIC_SITE_URL: z
     .string()
     .url("Invalid NEXT_PUBLIC_SITE_URL")
@@ -82,6 +85,12 @@ export const OPENAI_API_KEY = env.OPENAI_API_KEY;
 export const NODE_ENV = env.NODE_ENV || "development";
 export const ENABLE_SUPABASE_STARTUP_CHECKS =
   env.ENABLE_SUPABASE_STARTUP_CHECKS !== "false";
+export const REPORT_WORKER_FALLBACK_INTERVAL_MS =
+  env.REPORT_WORKER_FALLBACK_INTERVAL_MS;
+export const NEXT_PUBLIC_ENABLE_REPORT_EVIDENCE_PANEL =
+  env.NEXT_PUBLIC_ENABLE_REPORT_EVIDENCE_PANEL === "true";
+export const WHITE_SPACE_EMBEDDING_DISTANCE_MIN =
+  env.WHITE_SPACE_EMBEDDING_DISTANCE_MIN;
 export const NEXT_PUBLIC_SITE_URL = env.NEXT_PUBLIC_SITE_URL;
 export const CRON_SECRET = env.CRON_SECRET;
 export const LEMONSQUEEZY_API_KEY = env.LEMONSQUEEZY_API_KEY;

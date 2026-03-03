@@ -99,10 +99,95 @@ function assertJsonExportSourceOfTruth() {
   );
 }
 
+function assertNoGapEngineMockFallback() {
+  const gapEngineClient = read("features/conversion-gap/gapEngineClient.ts");
+  if (gapEngineClient.includes("rep_mock")) {
+    failures.push("gapEngineClient must not include mock report fallback (rep_mock).");
+  }
+  if (gapEngineClient.includes("fallbackUuidLike")) {
+    failures.push("gapEngineClient must not include fallback UUID generation.");
+  }
+}
+
+function assertStrictModuleRuntimeParsing() {
+  const runtimeService = read(
+    "features/conversion-gap/services/moduleRuntimeService.ts",
+  );
+  if (runtimeService.includes("parseJsonCandidates")) {
+    failures.push("moduleRuntimeService must not use tolerant parseJsonCandidates fallback.");
+  }
+  assertIncludes(
+    runtimeService,
+    "parseJsonStrict<unknown>(response.content)",
+    "moduleRuntimeService must use strict JSON parsing.",
+  );
+}
+
+function assertNoHeuristicOverlapFallback() {
+  const narrative = read(
+    "features/conversion-gap/services/reportAggregationNarrative.ts",
+  );
+  if (narrative.includes("Competitor ${index + 1}")) {
+    failures.push(
+      "reportAggregationNarrative must not synthesize competitor placeholders for overlap lanes.",
+    );
+  }
+  assertIncludes(
+    narrative,
+    "competitive_signal_insufficient",
+    "reportAggregationNarrative must fail closed with explicit insufficient-signal state.",
+  );
+}
+
+function assertCanonicalVersionMetadataRequired() {
+  const schema = read("features/conversion-gap/validators/reportSchema.ts");
+  assertIncludes(
+    schema,
+    "riskModelVersion: z.string().min(1)",
+    "report schema must require riskModelVersion.",
+  );
+  assertIncludes(
+    schema,
+    "taxonomyVersion: z.string().min(1)",
+    "report schema must require taxonomyVersion.",
+  );
+  assertIncludes(
+    schema,
+    "scoringWeightsVersion: z.string().min(1)",
+    "report schema must require scoringWeightsVersion.",
+  );
+  assertIncludes(
+    schema,
+    "completed reports require non-empty messagingOverlap.items",
+    "completed report schema must fail closed on empty messagingOverlap.items.",
+  );
+}
+
+function assertCanonicalCompletenessModelMetadataGate() {
+  const completeness = read(
+    "features/reports/services/canonicalSectionCompletenessService.ts",
+  );
+  assertIncludes(
+    completeness,
+    "missing_model_version_metadata",
+    "canonical completeness must reject missing model version metadata.",
+  );
+  assertIncludes(
+    completeness,
+    "missing_reproducibility_or_provenance",
+    "canonical completeness must require reproducibility + provenance metadata.",
+  );
+}
+
 assertGuardOrder();
 assertComputeGuarded();
 assertCanonicalCompletenessGating();
 assertJsonExportSourceOfTruth();
+assertNoGapEngineMockFallback();
+assertStrictModuleRuntimeParsing();
+assertNoHeuristicOverlapFallback();
+assertCanonicalVersionMetadataRequired();
+assertCanonicalCompletenessModelMetadataGate();
 
 if (failures.length > 0) {
   console.error("Decision infrastructure verification failed:");

@@ -6,6 +6,7 @@ import { runReportCompletionStartupCheck } from "@/features/reports/services/rep
 import { runDbContractStartupCheck } from "@/features/db/services/dbContractStartupService";
 import { verifySnapshotPdfPipelineReady } from "@/features/free-snapshot/pdf/generateSnapshotPdf";
 import { ENABLE_SUPABASE_STARTUP_CHECKS } from "@/lib/env";
+import { getAdminOpsSnapshot } from "@/features/ops/services/adminHealthSnapshotService";
 
 type AdminHealthLevel = "Healthy" | "Degraded" | "Maintenance" | "Unknown";
 type CheckCategory = "mandatory" | "optional" | "diagnostic";
@@ -153,6 +154,47 @@ export async function GET(request: Request) {
   ]);
 
   const checks: HealthCheck[] = [rateLimitCheck, reportCompletionCheck, dbContractCheck];
+  const opsSnapshot = await getAdminOpsSnapshot();
+  let subsystemSummary: {
+    providers: Record<string, unknown>;
+    queue: Record<string, unknown>;
+    token_accounting: Record<string, unknown>;
+    report_contract: Record<string, unknown>;
+    scoring_governance: Record<string, unknown>;
+  } = {
+    providers: {
+      rag: opsSnapshot.providers.rag,
+      openai: opsSnapshot.providers.openai,
+      supabase_service_role: opsSnapshot.providers.supabaseServiceRole,
+      lemonsqueezy_webhook: opsSnapshot.providers.lemonsqueezyWebhook,
+    },
+    queue: {
+      rag: opsSnapshot.queue.rag,
+      depth_total: opsSnapshot.queue.depth,
+      depth_report: opsSnapshot.queue.reportDepth,
+      depth_snapshot: opsSnapshot.queue.snapshotDepth,
+      oldest_queued_age_seconds: opsSnapshot.queue.oldestQueuedAgeSeconds,
+      average_processing_delay_seconds: opsSnapshot.queue.averageProcessingDelaySeconds,
+      failed_jobs_last_24h: opsSnapshot.queue.failedLast24h,
+    },
+    token_accounting: {
+      rag: opsSnapshot.tokenAccounting.rag,
+      pending_reconciliation_jobs: opsSnapshot.tokenAccounting.pendingReconciliations,
+      oldest_pending_seconds: opsSnapshot.tokenAccounting.oldestPendingSeconds,
+    },
+    report_contract: {
+      rag: opsSnapshot.reportContract.rag,
+      report_completion_rpc: opsSnapshot.reportContract.reportCompletionRpc,
+      db_contract_snapshot: opsSnapshot.reportContract.dbContractSnapshot,
+    },
+    scoring_governance: {
+      rag: opsSnapshot.scoringGovernance.rag,
+      model_version: opsSnapshot.scoringGovernance.modelVersion,
+      days_since_calibration: opsSnapshot.scoringGovernance.daysSinceCalibration,
+      training_sample_size: opsSnapshot.scoringGovernance.trainingSampleSize,
+      drift_threshold: opsSnapshot.scoringGovernance.driftThreshold,
+    },
+  };
 
   let pdfReadiness:
     | {
@@ -164,7 +206,8 @@ export async function GET(request: Request) {
 
   if (runDeep) {
     try {
-      pdfReadiness = await verifySnapshotPdfPipelineReady();
+      const pdfResult = await verifySnapshotPdfPipelineReady();
+      pdfReadiness = pdfResult;
       checks.push({
         key: "free_snapshot_pdf_pipeline",
         category: "diagnostic",
@@ -180,6 +223,10 @@ export async function GET(request: Request) {
         state: "unknown",
         detail: "Diagnostic probe failed unexpectedly.",
       });
+      subsystemSummary = {
+        ...subsystemSummary,
+        queue: { ...subsystemSummary.queue, pdf_probe: "failed" },
+      };
     }
   } else {
     checks.push({
@@ -219,6 +266,7 @@ export async function GET(request: Request) {
             },
           }
         : {}),
+      subsystems: subsystemSummary,
     },
     {
       status: statusCodeFor(overallStatus),

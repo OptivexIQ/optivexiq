@@ -34,6 +34,7 @@ import { scrapePage } from "@/features/conversion-gap/scraping/scraper";
 import { extractContent } from "@/features/conversion-gap/scraping/contentExtractor";
 import {
   buildUsageTotals,
+  validateUsageTotals,
   type UsageTotals,
 } from "@/features/usage/services/usageTotals";
 import { logger } from "@/lib/logger";
@@ -135,6 +136,15 @@ export async function runGapEngine(
       missingObjections: ["string"],
       differentiationGaps: ["string"],
       pricingClarityIssues: ["string"],
+      positioningDiagnostics: {
+        icp_clarity_score: 0.5,
+        outcome_vs_feature_ratio: 1,
+        ambiguity_flags: ["string"],
+        ambiguity_flag_evidence: [{ flag: "string", evidence: "string" }],
+        value_prop_specificity_score: 0.5,
+        detected_icp_statements: ["string"],
+        missing_icp_dimensions: ["string"],
+      },
     },
     system: gapAnalysisPrompt.system,
     user: gapAnalysisPrompt.user,
@@ -218,13 +228,7 @@ export async function runGapEngine(
   );
   const competitorSynthesis = await synthesizeCompetitorIntelligence({
     profile: context.profile,
-    homepageContent: context.companyContent,
-    pricingContent: context.pricingContent,
-    competitorContents: context.competitors
-      .map((item) => item.extracted)
-      .filter((item): item is ExtractedPageContent =>
-        Boolean(item && typeof item === "object"),
-      ),
+    competitors: context.competitors,
     gapAnalysis: gapAnalysis.data,
     homepageAnalysis: hero.data,
     pricingAnalysis: pricing.data,
@@ -265,6 +269,20 @@ export async function runGapEngine(
         ]
       : []),
   ]);
+  const usageValidation = validateUsageTotals(usageTotals);
+  if (!usageValidation.ok) {
+    logger.error("Gap engine module usage totals failed integrity validation.", {
+      reason: usageValidation.reason,
+      expected_total_tokens: usageValidation.expectedTotalTokens,
+      actual_total_tokens: usageValidation.actualTotalTokens,
+      modules: usageTotals.modules.map((item) => ({
+        name: item.name,
+        model: item.model,
+        tokens: item.totalTokens,
+      })),
+    });
+    throw new Error("gap_engine_usage_totals_invalid");
+  }
 
   const promptTokens = usageTotals.promptTokens;
   const completionTokens = usageTotals.completionTokens;

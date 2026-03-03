@@ -24,6 +24,19 @@ export type OpenAIResponse = {
   estimatedCostUsd: number;
 };
 
+export type OpenAIEmbeddingRequest = {
+  model?: string;
+  input: string[];
+};
+
+export type OpenAIEmbeddingResponse = {
+  embeddings: number[][];
+  promptTokens: number;
+  totalTokens: number;
+  model: string;
+  estimatedCostUsd: number;
+};
+
 const defaultModel = "gpt-4o-mini";
 
 function createClient() {
@@ -98,4 +111,48 @@ export async function streamChatCompletion(request: OpenAIRequest) {
       stream: true,
     }),
   );
+}
+
+export async function runEmbeddings(
+  request: OpenAIEmbeddingRequest,
+): Promise<OpenAIEmbeddingResponse> {
+  const client = createClient();
+  const model = request.model || "text-embedding-3-small";
+  const normalizedInput = request.input
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  if (normalizedInput.length === 0) {
+    return {
+      embeddings: [],
+      promptTokens: 0,
+      totalTokens: 0,
+      model,
+      estimatedCostUsd: 0,
+    };
+  }
+
+  const response = await withRetry(() =>
+    client.embeddings.create({
+      model,
+      input: normalizedInput,
+    }),
+  );
+
+  const promptTokens =
+    response.usage?.prompt_tokens ??
+    estimateTokens(normalizedInput.join("\n"));
+  const estimatedCostUsd = estimateCost({
+    model,
+    inputTokens: promptTokens,
+    outputTokens: 0,
+  });
+
+  return {
+    embeddings: response.data.map((item) => item.embedding),
+    promptTokens,
+    totalTokens: promptTokens,
+    model,
+    estimatedCostUsd,
+  };
 }

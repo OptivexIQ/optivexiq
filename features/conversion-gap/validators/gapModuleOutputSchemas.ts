@@ -8,6 +8,34 @@ export const gapAnalysisOutputSchema = z.object({
   missingObjections: z.array(z.string()),
   differentiationGaps: z.array(z.string()),
   pricingClarityIssues: z.array(z.string()),
+  positioningDiagnostics: z.object({
+    icp_clarity_score: z.number().min(0).max(1),
+    outcome_vs_feature_ratio: z.number().min(0),
+    ambiguity_flags: z.array(z.string().trim().min(1)),
+    ambiguity_flag_evidence: z.array(
+      z.object({
+        flag: z.string().trim().min(1),
+        evidence: z.string().trim().min(10),
+      }),
+    ),
+    value_prop_specificity_score: z.number().min(0).max(1),
+    detected_icp_statements: z.array(z.string().trim().min(1)),
+    missing_icp_dimensions: z.array(z.string().trim().min(1)),
+  }),
+}).superRefine((value, ctx) => {
+  const missingEvidenceFlags = value.positioningDiagnostics.ambiguity_flags.filter(
+    (flag) =>
+      !value.positioningDiagnostics.ambiguity_flag_evidence.some(
+        (evidence) => evidence.flag.trim().toLowerCase() === flag.trim().toLowerCase(),
+      ),
+  );
+  if (missingEvidenceFlags.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `missing ambiguity evidence for flags: ${missingEvidenceFlags.join(", ")}`,
+      path: ["positioningDiagnostics", "ambiguity_flag_evidence"],
+    });
+  }
 });
 
 export const heroOutputSchema = z.object({
@@ -49,4 +77,3 @@ export const competitiveCounterOutputSchema = z.object({
     }),
   ),
 });
-

@@ -42,6 +42,18 @@ export type GapAnalysisOutput = {
   missingObjections: string[];
   differentiationGaps: string[];
   pricingClarityIssues: string[];
+  positioningDiagnostics: {
+    icp_clarity_score: number;
+    outcome_vs_feature_ratio: number;
+    ambiguity_flags: string[];
+    ambiguity_flag_evidence: Array<{
+      flag: string;
+      evidence: string;
+    }>;
+    value_prop_specificity_score: number;
+    detected_icp_statements: string[];
+    missing_icp_dimensions: string[];
+  };
 };
 
 export type HeroOutput = {

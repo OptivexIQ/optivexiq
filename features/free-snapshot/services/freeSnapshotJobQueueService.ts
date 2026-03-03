@@ -64,6 +64,8 @@ export async function enqueueFreeSnapshotJob(snapshotId: string) {
     return { ok: false as const, error: "free_snapshot_job_enqueue_failed" };
   }
 
+  dispatchFreeSnapshotWorker("free_snapshot_job_enqueued");
+
   return { ok: true as const };
 }
 

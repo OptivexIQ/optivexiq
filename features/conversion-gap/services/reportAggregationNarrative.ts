@@ -188,8 +188,8 @@ export function buildExecutiveNarrative(input: {
   };
 }): string {
   const clean = (value: string) => value.trim().replace(/\s+/g, " ");
-  const first = (values: string[], fallback: string) =>
-    values.map(clean).find((item) => item.length > 0) ?? fallback;
+  const first = (values: string[]) =>
+    values.map(clean).find((item) => item.length > 0) ?? null;
   const toCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -211,14 +211,12 @@ export function buildExecutiveNarrative(input: {
         ? "moderate"
         : "contained";
 
-  const primaryRisk = first(
-    input.gapAnalysis.risks,
-    "Positioning ambiguity at critical buyer decision points",
-  );
-  const primaryOpportunity = first(
-    input.gapAnalysis.opportunities,
-    "Prioritize the highest-impact messaging fix on the most conversion-critical page",
-  );
+  const primaryRisk =
+    first(input.gapAnalysis.risks) ??
+    "signal_insufficient_primary_risk";
+  const primaryOpportunity =
+    first(input.gapAnalysis.opportunities) ??
+    "signal_insufficient_primary_opportunity";
   const competitiveContext = clean(
     input.competitorSynthesis?.substitutionRiskNarrative ??
       input.competitorSynthesis?.messagingOverlapRisk.explanation ??
@@ -227,7 +225,7 @@ export function buildExecutiveNarrative(input: {
   const resolvedCompetitiveContext =
     competitiveContext.length > 0
       ? competitiveContext
-      : "Competitive message parity is increasing substitution risk where differentiation proof is not explicit";
+      : "competitive_signal_insufficient";
   const captureRate =
     input.revenueImpact.pipelineAtRisk > 0
       ? (input.revenueImpact.projectedPipelineRecovery /
@@ -254,22 +252,25 @@ export function buildDiagnosis(input: {
   const primaryGap =
     input.gapAnalysis.gaps
       .map((item) => item.trim())
-      .find((item) => item.length > 0) ?? "No primary gap identified.";
+      .find((item) => item.length > 0) ??
+    "signal_insufficient_primary_gap";
   const primaryRisk =
     input.gapAnalysis.risks
       .map((item) => item.trim())
-      .find((item) => item.length > 0) ?? "No primary risk identified.";
+      .find((item) => item.length > 0) ??
+    "signal_insufficient_primary_risk";
   const primaryOpportunity =
     input.gapAnalysis.opportunities
       .map((item) => item.trim())
-      .find((item) => item.length > 0) ?? "No primary opportunity identified.";
+      .find((item) => item.length > 0) ??
+    "signal_insufficient_primary_opportunity";
   const summary = input.executiveNarrative.trim();
 
   return {
     summary:
       summary.length > 0
         ? summary
-        : `Primary gap: ${primaryGap}. Primary risk: ${primaryRisk}. Highest-leverage opportunity: ${primaryOpportunity}.`,
+        : "signal_insufficient_narrative",
     primaryGap,
     primaryRisk,
     primaryOpportunity,
@@ -285,10 +286,15 @@ export function buildMessagingOverlap(input: {
   const competitorNames = input.competitors
     .map((item) => item.name?.trim() ?? "")
     .filter((name) => name.length > 0);
-  const names =
-    competitorNames.length > 0
-      ? competitorNames
-      : input.overlapSignals.map((_, index) => `Competitor ${index + 1}`);
+  if (competitorNames.length === 0) {
+    return {
+      items: [],
+      insight:
+        "competitive_signal_insufficient",
+      ctaLabel: "Add competitor evidence",
+    };
+  }
+  const names = competitorNames;
 
   const distributionByCompetitor = buildOverlapDistributionByCompetitor(
     input.competitiveMatrixOverride,
@@ -332,59 +338,51 @@ export function buildMessagingOverlapFromSynthesis(
   },
 ): ConversionGapReport["messagingOverlap"] {
   const { synthesis } = input;
-  const risk: ThreatLevel =
-    synthesis.messagingOverlapRisk.level === "high"
-      ? "high"
-      : synthesis.messagingOverlapRisk.level === "moderate"
-        ? "medium"
-        : "low";
-  const baseScore = risk === "high" ? 80 : risk === "medium" ? 55 : 30;
-
-  const competitorNames = input.competitors
-    .map((item) => item.name?.trim() ?? "")
-    .filter((name) => name.length > 0);
-  const signalNames = input.overlapSignals
-    .map((item) => item.trim())
-    .filter((name) => name.length > 0);
-  const names = competitorNames.length > 0 ? competitorNames : signalNames;
-
-  const resolvedNames =
-    names.length > 0 ? names : ["Competitor 1", "Competitor 2"];
-
+  const overlapByCompetitor =
+    synthesis.overlapByCompetitor?.filter(
+      (item) => item.competitor.trim().length > 0,
+    ) ?? [];
   const distributionByCompetitor = buildOverlapDistributionByCompetitor(
     input.competitiveMatrixOverride,
   );
 
-  const items = resolvedNames.map((competitor, index) => {
-    const nameOffset =
-      competitor
-        .split("")
-        .reduce((sum, char) => sum + char.charCodeAt(0), 0) % 9;
-    const directionalOffset = nameOffset - 4 + index;
-    const competitorScore = clampScore(baseScore + directionalOffset);
-    const youScore = clampScore(100 - competitorScore + Math.floor(nameOffset / 2));
-    const competitorRisk: ThreatLevel =
-      competitorScore >= 70
-        ? "high"
-        : competitorScore >= 40
-          ? "medium"
-          : "low";
+  const items =
+    overlapByCompetitor.length > 0
+      ? overlapByCompetitor.map((item) => {
+          const competitorScore = clampScore(item.aggregate_overlap);
+          const competitorRisk: ThreatLevel =
+            competitorScore >= 70
+              ? "high"
+              : competitorScore >= 40
+                ? "medium"
+                : "low";
 
-    return {
-      competitor,
-      you: youScore,
-      competitors: competitorScore,
-      risk: competitorRisk,
-      overlapDistribution: resolveDistributionForCompetitor(
-        distributionByCompetitor,
-        competitor,
-      ),
-    };
-  });
+          return {
+            competitor: item.competitor,
+            you: clampScore(100 - competitorScore),
+            competitors: competitorScore,
+            risk: competitorRisk,
+            dimensionalOverlap: {
+              messaging_overlap: clampScore(item.messaging_overlap),
+              positioning_overlap: clampScore(item.positioning_overlap),
+              pricing_overlap: clampScore(item.pricing_overlap),
+              aggregate_overlap: competitorScore,
+              signal_density: clampScore(item.signal_density),
+            },
+            overlapDistribution: resolveDistributionForCompetitor(
+              distributionByCompetitor,
+              item.competitor,
+            ),
+          };
+        })
+      : [];
 
   return {
     items,
-    insight: synthesis.messagingOverlapRisk.explanation,
+      insight:
+        items.length > 0
+          ? synthesis.messagingOverlapRisk.explanation
+          : "competitive_signal_insufficient",
     ctaLabel: "Reduce overlap risk",
   };
 }

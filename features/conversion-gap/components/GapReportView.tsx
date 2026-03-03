@@ -15,6 +15,7 @@ import { ReportExportActions } from "@/features/reports/components/ReportExportA
 import { CompetitiveMatrixPreview } from "@/features/reports/components/execution/CompetitiveMatrixPreview";
 import { DifferentiationInsightsPanel } from "@/features/reports/components/execution/DifferentiationInsightsPanel";
 import { CompetitiveInsightsPanel } from "@/features/reports/components/execution/CompetitiveInsightsPanel";
+import { ReportProvenancePanel } from "@/features/reports/components/execution/ReportProvenancePanel";
 
 const PositioningMapPreview = dynamic(
   () =>
@@ -41,6 +42,8 @@ export function GapReportView({
   report,
   exportRestricted,
 }: GapReportViewProps) {
+  const showEvidenceMethodology =
+    process.env.NEXT_PUBLIC_ENABLE_REPORT_EVIDENCE_PANEL === "true";
   if (report.status !== "completed") {
     const isFailed = report.status === "failed";
     return (
@@ -51,7 +54,7 @@ export function GapReportView({
           </p>
           <p className="mt-2 text-sm text-foreground">
             {isFailed
-              ? "This report did not complete. Start a new run to generate decision-grade results."
+              ? "This report did not complete. Start a new run to generate structured conversion risk intelligence."
               : "We are processing your conversion gap report. Check back soon."}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
@@ -67,6 +70,7 @@ export function GapReportView({
       <ReportHeader report={report} exportRestricted={exportRestricted} />
 
       <ExecutiveNarrativeSummary report={report} />
+      {showEvidenceMethodology ? <ReportProvenancePanel report={report} /> : null}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <GapScoreCard report={report} />

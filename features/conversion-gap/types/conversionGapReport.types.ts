@@ -1,12 +1,45 @@
 import type { PriorityItem } from "@/features/conversion-gap/types/priority.types";
 
 export type ThreatLevel = "low" | "medium" | "high";
+export type CompetitiveSectionStatus = "ready" | "insufficient_signal";
+export type CompetitiveSectionReasonCode =
+  | "insufficient_competitor_coverage"
+  | "insufficient_overlap_density"
+  | "insufficient_extraction_confidence";
+
+export type CompetitiveSection = {
+  status: CompetitiveSectionStatus;
+  reason_code: CompetitiveSectionReasonCode | null;
+  evidence: string[];
+  evidence_count: number;
+  signal_density_score: number;
+  extraction_confidence: number;
+};
+
+export type SectionEvidenceProvenance = {
+  evidence_sources: Array<{
+    url: string;
+    snippet_hash: string;
+  }>;
+  evidence_hash: string;
+  module_prompt_version: number;
+  model_name: string;
+  model_temperature: number;
+  token_count: number;
+};
 
 export type MessagingOverlapItem = {
   competitor: string;
   you: number;
   competitors: number;
   risk: ThreatLevel;
+  dimensionalOverlap?: {
+    messaging_overlap: number;
+    positioning_overlap: number;
+    pricing_overlap: number;
+    aggregate_overlap: number;
+    signal_density: number;
+  };
   overlapDistribution?: {
     low: number;
     moderate: number;
@@ -44,6 +77,21 @@ export type Diagnosis = {
   primaryGap: string;
   primaryRisk: string;
   primaryOpportunity: string;
+};
+
+export type EvidenceBoundConclusion = {
+  claim: string;
+  evidence: string[];
+  derivedFrom: string[];
+  confidenceScore: number;
+};
+
+export type SectionConfidence = {
+  positioning: number;
+  objections: number;
+  differentiation: number;
+  scoring: number;
+  narrative: number;
 };
 
 export type RewriteRecommendation = {
@@ -160,6 +208,8 @@ export type CompetitiveInsight = {
 };
 
 export type ConversionGapReport = {
+  reportSchemaVersion?: number;
+  legacyMigrated?: boolean;
   canonicalSchemaVersion: string;
   id: string;
   company: string;
@@ -177,11 +227,26 @@ export type ConversionGapReport = {
   confidenceScore: number;
   threatLevel: ThreatLevel;
   scoringModelVersion: string;
+  riskModelVersion: string;
+  taxonomyVersion: string;
+  scoringWeightsVersion: string;
+  positioningMapGenerationVersion?: string;
+  reproducibilityChecksum?: string;
+  sectionHashes?: Record<string, string>;
+  evidenceProvenance?: Record<string, SectionEvidenceProvenance>;
   scoringBreakdown: ScoringBreakdown;
 
   executiveNarrative: string;
   executiveSummary: string;
   diagnosis: Diagnosis;
+  sectionConfidence: SectionConfidence;
+  diagnosticEvidence: {
+    positioningClarity: EvidenceBoundConclusion[];
+    objectionCoverage: EvidenceBoundConclusion[];
+    competitiveOverlap: EvidenceBoundConclusion[];
+    riskPrioritization: EvidenceBoundConclusion[];
+    narrativeDiagnosis: EvidenceBoundConclusion[];
+  };
 
   messagingOverlap: MessagingOverlap;
   objectionCoverage: ObjectionCoverage;
@@ -191,6 +256,7 @@ export type ConversionGapReport = {
   positioningMap: Record<string, unknown>;
   rewrites: Record<string, unknown>;
   rewriteRecommendations: RewriteRecommendation[];
+  competitive_section: CompetitiveSection;
   competitor_synthesis: {
     coreDifferentiationTension: string;
     messagingOverlapRisk: {
@@ -200,6 +266,53 @@ export type ConversionGapReport = {
     substitutionRiskNarrative: string;
     counterPositioningVector: string;
     pricingDefenseNarrative: string;
+    taxonomyVersion?: string;
+    companyTaxonomy?: {
+      competitor: string;
+      valuePropositions: string[];
+      targetSegments: string[];
+      primaryClaims: string[];
+      differentiationSignals: string[];
+      pricingSignals: string[];
+    };
+    competitorTaxonomies?: Array<{
+      competitor: string;
+      valuePropositions: string[];
+      targetSegments: string[];
+      primaryClaims: string[];
+      differentiationSignals: string[];
+      pricingSignals: string[];
+    }>;
+    overlapByCompetitor?: Array<{
+      competitor: string;
+      messaging_overlap: number;
+      positioning_overlap: number;
+      pricing_overlap: number;
+      aggregate_overlap: number;
+      signal_density: number;
+    }>;
+    dimensionalOverlap?: {
+      messaging_overlap: number;
+      positioning_overlap: number;
+      pricing_overlap: number;
+      aggregate_overlap: number;
+    };
+    whiteSpaceOpportunities?: Array<{
+      claim: string;
+      dimension: "messaging" | "positioning" | "pricing";
+      missingAcross: number;
+      evidence: string[];
+      whitespaceConfidenceScore?: number;
+      supportingCompetitorIds?: string[];
+      embeddingDistance?: number;
+      claimSpecificityScore?: number;
+    }>;
+    overlapDensity?: number;
+    referencedTaxonomyIds?: string[];
+    referencedOverlapDimensionIds?: Array<
+      "messaging_overlap" | "positioning_overlap" | "pricing_overlap" | "aggregate_overlap"
+    >;
+    whiteSpaceRulesApplied?: string[];
   };
 
   revenueImpact: RevenueImpact;

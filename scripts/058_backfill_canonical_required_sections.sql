@@ -45,7 +45,7 @@ patched as (
                     'evidence', jsonb_build_array(
                       jsonb_build_object(
                         'competitor', 'insufficient data',
-                        'snippet', 'insufficient data: legacy record missing structured evidence for this field.'
+                        'snippet', 'insufficient signal depth: structured evidence is unavailable for this field.'
                       )
                     ),
                     'confidence', 0,
@@ -59,7 +59,7 @@ patched as (
                     'evidence', jsonb_build_array(
                       jsonb_build_object(
                         'competitor', 'insufficient data',
-                        'snippet', 'insufficient data: legacy record missing structured evidence for this field.'
+                        'snippet', 'insufficient signal depth: structured evidence is unavailable for this field.'
                       )
                     ),
                     'confidence', 0,
@@ -73,7 +73,7 @@ patched as (
                     'evidence', jsonb_build_array(
                       jsonb_build_object(
                         'competitor', 'insufficient data',
-                        'snippet', 'insufficient data: legacy record missing structured evidence for this field.'
+                        'snippet', 'insufficient signal depth: structured evidence is unavailable for this field.'
                       )
                     ),
                     'confidence', 0,
@@ -87,7 +87,7 @@ patched as (
                     'evidence', jsonb_build_array(
                       jsonb_build_object(
                         'competitor', 'insufficient data',
-                        'snippet', 'insufficient data: legacy record missing structured evidence for this field.'
+                        'snippet', 'insufficient signal depth: structured evidence is unavailable for this field.'
                       )
                     ),
                     'confidence', 0,
@@ -100,7 +100,7 @@ patched as (
                   'supportingEvidence', jsonb_build_array(
                     jsonb_build_object(
                       'competitor', 'insufficient data',
-                      'snippet', 'insufficient data: legacy record missing structured evidence for this field.'
+                      'snippet', 'insufficient signal depth: structured evidence is unavailable for this field.'
                     )
                   ),
                   'confidence', 0,
@@ -121,10 +121,10 @@ patched as (
                 'evidence', jsonb_build_array(
                   jsonb_build_object(
                     'competitor', 'insufficient data',
-                    'snippet', 'insufficient data: legacy record missing structured evidence for this field.'
+                    'snippet', 'insufficient signal depth: structured evidence is unavailable for this field.'
                   )
                 ),
-                'reasoning', 'insufficient data: legacy record missing structured evidence for this field.',
+                'reasoning', 'insufficient signal depth: structured evidence is unavailable for this field.',
                 'confidence', 0,
                 'actionPriority', 'P2'
               )

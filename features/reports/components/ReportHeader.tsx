@@ -111,6 +111,12 @@ export function ReportHeader({
                 </Badge>
                 <span>{report.confidenceScore}%</span>
               </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                <span>Positioning {report.sectionConfidence.positioning}%</span>
+                <span>Objections {report.sectionConfidence.objections}%</span>
+                <span>Differentiation {report.sectionConfidence.differentiation}%</span>
+                <span>Scoring {report.sectionConfidence.scoring}%</span>
+              </div>
             </div>
             <div className="sm:pl-4">
               <p className="text-sm font-medium text-muted-foreground">

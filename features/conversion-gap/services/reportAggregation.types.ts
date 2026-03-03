@@ -14,6 +14,7 @@ import type { ObjectionAnalysisOutput } from "@/features/objection-engine/ai/obj
 import type { DifferentiationBuilderOutput } from "@/features/differentiation-builder/services/differentiationBuilderService";
 import type { CompetitiveMatrixOutput } from "@/features/differentiation-builder/services/competitiveMatrixService";
 import type { PositioningMapData } from "@/features/positioning-map/types/positioningMap.types";
+import type { UsageTotals } from "@/features/usage/services/usageTotals";
 
 export type GapRewrites = {
   hero: HeroOutput;
@@ -43,4 +44,10 @@ export type BuildConversionGapReportInput = {
   profile: SaasProfileFormValues;
   status?: ConversionGapReport["status"];
   createdAt?: string;
+  usageTotals?: UsageTotals;
+  modelTelemetry?: {
+    modelName: string;
+    modelTemperature: number;
+    modulePromptVersion: number;
+  };
 };

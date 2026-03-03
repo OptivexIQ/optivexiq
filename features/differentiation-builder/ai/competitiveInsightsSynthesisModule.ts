@@ -208,7 +208,7 @@ export async function runCompetitiveInsightsSynthesisModule(input: {
       "Category-level parity around generic conversion optimization framing",
     ],
     uniqueStrengthSignals: [
-      "Decision-grade conversion intelligence tied to pipeline risk visibility",
+      "Structured conversion risk intelligence tied to pipeline risk visibility",
     ],
     underleveragedStrengths: [
       "Cross-functional decision traceability for GTM and revenue leadership",

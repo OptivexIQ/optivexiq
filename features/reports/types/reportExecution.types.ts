@@ -30,4 +30,8 @@ export type GapReportExecutionPayload = {
   completedAt: string | null;
   error: string | null;
   report: ConversionGapReport | null;
+  metadata?: {
+    legacy_migrated: boolean;
+    report_schema_version: number | null;
+  };
 };

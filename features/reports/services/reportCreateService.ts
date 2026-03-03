@@ -46,8 +46,14 @@ import {
 } from "@/features/saas-profile/validators/profileNormalization";
 import { validateGapReport } from "@/features/reports/services/reportService";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
-import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
+import {
+  CANONICAL_RISK_MODEL_VERSION,
+  CANONICAL_SCORING_MODEL_VERSION,
+  CANONICAL_SCORING_WEIGHTS_VERSION,
+} from "@/features/conversion-gap/services/scoringModelRegistry";
 import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
+import { CANONICAL_TAXONOMY_VERSION } from "@/features/conversion-gap/services/taxonomyOverlapScoringService";
+import { CURRENT_REPORT_SCHEMA_VERSION } from "@/features/reports/services/reportSchemaAdapterService";
 import { assertCanonicalSectionCompleteness } from "@/features/reports/services/canonicalSectionCompletenessService";
 import {
   type ObjectionAnalysisOutput,
@@ -316,6 +322,7 @@ async function markReportFailedIfPending(
       completed_at: new Date().toISOString(),
       gap_analysis: { error: message },
       report_data: failedReportData,
+      report_schema_version: CURRENT_REPORT_SCHEMA_VERSION,
     })
     .eq("id", reportId)
     .in("status", ["queued", "running"]);
@@ -366,6 +373,27 @@ function assertUsageTotalsIntegrity(params: {
   });
 
   throw new Error("usage_totals_validation_failed");
+}
+
+function assertRequiredUsageModules(params: {
+  reportId: string;
+  userId: string;
+  usageTotals: UsageTotals;
+  requiredModules: string[];
+}): void {
+  const observed = new Set(params.usageTotals.modules.map((item) => item.name));
+  const missing = params.requiredModules.filter((moduleName) => !observed.has(moduleName));
+  if (missing.length === 0) {
+    return;
+  }
+
+  logger.error("Required usage modules missing from accounting payload.", {
+    report_id: params.reportId,
+    user_id: params.userId,
+    missing_modules: missing,
+    observed_modules: Array.from(observed),
+  });
+  throw new Error("usage_totals_required_module_missing");
 }
 
 function assertNoDuplicateAdvancedExecution(params: {
@@ -433,8 +461,9 @@ function buildFailedReportData(
   const now = new Date().toISOString();
   const safeMessage = message.trim() || "Report generation failed.";
   const insufficientEvidence =
-    "insufficient data: legacy record missing structured evidence for this field.";
+    "insufficient signal depth: structured evidence is unavailable for this field.";
   const failedReport: ConversionGapReport = {
+    reportSchemaVersion: CURRENT_REPORT_SCHEMA_VERSION,
     canonicalSchemaVersion: CANONICAL_REPORT_SCHEMA_VERSION,
     id: reportId,
     company: "Unknown",
@@ -451,6 +480,9 @@ function buildFailedReportData(
     confidenceScore: 0,
     threatLevel: "low",
     scoringModelVersion: CANONICAL_SCORING_MODEL_VERSION,
+    riskModelVersion: CANONICAL_RISK_MODEL_VERSION,
+    taxonomyVersion: CANONICAL_TAXONOMY_VERSION,
+    scoringWeightsVersion: CANONICAL_SCORING_WEIGHTS_VERSION,
     scoringBreakdown: {
       clarity: 0,
       differentiation: 0,
@@ -468,6 +500,55 @@ function buildFailedReportData(
       primaryGap: safeMessage,
       primaryRisk: safeMessage,
       primaryOpportunity: safeMessage,
+    },
+    sectionConfidence: {
+      positioning: 0,
+      objections: 0,
+      differentiation: 0,
+      scoring: 0,
+      narrative: 0,
+    },
+    diagnosticEvidence: {
+      positioningClarity: [
+        {
+          claim: safeMessage,
+          evidence: [safeMessage],
+          derivedFrom: ["homepage"],
+          confidenceScore: 0,
+        },
+      ],
+      objectionCoverage: [
+        {
+          claim: safeMessage,
+          evidence: [safeMessage],
+          derivedFrom: ["homepage"],
+          confidenceScore: 0,
+        },
+      ],
+      competitiveOverlap: [
+        {
+          claim: safeMessage,
+          evidence: [safeMessage],
+          derivedFrom: ["homepage"],
+          confidenceScore: 0,
+        },
+      ],
+      riskPrioritization: [
+        {
+          claim: safeMessage,
+          evidence: [safeMessage],
+          derivedFrom: ["homepage"],
+          confidenceScore: 0,
+        },
+      ],
+      narrativeDiagnosis: [
+        {
+          claim: safeMessage,
+          evidence: [safeMessage],
+          derivedFrom: ["homepage"],
+          confidenceScore: 0,
+        },
+      ],
     },
     messagingOverlap: {
       items: [],
@@ -550,6 +631,14 @@ function buildFailedReportData(
     positioningMap: {},
     rewrites: {},
     rewriteRecommendations: [],
+    competitive_section: {
+      status: "insufficient_signal",
+      reason_code: "insufficient_competitor_coverage",
+      evidence: [],
+      evidence_count: 0,
+      signal_density_score: 0,
+      extraction_confidence: 0,
+    },
     revenueImpact: {
       pipelineAtRisk: 0,
       estimatedLiftPercent: 0,
@@ -973,6 +1062,20 @@ async function processSnapshotReport(
       usageTotals: usage.usageTotals,
       context: "snapshot",
     });
+    assertRequiredUsageModules({
+      reportId,
+      userId,
+      usageTotals: usage.usageTotals,
+      requiredModules: [
+        "gapAnalysis",
+        "hero",
+        "pricing",
+        "objections",
+        "differentiation",
+        "competitiveCounter",
+        "competitorSynthesis",
+      ],
+    });
     const finalizedReservation = await finalizeReservationExact({
       userId,
       reservationKey,
@@ -1175,7 +1278,7 @@ async function processGapReport(
       differentiation: differentiationInsights,
     });
     const positioningMapOverride = toCanonicalPositioningMapData(
-      buildDifferentiationPositioningMap({
+      await buildDifferentiationPositioningMap({
         companyName: deriveCompanyName(report.homepage_url),
         profile,
         competitors,
@@ -1193,6 +1296,19 @@ async function processGapReport(
       competitiveMatrixOverride.usage.completionTokens;
     const totalTokens = totalInputTokens + totalOutputTokens;
     const totalCostCents = estimateCostCents(totalInputTokens, totalOutputTokens);
+    const fullReportUsageTotals = buildUsageTotals([
+      ...usage.usageTotals.modules.map((usageModule) => ({
+        name: usageModule.name,
+        usage: {
+          promptTokens: usageModule.promptTokens,
+          completionTokens: usageModule.completionTokens,
+          totalTokens: usageModule.totalTokens,
+          model: usageModule.model,
+        },
+      })),
+      { name: "competitorEvidenceExtraction", usage: competitorAnalysis.usage },
+      { name: "competitiveMatrixSynthesis", usage: competitiveMatrixOverride.usage },
+    ]);
 
     await updateExecutionState(reportId, "competitor_synthesis", 72);
     await updateExecutionState(reportId, "scoring", 82);
@@ -1223,6 +1339,12 @@ async function processGapReport(
       positioningMapOverride,
       profile,
       status: "completed",
+      usageTotals: fullReportUsageTotals,
+      modelTelemetry: {
+        modelName: usage.model,
+        modelTemperature: 0.2,
+        modulePromptVersion: 1,
+      },
     });
     const completeness = assertCanonicalSectionCompleteness(canonicalReport);
     if (!completeness.ok) {
@@ -1231,19 +1353,6 @@ async function processGapReport(
     if (!validateGapReport(canonicalReport)) {
       throw new Error("invalid_report_data");
     }
-    const fullReportUsageTotals = buildUsageTotals([
-      ...usage.usageTotals.modules.map((usageModule) => ({
-        name: usageModule.name,
-        usage: {
-          promptTokens: usageModule.promptTokens,
-          completionTokens: usageModule.completionTokens,
-          totalTokens: usageModule.totalTokens,
-          model: usageModule.model,
-        },
-      })),
-      { name: "competitorEvidenceExtraction", usage: competitorAnalysis.usage },
-      { name: "competitiveMatrixSynthesis", usage: competitiveMatrixOverride.usage },
-    ]);
     logger.info("Full report usage totals assembled.", {
       report_id: reportId,
       user_id: userId,
@@ -1268,6 +1377,24 @@ async function processGapReport(
         totalTokens: totalInputTokens + totalOutputTokens,
       },
       context: "full_report",
+    });
+    assertRequiredUsageModules({
+      reportId,
+      userId,
+      usageTotals: fullReportUsageTotals,
+      requiredModules: [
+        "gapAnalysis",
+        "hero",
+        "pricing",
+        "objections",
+        "differentiation",
+        "competitiveCounter",
+        "competitorSynthesis",
+        "objectionAnalysis",
+        "differentiationBuilder",
+        "competitorEvidenceExtraction",
+        "competitiveMatrixSynthesis",
+      ],
     });
     const finalizedTokens = await finalizeReservationExact({
       userId,
@@ -1298,6 +1425,14 @@ async function processGapReport(
         usageResult.error ?? "Unable to record gap report usage.",
       );
     }
+    await createSupabaseAdminClient("worker")
+      .from("conversion_gap_reports")
+      .update({
+        report_schema_version: CURRENT_REPORT_SCHEMA_VERSION,
+        reproducibility_checksum: canonicalReport.reproducibilityChecksum ?? null,
+        section_hashes: canonicalReport.sectionHashes ?? {},
+      })
+      .eq("id", reportId);
     completionCommitted = true;
     await updateExecutionState(reportId, "complete", 100, {
       completed_at: new Date().toISOString(),
@@ -1357,6 +1492,7 @@ async function processGapReport(
         completed_at: new Date().toISOString(),
         gap_analysis: { error: message },
         report_data: buildFailedReportData(reportId, message),
+        report_schema_version: CURRENT_REPORT_SCHEMA_VERSION,
       });
     } catch (statusError) {
       logger.error("Gap report failure state persistence failed", statusError, {

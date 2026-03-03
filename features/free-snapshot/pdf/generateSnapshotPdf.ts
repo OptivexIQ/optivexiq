@@ -4,8 +4,14 @@ import {
 } from "@/features/free-snapshot/pdf/renderSnapshotHtml";
 import type { SnapshotPdfProps } from "@/features/free-snapshot/pdf/SnapshotPdfTemplate";
 import type { ConversionGapReport } from "@/features/reports/types/report.types";
-import { CANONICAL_SCORING_MODEL_VERSION } from "@/features/conversion-gap/services/scoringModelRegistry";
+import {
+  CANONICAL_RISK_MODEL_VERSION,
+  CANONICAL_SCORING_MODEL_VERSION,
+  CANONICAL_SCORING_WEIGHTS_VERSION,
+} from "@/features/conversion-gap/services/scoringModelRegistry";
 import { CANONICAL_REPORT_SCHEMA_VERSION } from "@/features/reports/contracts/canonicalReportContract";
+import { CANONICAL_TAXONOMY_VERSION } from "@/features/conversion-gap/services/taxonomyOverlapScoringService";
+import { CURRENT_REPORT_SCHEMA_VERSION } from "@/features/reports/services/reportSchemaAdapterService";
 
 type PuppeteerBrowser = {
   newPage: () => Promise<{
@@ -126,8 +132,9 @@ function buildVerificationReport(): ConversionGapReport {
     120,
   );
   const insufficientEvidence =
-    "insufficient data: legacy record missing structured evidence for this field.";
+    "insufficient signal depth: structured evidence is unavailable for this field.";
   return {
+    reportSchemaVersion: CURRENT_REPORT_SCHEMA_VERSION,
     canonicalSchemaVersion: CANONICAL_REPORT_SCHEMA_VERSION,
     id: "00000000-0000-0000-0000-000000000001",
     company: "verification.optivexiq.com",
@@ -144,6 +151,9 @@ function buildVerificationReport(): ConversionGapReport {
     confidenceScore: 60,
     threatLevel: "medium",
     scoringModelVersion: CANONICAL_SCORING_MODEL_VERSION,
+    riskModelVersion: CANONICAL_RISK_MODEL_VERSION,
+    taxonomyVersion: CANONICAL_TAXONOMY_VERSION,
+    scoringWeightsVersion: CANONICAL_SCORING_WEIGHTS_VERSION,
     scoringBreakdown: {
       clarity: 67,
       differentiation: 61,
@@ -161,6 +171,55 @@ function buildVerificationReport(): ConversionGapReport {
       primaryGap: "Message-value mismatch",
       primaryRisk: "High overlap with competitor claims compresses perceived differentiation.",
       primaryOpportunity: "Clarify ICP-specific outcomes and support each claim with proof.",
+    },
+    sectionConfidence: {
+      positioning: 61,
+      objections: 42,
+      differentiation: 61,
+      scoring: 64,
+      narrative: 60,
+    },
+    diagnosticEvidence: {
+      positioningClarity: [
+        {
+          claim: "Message-value mismatch",
+          evidence: ["insufficient data"],
+          derivedFrom: ["homepage"],
+          confidenceScore: 61,
+        },
+      ],
+      objectionCoverage: [
+        {
+          claim: "Objection handling gap",
+          evidence: ["Social proof and validation are limited."],
+          derivedFrom: ["homepage"],
+          confidenceScore: 42,
+        },
+      ],
+      competitiveOverlap: [
+        {
+          claim: "Overlap risk requires tighter differentiation.",
+          evidence: ["insufficient data"],
+          derivedFrom: ["homepage"],
+          confidenceScore: 64,
+        },
+      ],
+      riskPrioritization: [
+        {
+          claim: "High overlap with competitor claims compresses perceived differentiation.",
+          evidence: ["Funnel risk 52/100", "Differentiation score 61/100"],
+          derivedFrom: ["homepage"],
+          confidenceScore: 64,
+        },
+      ],
+      narrativeDiagnosis: [
+        {
+          claim: verbose,
+          evidence: [verbose],
+          derivedFrom: ["homepage"],
+          confidenceScore: 60,
+        },
+      ],
     },
     messagingOverlap: {
       items: [],
@@ -294,6 +353,14 @@ function buildVerificationReport(): ConversionGapReport {
         iconName: "pricing",
       },
     ],
+    competitive_section: {
+      status: "ready",
+      reason_code: null,
+      evidence: ["verification: synthetic payload for pdf pipeline check"],
+      evidence_count: 1,
+      signal_density_score: 50,
+      extraction_confidence: 50,
+    },
     revenueImpact: {
       pipelineAtRisk: 120000,
       estimatedLiftPercent: 14,
