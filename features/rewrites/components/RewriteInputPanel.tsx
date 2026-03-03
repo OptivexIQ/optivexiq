@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Info, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +98,8 @@ export function RewriteInputPanel({
   onSubmit,
   onCancel,
 }: RewriteInputPanelProps) {
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false);
+
   const toggleEmphasis = (value: RewriteEmphasis) => {
     const exists = strategy.emphasis.includes(value);
     const next = exists
@@ -150,6 +153,17 @@ export function RewriteInputPanel({
     (value.content ?? "").trim().length > 0 &&
     !hasSectionLabels &&
     !enforceSectionLabels;
+  const hasAdditionalValues =
+    (strategy.audience ?? "").trim().length > 0 ||
+    (strategy.constraints ?? "").trim().length > 0 ||
+    (value.notes ?? "").trim().length > 0 ||
+    refineMode;
+
+  useEffect(() => {
+    if (hasAdditionalValues) {
+      setShowAdditionalFields(true);
+    }
+  }, [hasAdditionalValues]);
 
   return (
     <TooltipProvider>
@@ -224,9 +238,26 @@ export function RewriteInputPanel({
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-foreground/90">
-              Rewrite Strategy
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-foreground/90">
+                Rewrite Strategy
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                disabled={running}
+                onClick={() =>
+                  setShowAdditionalFields((previous) => !previous)
+                }
+                aria-expanded={showAdditionalFields}
+                aria-controls="rewrite-additional-fields"
+              >
+                {showAdditionalFields
+                  ? "Hide additional fields"
+                  : "Show additional fields"}
+              </Button>
+            </div>
             <div className="mt-3 grid gap-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
@@ -336,70 +367,77 @@ export function RewriteInputPanel({
                 </div>
               </div>
 
-              <div>
-                <p className="mb-2 text-sm font-medium text-foreground/85">
-                  <InfoHelp
-                    label="Constraints (optional, hard requirements)"
-                    hint='Non-negotiables the rewrite must follow. Example: "Avoid discount language. Keep claims under 12 words."'
-                  />
-                </p>
-                <p className="mb-2 text-xs text-muted-foreground">
-                  Non-negotiables the rewrite must follow (must include/avoid).
-                </p>
-                <Textarea
-                  disabled={running}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Must include/avoid..."
-                  value={strategy.constraints ?? ""}
-                  onChange={(event) =>
-                    onStrategyChange({
-                      ...strategy,
-                      constraints: event.target.value,
-                    })
-                  }
-                />
-              </div>
+              {showAdditionalFields ? (
+                <div
+                  id="rewrite-additional-fields"
+                  className="space-y-4 rounded-md border border-border/60 bg-secondary/15 p-3"
+                >
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-foreground/85">
+                      <InfoHelp
+                        label="Constraints (optional, hard requirements)"
+                        hint='Non-negotiables the rewrite must follow. Example: "Avoid discount language. Keep claims under 12 words."'
+                      />
+                    </p>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Non-negotiables the rewrite must follow (must include/avoid).
+                    </p>
+                    <Textarea
+                      disabled={running}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Must include/avoid..."
+                      value={strategy.constraints ?? ""}
+                      onChange={(event) =>
+                        onStrategyChange({
+                          ...strategy,
+                          constraints: event.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-foreground/85">
+                      <InfoHelp
+                        label="Context notes (optional, guidance)"
+                        hint='Background context to guide tone and emphasis. Example: "Launching to RevOps teams after Product Hunt week."'
+                      />
+                    </p>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Background context and priorities to guide tone and emphasis.
+                    </p>
+                    <Textarea
+                      disabled={running}
+                      rows={3}
+                      placeholder="Business context, goals, objections, or campaign nuance."
+                      value={value.notes ?? ""}
+                      onChange={(event) =>
+                        onChange(updateField(value, "notes", event.target.value))
+                      }
+                    />
+                  </div>
+
+                  {refineMode ? (
+                    <div id="rewrite-delta-instructions">
+                      <p className="mb-2 text-sm font-medium text-foreground/85">
+                        Delta instructions (refine)
+                      </p>
+                      <Textarea
+                        disabled={running}
+                        rows={3}
+                        placeholder="Specify exactly what to improve from the current rewrite."
+                        value={deltaInstructions}
+                        onChange={(event) =>
+                          onDeltaInstructionsChange(event.target.value)
+                        }
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-foreground/85">
-              <InfoHelp
-                label="Context notes (optional, guidance)"
-                hint='Background context to guide tone and emphasis. Example: "Launching to RevOps teams after Product Hunt week."'
-              />
-            </p>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Background context and priorities to guide tone and emphasis.
-            </p>
-            <Textarea
-              disabled={running}
-              rows={3}
-              placeholder="Business context, goals, objections, or campaign nuance."
-              value={value.notes ?? ""}
-              onChange={(event) =>
-                onChange(updateField(value, "notes", event.target.value))
-              }
-            />
-          </div>
-
-          {refineMode ? (
-            <div id="rewrite-delta-instructions">
-              <p className="mb-2 text-sm font-medium text-foreground/85">
-                Delta instructions (refine)
-              </p>
-              <Textarea
-                disabled={running}
-                rows={3}
-                placeholder="Specify exactly what to improve from the current rewrite."
-                value={deltaInstructions}
-                onChange={(event) =>
-                  onDeltaInstructionsChange(event.target.value)
-                }
-              />
-            </div>
-          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-3">

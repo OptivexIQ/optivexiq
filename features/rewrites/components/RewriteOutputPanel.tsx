@@ -4,46 +4,19 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import {
-  Check,
-  ChevronDown,
-  Copy,
-  Download,
-  FileCode2,
-  FileType2,
-  FileText,
-  History,
   Loader2,
-  Sparkles,
-  SplitSquareHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type {
-  RewriteExportFormat,
-  RewriteType,
-} from "@/features/rewrites/types/rewrites.types";
+import type { RewriteType } from "@/features/rewrites/types/rewrites.types";
 import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
 
 type RewriteOutputPanelProps = {
   rewriteType: RewriteType;
   running: boolean;
   output: string;
-  canCompare: boolean;
   requestRef: string | null;
   error: string | null;
-  onCopy: () => void | Promise<void>;
-  onExport: (format: RewriteExportFormat) => void;
-  onOpenHistory: () => void;
-  onDuplicate: () => void;
-  onRefine: () => void;
-  onEnterCompare: () => void;
   onRetry: () => void;
-  showRunGapEngine?: boolean;
   metadata?: {
     experimentId?: string | null;
     versionNumber?: number | null;
@@ -99,33 +72,17 @@ export function RewriteOutputPanel({
   rewriteType,
   running,
   output,
-  canCompare,
   requestRef,
   error,
-  onCopy,
-  onExport,
-  onOpenHistory,
-  onDuplicate,
-  onRefine,
-  onEnterCompare,
   onRetry,
-  showRunGapEngine = false,
   metadata,
 }: RewriteOutputPanelProps) {
-  const canExport = output.trim().length > 0 && Boolean(requestRef);
   const filename = useMemo(() => filenameFor(rewriteType), [rewriteType]);
   const outputViewModel = useMemo(
     () => buildRewriteOutputViewModel(output),
     [output],
   );
-  const [copied, setCopied] = useState(false);
   const [copiedError, setCopiedError] = useState(false);
-
-  const handleCopy = async () => {
-    await onCopy();
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleCopyError = async () => {
     if (!error) {
@@ -307,94 +264,6 @@ export function RewriteOutputPanel({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>Filename: {filename}</span>
         <span>Request: {requestRef ?? "N/A"}</span>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onOpenHistory}
-          >
-            <History className="h-4 w-4" />
-            Version history
-          </Button>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onDuplicate}
-            disabled={!canExport}
-          >
-            <Sparkles className="h-4 w-4" />
-            Duplicate
-          </Button>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onRefine}
-            disabled={!canExport}
-          >
-            <Sparkles className="h-4 w-4" />
-            Refine
-          </Button>
-          <Button
-            variant="secondary"
-            size="xs"
-            onClick={() => void handleCopy()}
-            disabled={!canExport}
-          >
-            {copied ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-            {copied ? "Copied" : "Copy"}
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {showRunGapEngine ? (
-            <Button asChild variant="outline" size="xs">
-              <Link href="/dashboard/gap-engine">Run Gap Engine</Link>
-            </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onEnterCompare}
-            disabled={!canExport || !canCompare}
-          >
-            <SplitSquareHorizontal className="h-4 w-4" />
-            Compare versions
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="xs" disabled={!canExport}>
-                <Download className="h-4 w-4" />
-                Export
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onSelect={() => onExport("markdown")}>
-                <FileText className="h-4 w-4" />
-                Markdown (.md)
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onExport("text")}>
-                <FileText className="h-4 w-4" />
-                Plain text (.txt)
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onExport("html")}>
-                <FileCode2 className="h-4 w-4" />
-                HTML (.html)
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onExport("pdf")}>
-                <FileType2 className="h-4 w-4" />
-                PDF (.pdf)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </div>
     </div>
   );

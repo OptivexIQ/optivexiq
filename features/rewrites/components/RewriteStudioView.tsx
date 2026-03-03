@@ -23,6 +23,7 @@ import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPa
 import { RewriteComparisonPanel } from "@/features/rewrites/components/RewriteComparisonPanel";
 import { RewriteExecutiveSummaryCard } from "@/features/rewrites/components/RewriteExecutiveSummaryCard";
 import { RewriteOutputPanel } from "@/features/rewrites/components/RewriteOutputPanel";
+import { RewriteOutputActionBar } from "@/features/rewrites/components/RewriteOutputActionBar";
 import { RewriteShiftStatsCards } from "@/features/rewrites/components/RewriteShiftStatsCards";
 import { RewriteStrategicRationaleCard } from "@/features/rewrites/components/RewriteStrategicRationaleCard";
 import {
@@ -1113,7 +1114,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             />
           </section>
 
-          <section className="space-y-4 border-t border-border/60 bg-background p-6 lg:border-t-0 lg:border-l lg:border-border/60">
+          <section className="flex h-full flex-col border-t border-border/60 bg-background p-6 lg:border-t-0 lg:border-l lg:border-border/60">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -1198,7 +1199,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               <div className="h-px bg-border/60" />
             </div>
 
-            <div className="space-y-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
               <RewriteExecutiveSummaryCard
                 output={output}
                 compareMode={compareMode}
@@ -1208,10 +1209,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                 rewriteType={request.rewriteType}
                 running={running}
                 output={output}
-                canCompare={canCompare}
                 requestRef={requestRef}
                 error={error}
-                showRunGapEngine
                 metadata={{
                   experimentId: currentVersionRecord?.experimentGroupId ?? null,
                   versionNumber: currentVersionRecord?.versionNumber ?? null,
@@ -1221,7 +1220,23 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   winnerLabel: currentVersionRecord?.winnerLabel ?? null,
                   strategySnapshot,
                 }}
+                onRetry={() => void handleSubmit()}
+              />
+              <RewriteOutputActionBar
+                canExport={output.trim().length > 0 && Boolean(requestRef)}
+                canCompare={canCompare}
+                running={running}
+                showRunGapEngine
+                onOpenHistory={handleOpenHistory}
+                onDuplicate={handleDuplicate}
+                onRefine={handleRefine}
                 onCopy={() => void handleCopy()}
+                onEnterCompare={() => {
+                  if (!selectedBaselineRef && baselineOptions.length > 0) {
+                    setSelectedBaselineRef(baselineOptions[0].requestRef);
+                  }
+                  setCompareMode(true);
+                }}
                 onExport={(format) => {
                   void handleExport(format).catch((exportError: unknown) => {
                     const message =
@@ -1235,16 +1250,6 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                     });
                   });
                 }}
-                onOpenHistory={handleOpenHistory}
-                onDuplicate={handleDuplicate}
-                onRefine={handleRefine}
-                onEnterCompare={() => {
-                  if (!selectedBaselineRef && baselineOptions.length > 0) {
-                    setSelectedBaselineRef(baselineOptions[0].requestRef);
-                  }
-                  setCompareMode(true);
-                }}
-                onRetry={() => void handleSubmit()}
               />
               <RewriteStrategicRationaleCard
                 output={output}
