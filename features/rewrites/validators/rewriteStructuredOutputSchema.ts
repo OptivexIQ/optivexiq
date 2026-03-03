@@ -3,10 +3,12 @@ import { z } from "zod";
 export const REWRITE_OUTPUT_SCHEMA_VERSION = 1;
 
 export const rewriteStructuredOutputSchema = z.object({
-  strategySummary: z.string().trim().min(1),
+  experimentSetup: z.string().trim().min(1),
+  controlSummary: z.string().trim().min(1),
+  treatmentPlan: z.string().trim().min(1),
   proposedRewrite: z.string().trim().min(1),
-  rationale: z.string().trim().min(1),
-  implementationChecklist: z.string().trim().min(1),
+  changeSummary: z.string().trim().min(1),
+  confidenceAndRisk: z.string().trim().min(1),
 });
 
 export type RewriteStructuredOutput = z.infer<
@@ -14,10 +16,17 @@ export type RewriteStructuredOutput = z.infer<
 >;
 
 function normalizeHeadingLabel(value: string) {
-  return value
+  const normalized = value
     .toLowerCase()
     .trim()
+    .replace(/^\d+\s*[\).\-\:]\s*/, "")
     .replace(/\s+/g, " ");
+
+  if (normalized === "confidence and risk") {
+    return "confidence & risk";
+  }
+
+  return normalized;
 }
 
 export function parseRewriteStructuredOutputFromMarkdown(
@@ -56,22 +65,26 @@ export function parseRewriteStructuredOutputFromMarkdown(
   }
   flush();
 
-  const strategySummary = sections.get("strategy summary")?.join("\n").trim();
+  const experimentSetup = sections.get("experiment setup")?.join("\n").trim();
+  const controlSummary = sections.get("control summary")?.join("\n").trim();
+  const treatmentPlan = sections.get("treatment plan")?.join("\n").trim();
   const proposedRewrite = sections.get("proposed rewrite")?.join("\n").trim();
-  const rationale = sections
-    .get("rationale linked to conversion outcomes")
+  const changeSummary = sections
+    .get("change summary")
     ?.join("\n")
     .trim();
-  const implementationChecklist = sections
-    .get("implementation checklist")
+  const confidenceAndRisk = sections
+    .get("confidence & risk")
     ?.join("\n")
     .trim();
 
   const parsed = rewriteStructuredOutputSchema.safeParse({
-    strategySummary,
+    experimentSetup,
+    controlSummary,
+    treatmentPlan,
     proposedRewrite,
-    rationale,
-    implementationChecklist,
+    changeSummary,
+    confidenceAndRisk,
   });
   if (!parsed.success) {
     return null;

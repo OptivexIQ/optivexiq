@@ -2,6 +2,9 @@ import type { OpenAIRequest } from "@/features/ai/client/openaiClient";
 import { getProfile } from "@/features/saas-profile/services/profileService";
 import type { RewriteGenerateRequestValues } from "@/features/rewrites/validators/rewritesSchema";
 
+export const REWRITE_PROMPT_VERSION = 2;
+export const REWRITE_SYSTEM_TEMPLATE_VERSION = 2;
+
 function formatGoal(goal: string) {
   if (goal === "trial") {
     return "Drive more high-intent trials.";
@@ -61,28 +64,58 @@ function buildSystemPrompt(type: RewriteGenerateRequestValues["rewriteType"]) {
     "You are a senior SaaS conversion copy strategist.",
     `Task scope: ${scope}.`,
     "Return markdown only.",
-    "Be concrete, specific, and actionable.",
-    "Rewrite only what the user explicitly provided in source content.",
-    "Do not invent new page sections, new offers, new guarantees, new proof blocks, or new CTAs that are not present in source content.",
-    "If something important is missing from source content, do not add it to the rewrite.",
-    "The rewrite body must remain faithful to source structure and intent while improving clarity and conversion quality.",
+    "Be concrete, specific, and actionable. Keep reasoning concise and user-facing.",
+    "Preserve factual truth and business meaning from source content.",
+    "Do not fabricate claims, proof, guarantees, legal/compliance statements, or pricing facts.",
+    "Apply treatment variables explicitly and keep controlled variables stable.",
+    "Avoid close paraphrase. Do not reuse source sentences verbatim. Prefer new framing.",
+    "For moderate/strong delta, you may improve CTA wording and section ordering within the same page type.",
+    "Do not switch page type (homepage stays homepage, pricing stays pricing).",
+    "Do not include hidden chain-of-thought or private reasoning.",
     "Formatting requirements:",
-    "- The rationale must be a single narrative paragraph.",
-    "- Rationale length must be 2-4 sentences and roughly 50-110 words.",
-    "- Do not use bullet points or numbering inside the rationale.",
-    "- Include these exact shift lines in Strategy summary using strict formats:",
+    "- Every required section heading below must be present exactly once.",
+    "- Use concise bullet points where requested and plain markdown for rewrite content.",
+    "- Include these exact shift lines in Confidence & Risk using strict formats:",
     "  - Clarity Shift: signed percentage (example: +42%)",
     "  - Objection Shift: signed percentage (example: -18%)",
     "  - Positioning Shift: one of Strong | Moderate | Weak | Improving | Needs Work",
     "  - Confidence: percentage between 0% and 100% (example: 84%)",
-    "- In the Proposed rewrite section, include explicit labeled lines for 'Primary CTA' and 'Final CTA'.",
-    "- If source content contains an end-of-page CTA/final CTA, rewrite and include it explicitly under 'Final CTA'.",
+    "- In Proposed Rewrite, include explicit labeled lines for 'Primary CTA' and 'Final CTA' when present in source content.",
+    "- Change Summary must contain section-level changes with what changed and why.",
+    "- For minimum_delta_level=moderate or strong, Change Summary must include at least 5 bullets.",
+    "- For minimum_delta_level=strong, Change Summary should include 8-10 bullets where feasible.",
     "Output sections:",
-    "1) Strategy summary",
-    "2) Proposed rewrite",
-    "3) Rationale linked to conversion outcomes",
-    "4) Implementation checklist",
+    "1) ## Experiment Setup",
+    "2) ## Control Summary",
+    "3) ## Treatment Plan",
+    "4) ## Proposed Rewrite",
+    "5) ## Change Summary",
+    "6) ## Confidence & Risk",
   ].join("\n");
+}
+
+function minimumDeltaInstruction(
+  level: RewriteGenerateRequestValues["hypothesis"]["minimumDeltaLevel"],
+) {
+  if (level === "light") {
+    return "Minimum delta enforcement: light. Improve clarity and precision without major structural change.";
+  }
+  if (level === "strong") {
+    return "Minimum delta enforcement: strong. Apply significant reframing and reorder sections as needed while preserving factual truth and page type.";
+  }
+  return "Minimum delta enforcement: moderate. Rewrite headlines/CTAs and reframe objections/differentiation with meaningful wording changes.";
+}
+
+function temperatureForDelta(
+  level: RewriteGenerateRequestValues["hypothesis"]["minimumDeltaLevel"],
+) {
+  if (level === "strong") {
+    return 0.65;
+  }
+  if (level === "moderate") {
+    return 0.5;
+  }
+  return 0.35;
 }
 
 function buildUserPrompt(input: RewriteGenerateRequestValues, context: string) {
@@ -113,9 +146,36 @@ function buildUserPrompt(input: RewriteGenerateRequestValues, context: string) {
         `- Audience: ${input.rewriteStrategy.audience?.trim() || "not specified"}`,
       ].join("\n")
     : "";
+  const hypothesis = [
+    "Experiment contract:",
+    `- Hypothesis type: ${input.hypothesis.type}`,
+    `- Controlled variables (must remain stable): ${input.hypothesis.controlledVariables.join(", ")}`,
+    `- Treatment variables (must change): ${input.hypothesis.treatmentVariables.join(", ")}`,
+    `- Success criteria: ${input.hypothesis.successCriteria}`,
+    `- Minimum delta level: ${input.hypothesis.minimumDeltaLevel}`,
+    `- ${minimumDeltaInstruction(input.hypothesis.minimumDeltaLevel)}`,
+  ].join("\n");
   const content = input.content ? `Content:\n${input.content}` : "";
 
-  return [url, sourceType, notes, strategicContext, rewriteStrategy, context, content]
+  return [
+    url,
+    sourceType,
+    notes,
+    strategicContext,
+    rewriteStrategy,
+    hypothesis,
+    context,
+    content,
+    [
+      "Execution instructions:",
+      "- First output Experiment Setup reflecting the contract above.",
+      "- Then output Control Summary (exactly 3 bullets) describing current messaging weaknesses relevant to hypothesis.",
+      "- Then output Treatment Plan (exactly 3 bullets) describing what will change and why.",
+      "- Then output Proposed Rewrite.",
+      "- Then output Change Summary with per-section changes and why.",
+      "- Then output Confidence & Risk with confidence and key residual risks.",
+    ].join("\n"),
+  ]
     .filter(Boolean)
     .join("\n\n");
 }
@@ -124,10 +184,11 @@ export async function buildRewriteOpenAIRequest(
   input: RewriteGenerateRequestValues,
 ): Promise<OpenAIRequest> {
   const context = await formatProfileContext();
+  const temperature = temperatureForDelta(input.hypothesis.minimumDeltaLevel);
 
   return {
     model: "gpt-4o-mini",
-    temperature: 0.35,
+    temperature,
     maxTokens: 1800,
     messages: [
       { role: "system", content: buildSystemPrompt(input.rewriteType) },

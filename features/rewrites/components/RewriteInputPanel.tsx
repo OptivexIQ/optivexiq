@@ -22,8 +22,12 @@ import { Switch } from "@/components/ui/switch";
 import type {
   RewriteEmphasis,
   RewriteGenerateRequest,
+  RewriteHypothesis,
+  RewriteHypothesisType,
   RewriteLength,
   RewriteStrategy,
+  RewriteTreatmentVariable,
+  RewriteControlledVariable,
   RewriteTone,
 } from "@/features/rewrites/types/rewrites.types";
 import {
@@ -35,12 +39,14 @@ import {
 type RewriteInputPanelProps = {
   value: RewriteGenerateRequest;
   strategy: RewriteStrategy;
+  hypothesis: RewriteHypothesis;
   refineMode: boolean;
   deltaInstructions: string;
   running: boolean;
   enforceSectionLabels: boolean;
   onChange: (value: RewriteGenerateRequest) => void;
   onStrategyChange: (value: RewriteStrategy) => void;
+  onHypothesisChange: (value: RewriteHypothesis) => void;
   onEnforceSectionLabelsChange: (value: boolean) => void;
   onDeltaInstructionsChange: (value: string) => void;
   onSubmit: () => void;
@@ -84,15 +90,64 @@ const AUDIENCE_OPTIONS = [
   "Mixed buying committee",
 ] as const;
 
+const HYPOTHESIS_TYPE_OPTIONS: Array<{
+  value: RewriteHypothesisType;
+  label: string;
+}> = [
+  { value: "positioning_shift", label: "Positioning shift" },
+  { value: "objection_attack", label: "Objection attack" },
+  { value: "differentiation_emphasis", label: "Differentiation emphasis" },
+  { value: "risk_reduction", label: "Risk reduction" },
+  { value: "authority_increase", label: "Authority increase" },
+  { value: "clarity_simplification", label: "Clarity simplification" },
+];
+
+const MINIMUM_DELTA_OPTIONS: Array<{
+  value: RewriteHypothesis["minimumDeltaLevel"];
+  label: string;
+}> = [
+  { value: "light", label: "Light" },
+  { value: "moderate", label: "Moderate" },
+  { value: "strong", label: "Strong" },
+];
+
+const CONTROLLED_VARIABLE_OPTIONS: Array<{
+  value: RewriteControlledVariable;
+  label: string;
+}> = [
+  { value: "audience", label: "Audience" },
+  { value: "tone", label: "Tone" },
+  { value: "structure", label: "Structure" },
+  { value: "value_prop", label: "Value proposition" },
+  { value: "cta_type", label: "CTA type" },
+  { value: "proof_points", label: "Proof points" },
+  { value: "pricing_frame", label: "Pricing frame" },
+];
+
+const TREATMENT_VARIABLE_OPTIONS: Array<{
+  value: RewriteTreatmentVariable;
+  label: string;
+}> = [
+  { value: "headline", label: "Headline" },
+  { value: "primary_cta", label: "Primary CTA" },
+  { value: "objection_handling", label: "Objection handling" },
+  { value: "differentiators", label: "Differentiators" },
+  { value: "risk_reversal", label: "Risk reversal" },
+  { value: "proof_depth", label: "Proof depth" },
+  { value: "pricing_anchor", label: "Pricing anchor" },
+];
+
 export function RewriteInputPanel({
   value,
   strategy,
+  hypothesis,
   refineMode,
   deltaInstructions,
   running,
   enforceSectionLabels,
   onChange,
   onStrategyChange,
+  onHypothesisChange,
   onEnforceSectionLabelsChange,
   onDeltaInstructionsChange,
   onSubmit,
@@ -106,6 +161,22 @@ export function RewriteInputPanel({
       ? strategy.emphasis.filter((item) => item !== value)
       : [...strategy.emphasis, value];
     onStrategyChange({ ...strategy, emphasis: next });
+  };
+
+  const toggleControlledVariable = (value: RewriteControlledVariable) => {
+    const exists = hypothesis.controlledVariables.includes(value);
+    const next = exists
+      ? hypothesis.controlledVariables.filter((item) => item !== value)
+      : [...hypothesis.controlledVariables, value];
+    onHypothesisChange({ ...hypothesis, controlledVariables: next });
+  };
+
+  const toggleTreatmentVariable = (value: RewriteTreatmentVariable) => {
+    const exists = hypothesis.treatmentVariables.includes(value);
+    const next = exists
+      ? hypothesis.treatmentVariables.filter((item) => item !== value)
+      : [...hypothesis.treatmentVariables, value];
+    onHypothesisChange({ ...hypothesis, treatmentVariables: next });
   };
 
   const InfoHelp = ({ label, hint }: { label: string; hint: string }) => (
@@ -364,6 +435,136 @@ export function RewriteInputPanel({
                       {option.label}
                     </Button>
                   ))}
+                </div>
+              </div>
+
+              <div className="space-y-4 rounded-md border border-border/60 bg-secondary/15 p-3">
+                <p className="text-sm font-semibold text-foreground/90">
+                  Hypothesis
+                </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-foreground/85">
+                      Type
+                    </p>
+                    <Select
+                      value={hypothesis.type}
+                      onValueChange={(next) =>
+                        onHypothesisChange({
+                          ...hypothesis,
+                          type: next as RewriteHypothesisType,
+                        })
+                      }
+                      disabled={running}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HYPOTHESIS_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-foreground/85">
+                      Minimum delta
+                    </p>
+                    <Select
+                      value={hypothesis.minimumDeltaLevel}
+                      onValueChange={(next) =>
+                        onHypothesisChange({
+                          ...hypothesis,
+                          minimumDeltaLevel:
+                            next as RewriteHypothesis["minimumDeltaLevel"],
+                        })
+                      }
+                      disabled={running}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MINIMUM_DELTA_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground/85">
+                    Controlled variables (keep fixed)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {CONTROLLED_VARIABLE_OPTIONS.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        size="sm"
+                        variant={
+                          hypothesis.controlledVariables.includes(option.value)
+                            ? "default"
+                            : "outline"
+                        }
+                        disabled={running}
+                        onClick={() => toggleControlledVariable(option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Select at least 2 controlled variables.
+                  </p>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground/85">
+                    Treatment variables (must change)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {TREATMENT_VARIABLE_OPTIONS.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        size="sm"
+                        variant={
+                          hypothesis.treatmentVariables.includes(option.value)
+                            ? "default"
+                            : "outline"
+                        }
+                        disabled={running}
+                        onClick={() => toggleTreatmentVariable(option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Select at least 1 treatment variable.
+                  </p>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground/85">
+                    Success criteria
+                  </p>
+                  <Input
+                    disabled={running}
+                    maxLength={280}
+                    placeholder="Describe what this treatment should improve."
+                    value={hypothesis.successCriteria}
+                    onChange={(event) =>
+                      onHypothesisChange({
+                        ...hypothesis,
+                        successCriteria: event.target.value,
+                      })
+                    }
+                  />
                 </div>
               </div>
 

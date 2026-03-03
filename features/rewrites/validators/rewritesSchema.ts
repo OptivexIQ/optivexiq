@@ -32,6 +32,37 @@ const idempotencyKeySchema = z
   .min(8, "Idempotency key is required.")
   .max(128, "Idempotency key is too long.");
 
+const hypothesisTypeSchema = z.enum([
+  "positioning_shift",
+  "objection_attack",
+  "differentiation_emphasis",
+  "risk_reduction",
+  "authority_increase",
+  "clarity_simplification",
+]);
+
+const controlledVariableSchema = z.enum([
+  "audience",
+  "tone",
+  "structure",
+  "value_prop",
+  "cta_type",
+  "proof_points",
+  "pricing_frame",
+]);
+
+const treatmentVariableSchema = z.enum([
+  "headline",
+  "primary_cta",
+  "objection_handling",
+  "differentiators",
+  "risk_reversal",
+  "proof_depth",
+  "pricing_anchor",
+]);
+
+const minimumDeltaLevelSchema = z.enum(["light", "moderate", "strong"]);
+
 export const rewriteGenerateRequestSchema = z
   .object({
     rewriteType: rewriteTypeSchema,
@@ -85,6 +116,29 @@ export const rewriteGenerateRequestSchema = z
         audience: z.string().trim().max(120).optional(),
       })
       .optional(),
+    hypothesis: z.object({
+      type: hypothesisTypeSchema,
+      controlledVariables: z
+        .array(controlledVariableSchema)
+        .min(2, "Select at least 2 controlled variables.")
+        .max(7)
+        .refine((values) => new Set(values).size === values.length, {
+          message: "Controlled variables must be unique.",
+        }),
+      treatmentVariables: z
+        .array(treatmentVariableSchema)
+        .min(1, "Select at least 1 treatment variable.")
+        .max(7)
+        .refine((values) => new Set(values).size === values.length, {
+          message: "Treatment variables must be unique.",
+        }),
+      successCriteria: z
+        .string()
+        .trim()
+        .min(8, "Success criteria is required.")
+        .max(280, "Success criteria is too long."),
+      minimumDeltaLevel: minimumDeltaLevelSchema,
+    }),
   })
   .refine((value) => Boolean(value.websiteUrl || value.content), {
     path: ["websiteUrl"],

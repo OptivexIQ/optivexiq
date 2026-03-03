@@ -20,6 +20,8 @@ import type { NextRequest } from "next/server";
 import { rewriteGenerateRequestSchema } from "@/features/rewrites/validators/rewritesSchema";
 import {
   buildRewriteOpenAIRequest,
+  REWRITE_PROMPT_VERSION,
+  REWRITE_SYSTEM_TEMPLATE_VERSION,
   buildRewriteShiftStatsRepairRequest,
 } from "@/features/rewrites/services/rewritesService";
 import {
@@ -46,6 +48,30 @@ import { emitRewriteTelemetryEvent } from "@/features/rewrites/services/rewriteT
 const DEFAULT_MODEL = "gpt-4o-mini";
 const FINALIZATION_MAX_ATTEMPTS = 3;
 const REWRITE_PERSIST_MAX_ATTEMPTS = 3;
+
+type RewriteDeltaMetrics = {
+  lexical_similarity: number;
+  headline_changed: boolean;
+  cta_changed: boolean;
+  structure_changed: boolean;
+  delta_level: "light" | "moderate" | "strong";
+};
+
+function buildHypothesisTelemetryMetadata(
+  rewriteInput: RewriteGenerateRequestValues | null | undefined,
+) {
+  if (!rewriteInput) {
+    return {};
+  }
+  return {
+    hypothesis_type: rewriteInput.hypothesis.type,
+    minimum_delta_level: rewriteInput.hypothesis.minimumDeltaLevel,
+    controlled_variables: rewriteInput.hypothesis.controlledVariables,
+    treatment_variables: rewriteInput.hypothesis.treatmentVariables,
+    controlled_variables_count: rewriteInput.hypothesis.controlledVariables.length,
+    treatment_variables_count: rewriteInput.hypothesis.treatmentVariables.length,
+  };
+}
 
 type GeneratePayload = {
   model?: string;
@@ -315,6 +341,182 @@ async function ensureRewriteShiftStats(params: {
   };
 }
 
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[`*_>#~\-]/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toTokenSet(value: string) {
+  return new Set(
+    normalizeText(value)
+      .split(" ")
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3),
+  );
+}
+
+function computeLexicalSimilarity(source: string, treatment: string) {
+  const sourceSet = toTokenSet(source);
+  const treatmentSet = toTokenSet(treatment);
+  if (sourceSet.size === 0 || treatmentSet.size === 0) {
+    return 0;
+  }
+
+  let overlap = 0;
+  for (const token of sourceSet) {
+    if (treatmentSet.has(token)) {
+      overlap += 1;
+    }
+  }
+
+  const denominator = sourceSet.size + treatmentSet.size;
+  if (denominator === 0) {
+    return 0;
+  }
+
+  return (2 * overlap) / denominator;
+}
+
+function extractFirstContentLine(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  for (const line of lines) {
+    const normalized = line
+      .replace(/^#{1,6}\s+/, "")
+      .replace(/^[-*]\s+/, "")
+      .trim();
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+  return "";
+}
+
+function extractPrimaryCtaLine(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  for (const line of lines) {
+    const match = line.match(/^\s*(?:[-*]\s+)?(?:\*\*)?Primary CTA(?:\*\*)?\s*:\s*(.+)$/i);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+  return "";
+}
+
+function extractStructureSignature(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const markers: string[] = [];
+  for (const line of lines) {
+    const heading = line.match(/^#{1,6}\s+(.+)$/);
+    if (heading?.[1]) {
+      markers.push(
+        heading[1]
+          .toLowerCase()
+          .trim()
+          .replace(/^\d+\s*[\).\-\:]\s*/, "")
+          .replace(/\s+/g, " "),
+      );
+      continue;
+    }
+    const label = line.match(/^\s*([A-Za-z][A-Za-z0-9 /&-]{1,48})\s*:\s+/);
+    if (label?.[1]) {
+      markers.push(label[1].toLowerCase().trim().replace(/\s+/g, " "));
+    }
+  }
+  return markers.join("|");
+}
+
+function clamp01(value: number) {
+  if (value < 0) {
+    return 0;
+  }
+  if (value > 1) {
+    return 1;
+  }
+  return value;
+}
+
+function computeRewriteDeltaMetrics(params: {
+  sourceContent: string;
+  proposedRewrite: string;
+  minimumDeltaLevel: "light" | "moderate" | "strong";
+}): RewriteDeltaMetrics {
+  const lexicalSimilarity = clamp01(
+    computeLexicalSimilarity(params.sourceContent, params.proposedRewrite),
+  );
+  const sourceHeadline = normalizeText(extractFirstContentLine(params.sourceContent));
+  const rewriteHeadline = normalizeText(extractFirstContentLine(params.proposedRewrite));
+  const sourceCta = normalizeText(extractPrimaryCtaLine(params.sourceContent));
+  const rewriteCta = normalizeText(extractPrimaryCtaLine(params.proposedRewrite));
+  const sourceStructure = extractStructureSignature(params.sourceContent);
+  const rewriteStructure = extractStructureSignature(params.proposedRewrite);
+
+  return {
+    lexical_similarity: Number(lexicalSimilarity.toFixed(4)),
+    headline_changed:
+      sourceHeadline.length > 0 &&
+      rewriteHeadline.length > 0 &&
+      sourceHeadline !== rewriteHeadline,
+    cta_changed:
+      sourceCta.length > 0 &&
+      rewriteCta.length > 0 &&
+      sourceCta !== rewriteCta,
+    structure_changed:
+      sourceStructure.length > 0 &&
+      rewriteStructure.length > 0 &&
+      sourceStructure !== rewriteStructure,
+    delta_level: params.minimumDeltaLevel,
+  };
+}
+
+function maxLexicalSimilarityForDelta(level: "light" | "moderate" | "strong") {
+  if (level === "strong") {
+    return 0.55;
+  }
+  if (level === "moderate") {
+    return 0.7;
+  }
+  return 0.85;
+}
+
+function buildIncreaseVariationRetryRequest(params: {
+  baseRequest: OpenAIRequest;
+  currentOutput: string;
+  minimumDeltaLevel: "light" | "moderate" | "strong";
+  lexicalSimilarity: number;
+}): OpenAIRequest {
+  const stricter = [
+    "Retry instruction: increase variation.",
+    `Minimum delta: ${params.minimumDeltaLevel}.`,
+    `Current lexical similarity is too high (${(params.lexicalSimilarity * 100).toFixed(1)}%).`,
+    "Avoid close paraphrase, use new framing, and materially rewrite headlines/CTAs and section language while preserving factual truth.",
+    "Return the full response again in the required six-section format.",
+  ].join("\n");
+
+  return {
+    ...params.baseRequest,
+    temperature:
+      typeof params.baseRequest.temperature === "number"
+        ? Math.min(0.85, params.baseRequest.temperature + 0.1)
+        : 0.55,
+    messages: [
+      ...params.baseRequest.messages,
+      {
+        role: "user",
+        content: [
+          "Previous output:",
+          params.currentOutput,
+          "",
+          stricter,
+        ].join("\n"),
+      },
+    ],
+  };
+}
+
 export async function handleGenerateStream(params: {
   request: NextRequest;
   userId: string;
@@ -429,6 +631,7 @@ export async function handleGenerateStream(params: {
       metadata: {
         rewrite_type: rewriteInput?.rewriteType ?? null,
         model: generateRequest.model,
+        ...buildHypothesisTelemetryMetadata(rewriteInput),
       },
     });
   }
@@ -463,6 +666,301 @@ export async function handleGenerateStream(params: {
     });
   }
 
+  if (isRewriteRequest && rewriteInput && rewriteRef && rewriteCreatedAt) {
+    try {
+      let workingRequest = generateRequest;
+      let output = "";
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      let totalCostCents = 0;
+      let deltaMetrics: RewriteDeltaMetrics | null = null;
+      let usedModel = generateRequest.model;
+
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        const completion = await runChatCompletion(workingRequest);
+        usedModel = completion.model;
+        totalInputTokens += completion.promptTokens;
+        totalOutputTokens += completion.completionTokens;
+        totalCostCents += Math.round(completion.estimatedCostUsd * 100);
+
+        let candidateOutput = completion.content;
+        const shiftStatsResult = await ensureRewriteShiftStats({
+          output: candidateOutput,
+          rewriteInput,
+          requestId,
+          userId,
+          requestRef: rewriteRef,
+        });
+        totalInputTokens += shiftStatsResult.extraInputTokens;
+        totalOutputTokens += shiftStatsResult.extraOutputTokens;
+        totalCostCents += shiftStatsResult.extraCostCents;
+
+        if (!shiftStatsResult.stats || !shiftStatsResult.confidence) {
+          throw new Error("Rewrite output failed metrics contract validation.");
+        }
+
+        if (shiftStatsResult.appendedBlock.length > 0) {
+          candidateOutput += shiftStatsResult.appendedBlock;
+          totalOutputTokens += estimateTokens(shiftStatsResult.appendedBlock);
+        }
+
+        const structured = parseRewriteStructuredOutputFromMarkdown(candidateOutput);
+        if (!structured) {
+          throw new Error("Rewrite output failed structured contract validation.");
+        }
+
+        const proposedRewriteForMetrics = structured.proposedRewrite;
+        const computedMetrics = computeRewriteDeltaMetrics({
+          sourceContent: rewriteInput.content ?? "",
+          proposedRewrite: proposedRewriteForMetrics,
+          minimumDeltaLevel: rewriteInput.hypothesis.minimumDeltaLevel,
+        });
+        const threshold = maxLexicalSimilarityForDelta(
+          rewriteInput.hypothesis.minimumDeltaLevel,
+        );
+        if (computedMetrics.lexical_similarity <= threshold) {
+          output = candidateOutput;
+          deltaMetrics = computedMetrics;
+          break;
+        }
+
+        if (attempt === 1) {
+          workingRequest = buildIncreaseVariationRetryRequest({
+            baseRequest: generateRequest,
+            currentOutput: candidateOutput,
+            minimumDeltaLevel: rewriteInput.hypothesis.minimumDeltaLevel,
+            lexicalSimilarity: computedMetrics.lexical_similarity,
+          });
+          continue;
+        }
+
+        throw new Error(
+          "We could not produce a meaningful variation for this hypothesis. Try increasing delta or changing treatment variables.",
+        );
+      }
+
+      if (!output || !deltaMetrics) {
+        throw new Error("Rewrite generation failed to produce a valid output.");
+      }
+
+      const finalizedTokens = Math.min(
+        reservedTokens,
+        totalInputTokens + totalOutputTokens,
+      );
+      const finalizedCostCents = Math.min(
+        reservedCostCents,
+        Math.max(0, totalCostCents),
+      );
+
+      const finalization = await finalizeGenerateUsageWithRetry({
+        userId,
+        reservationKey: requestId,
+        actualTokens: finalizedTokens,
+        actualCostCents: finalizedCostCents,
+        requestId,
+      });
+
+      if (!finalization.ok) {
+        await enqueueUsageFinalizationReconciliation({
+          reservationKey: requestId,
+          userId,
+          route: routePath,
+          exactTokens: finalizedTokens,
+          exactCostCents: finalizedCostCents,
+          errorMessage: "finalization_failed_after_retries",
+        });
+        logger.error("AI usage finalization failed after retries.", {
+          request_id: requestId,
+          user_id: userId,
+          reservation_key: requestId,
+          charge_state: "reservation_retained",
+          finalization_state: "unreconciled",
+          input_tokens: totalInputTokens,
+          output_tokens: totalOutputTokens,
+          finalized_tokens: finalizedTokens,
+          finalized_cost_cents: finalizedCostCents,
+        });
+        await emitOperationalAlert({
+          severity: "critical",
+          source: "generate_stream_finalization",
+          message:
+            "Generate stream finalization failed after retries; reservation retained.",
+          context: {
+            reservation_key: requestId,
+            user_id: userId,
+            route: routePath,
+            exact_tokens: finalizedTokens,
+            exact_cost_cents: finalizedCostCents,
+            error: "finalization_failed_after_retries",
+          },
+        });
+        return errorResponse("internal_error", "Unable to finalize usage.", 500, {
+          requestId,
+          headers: { "x-request-id": requestId },
+        });
+      }
+
+      const rewriteUsage = await incrementRewrites(userId);
+      if (!rewriteUsage.ok) {
+        logger.error("Rewrite usage increment failed after rewrite completion.", {
+          request_id: requestId,
+          user_id: userId,
+          error: rewriteUsage.error,
+        });
+      }
+
+      const persistResult = await saveRewriteRecordWithRetry({
+        userId,
+        requestId,
+        requestRef: rewriteRef,
+        input: rewriteInput,
+        outputMarkdown: output,
+        model: usedModel,
+        promptVersion: REWRITE_PROMPT_VERSION,
+        systemTemplateVersion: REWRITE_SYSTEM_TEMPLATE_VERSION,
+        modelTemperature:
+          typeof workingRequest.temperature === "number"
+            ? workingRequest.temperature
+            : 0.35,
+        deltaMetrics,
+        tokensInput: totalInputTokens,
+        tokensOutput: totalOutputTokens,
+        costCents: totalCostCents,
+      });
+
+      if (!persistResult.ok) {
+        logger.error(
+          "Rewrite generation persisted with usage but no history record.",
+          {
+            request_id: requestId,
+            user_id: userId,
+            request_ref: rewriteRef,
+            error: persistResult.error,
+          },
+        );
+        await emitOperationalAlert({
+          severity: "critical",
+          source: "rewrite_persistence",
+          message:
+            "Rewrite completed but history persistence failed after retries.",
+          context: {
+            request_id: requestId,
+            request_ref: rewriteRef,
+            user_id: userId,
+            rewrite_type: rewriteInput.rewriteType,
+            error: persistResult.error,
+          },
+        });
+        void emitRewriteTelemetryEvent({
+          userId,
+          requestId,
+          eventType: "rewrite_failed",
+          requestRef: rewriteRef,
+          experimentGroupId: null,
+          route: routePath,
+          latencyMs: Date.now() - startTime,
+          reservedTokens,
+          actualTokens: finalizedTokens,
+          metadata: {
+            stage: "persistence",
+            rewrite_type: rewriteInput.rewriteType,
+          },
+        });
+      } else {
+        completedExperimentGroupId = persistResult.lineage.experimentGroupId;
+        completedVersionNumber = persistResult.lineage.versionNumber;
+        void emitRewriteTelemetryEvent({
+          userId,
+          requestId,
+          eventType: "rewrite_completed",
+          requestRef: rewriteRef,
+          experimentGroupId: persistResult.lineage.experimentGroupId,
+          route: routePath,
+          latencyMs: Date.now() - startTime,
+          reservedTokens,
+          actualTokens: finalizedTokens,
+          metadata: {
+            rewrite_type: rewriteInput.rewriteType,
+            version_number: persistResult.lineage.versionNumber,
+            parent_request_ref: persistResult.lineage.parentRequestRef,
+            rewrite_output_schema_version: REWRITE_OUTPUT_SCHEMA_VERSION,
+            delta_metrics: deltaMetrics,
+          },
+        });
+      }
+
+      logger.info("rewrite.generate.completed", {
+        requestId,
+        userId,
+        requestRef: rewriteRef,
+        experimentGroupId: completedExperimentGroupId,
+        rewriteType: rewriteInput.rewriteType,
+        rewriteOutputSchemaVersion: REWRITE_OUTPUT_SCHEMA_VERSION,
+        versionNumber: completedVersionNumber,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        costCents: totalCostCents,
+        durationMs: Date.now() - startTime,
+        deltaMetrics,
+      });
+
+      return new Response(output, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-store",
+          "x-request-id": requestId,
+          "x-rewrite-ref": rewriteRef,
+          "x-rewrite-created-at": rewriteCreatedAt,
+          "x-rewrite-delta-lexical-similarity": String(
+            deltaMetrics.lexical_similarity,
+          ),
+        },
+      });
+    } catch (error) {
+      logger.error("rewrite.generate.failed", error, {
+        requestId,
+        userId,
+        requestRef: rewriteRef,
+        experimentGroupId: null,
+        stage: "delta_enforcement",
+      });
+      void emitRewriteTelemetryEvent({
+        userId,
+        requestId,
+        eventType: "rewrite_failed",
+        requestRef: rewriteRef,
+        experimentGroupId: null,
+        route: routePath,
+        metadata: {
+          stage: "delta_enforcement",
+          rewrite_type: rewriteInput.rewriteType,
+          message: error instanceof Error ? error.message : "unknown_error",
+          ...buildHypothesisTelemetryMetadata(rewriteInput),
+        },
+      });
+      await rollbackGenerateUsage({
+        userId,
+        reservationKey: requestId,
+      });
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to generate rewrite.";
+      const isVariationFailure = /meaningful variation/i.test(message);
+      return errorResponse(
+        isVariationFailure
+          ? "conflict"
+          : "provider_unavailable",
+        message,
+        isVariationFailure ? 422 : 500,
+        {
+        requestId,
+        headers: { "x-request-id": requestId },
+        },
+      );
+    }
+  }
+
   let stream: Awaited<ReturnType<typeof streamChatCompletion>>;
   try {
     stream = await streamChatCompletion(generateRequest);
@@ -486,6 +984,7 @@ export async function handleGenerateStream(params: {
         metadata: {
           stage: "stream_start",
           rewrite_type: rewriteInput?.rewriteType ?? null,
+          ...buildHypothesisTelemetryMetadata(rewriteInput),
         },
       });
     }
@@ -534,6 +1033,7 @@ export async function handleGenerateStream(params: {
         metadata: {
           stage: "stream_prime",
           rewrite_type: rewriteInput?.rewriteType ?? null,
+          ...buildHypothesisTelemetryMetadata(rewriteInput),
         },
       });
     }
@@ -648,6 +1148,7 @@ export async function handleGenerateStream(params: {
                   metadata: {
                     stage: "stream_runtime",
                     rewrite_type: rewriteInput?.rewriteType ?? null,
+                    ...buildHypothesisTelemetryMetadata(rewriteInput),
                   },
                 });
               }
@@ -799,6 +1300,13 @@ export async function handleGenerateStream(params: {
                 input: rewriteInput,
                 outputMarkdown: output,
                 model: generateRequest.model,
+                promptVersion: REWRITE_PROMPT_VERSION,
+                systemTemplateVersion: REWRITE_SYSTEM_TEMPLATE_VERSION,
+                modelTemperature:
+                  typeof generateRequest.temperature === "number"
+                    ? generateRequest.temperature
+                    : 0.35,
+                deltaMetrics: null,
                 tokensInput: totalInputTokens,
                 tokensOutput: totalOutputTokens,
                 costCents,
@@ -836,6 +1344,7 @@ export async function handleGenerateStream(params: {
                   metadata: {
                     stage: "persistence",
                     rewrite_type: rewriteInput.rewriteType,
+                    ...buildHypothesisTelemetryMetadata(rewriteInput),
                   },
                 });
               } else {
@@ -857,6 +1366,7 @@ export async function handleGenerateStream(params: {
                     version_number: persistResult.lineage.versionNumber,
                     parent_request_ref: persistResult.lineage.parentRequestRef,
                     rewrite_output_schema_version: REWRITE_OUTPUT_SCHEMA_VERSION,
+                    ...buildHypothesisTelemetryMetadata(rewriteInput),
                   },
                 });
               }

@@ -81,11 +81,76 @@ export async function streamRewrite(
   }
 
   result += decoder.decode();
+  const deltaLexicalSimilarityRaw = response.headers.get(
+    "x-rewrite-delta-lexical-similarity",
+  );
+  const parsedDeltaLexicalSimilarity =
+    deltaLexicalSimilarityRaw == null
+      ? null
+      : Number(deltaLexicalSimilarityRaw);
   return {
     content: result,
     requestId: response.headers.get("x-request-id"),
     requestRef: response.headers.get("x-rewrite-ref"),
     requestCreatedAt: response.headers.get("x-rewrite-created-at"),
+    idempotentReplay: response.headers.get("x-idempotent-replay") === "true",
+    deltaLexicalSimilarity:
+      parsedDeltaLexicalSimilarity != null &&
+      Number.isFinite(parsedDeltaLexicalSimilarity)
+        ? parsedDeltaLexicalSimilarity
+        : null,
+  };
+}
+
+export async function exportRewriteComparison(input: {
+  baselineRequestRef: string;
+  currentRequestRef: string;
+  format: "markdown" | "html" | "pdf";
+  signal?: AbortSignal;
+}): Promise<{
+  blob: Blob;
+  filename: string;
+  contentType: string;
+}> {
+  const baselineRequestRef = input.baselineRequestRef.trim();
+  const currentRequestRef = input.currentRequestRef.trim();
+  if (!baselineRequestRef || !currentRequestRef) {
+    throw {
+      status: 400,
+      message: "Both baseline and current request references are required.",
+    } satisfies HttpError;
+  }
+
+  const response = await fetch("/api/rewrites/compare-export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      controlRequestRef: baselineRequestRef,
+      treatmentRequestRefs: [currentRequestRef],
+      format: input.format,
+    }),
+    signal: input.signal,
+  });
+
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+    const payload = contentType.includes("application/json")
+      ? await response.json().catch(() => null)
+      : await response.text().catch(() => "");
+    throw toHttpError(response.status, payload);
+  }
+
+  const blob = await response.blob();
+  const contentType = response.headers.get("content-type") ?? blob.type;
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filenameFromHeader = disposition.match(/filename="([^"]+)"/i)?.[1] ?? null;
+  const fallbackExtension =
+    input.format === "markdown" ? "md" : input.format === "html" ? "html" : "pdf";
+
+  return {
+    blob,
+    contentType,
+    filename: filenameFromHeader ?? `rewrite-compare.${fallbackExtension}`,
   };
 }
 

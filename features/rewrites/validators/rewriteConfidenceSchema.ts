@@ -92,7 +92,7 @@ export function parseRewriteConfidenceFromTrustedSections(
   text: string,
 ): RewriteConfidence | null {
   const trusted = new Set([
-    "strategy summary",
+    "confidence & risk",
     "shift metrics",
     "metrics addendum",
   ]);

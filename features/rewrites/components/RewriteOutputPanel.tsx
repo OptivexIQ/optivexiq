@@ -24,6 +24,8 @@ type RewriteOutputPanelProps = {
     isWinner?: boolean;
     winnerLabel?: string | null;
     strategySnapshot?: string | null;
+    deltaMetrics?: Record<string, unknown> | null;
+    idempotentReplay?: boolean;
   };
 };
 
@@ -68,6 +70,28 @@ function sanitizeUrl(url: string) {
   return "";
 }
 
+function resolveDeltaScore(
+  deltaMetrics: Record<string, unknown> | null | undefined,
+): { label: string; value: string } | null {
+  if (!deltaMetrics) {
+    return null;
+  }
+  const similarity = deltaMetrics.lexical_similarity;
+  if (typeof similarity !== "number" || !Number.isFinite(similarity)) {
+    return null;
+  }
+
+  const variation = Math.max(0, Math.min(1, 1 - similarity));
+  const pct = Math.round(variation * 100);
+  if (variation >= 0.45) {
+    return { label: "Delta score", value: `${pct}% (strong)` };
+  }
+  if (variation >= 0.3) {
+    return { label: "Delta score", value: `${pct}% (moderate)` };
+  }
+  return { label: "Delta score", value: `${pct}% (light)` };
+}
+
 export function RewriteOutputPanel({
   rewriteType,
   running,
@@ -83,6 +107,7 @@ export function RewriteOutputPanel({
     [output],
   );
   const [copiedError, setCopiedError] = useState(false);
+  const deltaScore = resolveDeltaScore(metadata?.deltaMetrics);
 
   const handleCopyError = async () => {
     if (!error) {
@@ -120,6 +145,19 @@ export function RewriteOutputPanel({
           {metadata?.isWinner ? (
             <span className="font-medium text-foreground/90">
               Winner{metadata.winnerLabel ? ` (${metadata.winnerLabel})` : ""}
+            </span>
+          ) : null}
+          {deltaScore ? (
+            <span>
+              {deltaScore.label}:{" "}
+              <span className="font-medium text-foreground/90">
+                {deltaScore.value}
+              </span>
+            </span>
+          ) : null}
+          {metadata?.idempotentReplay ? (
+            <span className="font-medium text-amber-500">
+              Not a new variation
             </span>
           ) : null}
         </div>

@@ -15,6 +15,19 @@ const exportFormatSchema = z.enum(["markdown", "text", "html", "pdf"]);
 type RewriteExportRow = {
   request_ref: string;
   experiment_group_id: string | null;
+  version_number: number;
+  parent_request_ref: string | null;
+  is_winner: boolean;
+  winner_label: string | null;
+  hypothesis_type: string | null;
+  controlled_variables: unknown;
+  treatment_variables: unknown;
+  success_criteria: string | null;
+  minimum_delta_level: string | null;
+  delta_metrics: Record<string, unknown> | null;
+  prompt_version: number | null;
+  system_template_version: number | null;
+  model_temperature: number | null;
   rewrite_type: RewriteType;
   output_markdown: string;
 };
@@ -48,7 +61,9 @@ export async function GET(
     const supabase = await createSupabaseServerReadOnlyClient();
     const { data, error } = await supabase
       .from("rewrite_generations")
-      .select("request_ref, experiment_group_id, rewrite_type, output_markdown")
+      .select(
+        "request_ref, experiment_group_id, version_number, parent_request_ref, is_winner, winner_label, hypothesis_type, controlled_variables, treatment_variables, success_criteria, minimum_delta_level, delta_metrics, prompt_version, system_template_version, model_temperature, rewrite_type, output_markdown",
+      )
       .eq("user_id", userId)
       .eq("request_ref", requestRef)
       .maybeSingle();
@@ -74,10 +89,35 @@ export async function GET(
     }
 
     const row = data as RewriteExportRow;
+    const controlledVariables = Array.isArray(row.controlled_variables)
+      ? row.controlled_variables.filter((item): item is string => typeof item === "string")
+      : [];
+    const treatmentVariables = Array.isArray(row.treatment_variables)
+      ? row.treatment_variables.filter((item): item is string => typeof item === "string")
+      : [];
     const document = buildRewriteExportDocument({
       rewriteType: row.rewrite_type,
       outputMarkdown: row.output_markdown,
       format,
+      metadata: {
+        requestRef: row.request_ref,
+        experimentGroupId: row.experiment_group_id,
+        versionNumber: row.version_number,
+        parentRequestRef: row.parent_request_ref,
+        isWinner: row.is_winner,
+        winnerLabel: row.winner_label,
+        hypothesis: {
+          type: row.hypothesis_type ?? "N/A",
+          controlledVariables,
+          treatmentVariables,
+          successCriteria: row.success_criteria ?? "N/A",
+          minimumDeltaLevel: row.minimum_delta_level ?? "N/A",
+        },
+        deltaMetrics: row.delta_metrics,
+        promptVersion: row.prompt_version,
+        systemTemplateVersion: row.system_template_version,
+        modelTemperature: row.model_temperature,
+      },
     });
 
     const admin = createSupabaseAdminClient("worker");
@@ -113,7 +153,7 @@ export async function GET(
       requestRef,
       experimentGroupId: row.experiment_group_id,
       route: "/api/rewrites/[requestRef]/export",
-      metadata: { format },
+      metadata: { format, audit_action: "single_export" },
     });
 
     return new NextResponse(document.content, {

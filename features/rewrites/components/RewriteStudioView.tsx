@@ -33,6 +33,7 @@ import {
 import { RewriteStudioHeader } from "@/features/rewrites/components/RewriteStudioHeader";
 import {
   exportRewrite,
+  exportRewriteComparison,
   mapRewriteSections,
   streamRewrite,
 } from "@/features/rewrites/services/rewritesClient";
@@ -43,6 +44,7 @@ import { markWinnerAction } from "@/features/rewrites/actions/markWinner";
 import type {
   RewriteExportFormat,
   RewriteGenerateRequest,
+  RewriteHypothesis,
   RewriteSectionMapResult,
   RewriteStrategy,
   RewriteStudioInitialData,
@@ -57,7 +59,17 @@ const REWRITE_STUDIO_STRATEGY_STORAGE_KEY =
   "optivexiq.rewrite_studio.strategy.v1";
 const REWRITE_STUDIO_INPUT_POLICY_STORAGE_KEY =
   "optivexiq.rewrite_studio.input_policy.v1";
+const REWRITE_STUDIO_HYPOTHESIS_STORAGE_KEY =
+  "optivexiq.rewrite_studio.hypothesis.v1";
 const ORIGINAL_BASELINE_REF = "__original_draft__";
+
+const DEFAULT_REWRITE_HYPOTHESIS: RewriteHypothesis = {
+  type: "clarity_simplification",
+  controlledVariables: ["audience", "tone"],
+  treatmentVariables: ["headline"],
+  successCriteria: "Improve clarity and conversion intent for the target page.",
+  minimumDeltaLevel: "moderate",
+};
 
 function createIdempotencyKey() {
   if (
@@ -104,6 +116,67 @@ function formatHistoryTimestamp(value: string) {
   });
 }
 
+function normalizeHypothesis(value?: Partial<RewriteHypothesis> | null): RewriteHypothesis {
+  const type =
+    value?.type === "positioning_shift" ||
+    value?.type === "objection_attack" ||
+    value?.type === "differentiation_emphasis" ||
+    value?.type === "risk_reduction" ||
+    value?.type === "authority_increase" ||
+    value?.type === "clarity_simplification"
+      ? value.type
+      : DEFAULT_REWRITE_HYPOTHESIS.type;
+
+  const controlledVariables = Array.isArray(value?.controlledVariables)
+    ? value.controlledVariables.filter(
+        (item): item is RewriteHypothesis["controlledVariables"][number] =>
+          item === "audience" ||
+          item === "tone" ||
+          item === "structure" ||
+          item === "value_prop" ||
+          item === "cta_type" ||
+          item === "proof_points" ||
+          item === "pricing_frame",
+      )
+    : [];
+
+  const treatmentVariables = Array.isArray(value?.treatmentVariables)
+    ? value.treatmentVariables.filter(
+        (item): item is RewriteHypothesis["treatmentVariables"][number] =>
+          item === "headline" ||
+          item === "primary_cta" ||
+          item === "objection_handling" ||
+          item === "differentiators" ||
+          item === "risk_reversal" ||
+          item === "proof_depth" ||
+          item === "pricing_anchor",
+      )
+    : [];
+
+  return {
+    type,
+    controlledVariables:
+      controlledVariables.length >= 2
+        ? Array.from(new Set(controlledVariables))
+        : DEFAULT_REWRITE_HYPOTHESIS.controlledVariables,
+    treatmentVariables:
+      treatmentVariables.length >= 1
+        ? Array.from(new Set(treatmentVariables))
+        : DEFAULT_REWRITE_HYPOTHESIS.treatmentVariables,
+    successCriteria:
+      typeof value?.successCriteria === "string" &&
+      value.successCriteria.trim().length >= 8
+        ? value.successCriteria
+        : DEFAULT_REWRITE_HYPOTHESIS.successCriteria,
+    minimumDeltaLevel:
+      value?.minimumDeltaLevel === "light" ||
+      value?.minimumDeltaLevel === "moderate" ||
+      value?.minimumDeltaLevel === "strong"
+        ? value.minimumDeltaLevel
+        : DEFAULT_REWRITE_HYPOTHESIS.minimumDeltaLevel,
+  };
+}
+
 export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const { toast } = useToast();
   const abortRef = useRef<AbortController | null>(null);
@@ -113,6 +186,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     websiteUrl: initialData.defaultWebsiteUrl,
     content: "",
     notes: "",
+    hypothesis: DEFAULT_REWRITE_HYPOTHESIS,
     ...(initialData.defaultRewriteRequest ?? {}),
   });
   const [output, setOutput] = useState(initialData.initialOutputMarkdown ?? "");
@@ -179,10 +253,19 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     constraints: "",
     audience: "",
   });
+  const [hypothesis, setHypothesis] = useState<RewriteHypothesis>(
+    normalizeHypothesis(
+      initialData.historyVersions?.find(
+        (item) => item.requestRef === initialData.initialRequestRef,
+      )?.hypothesis,
+    ),
+  );
   const [historyVersions, setHistoryVersions] = useState(
     initialData.historyVersions ?? [],
   );
   const [winnerMutationRunning, setWinnerMutationRunning] = useState(false);
+  const [idempotentReplay, setIdempotentReplay] = useState(false);
+  const [compareExportRunning, setCompareExportRunning] = useState(false);
 
   const selectedIcpLabel = useCustomIcp ? customIcp.trim() : profileIcp;
   const resolvedIcpLabel =
@@ -199,32 +282,40 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     return request.content?.trim().length ? request.content : "";
   }, [requestRef, currentVersionSourceContent, request.content]);
   const compareBaselineOptions = useMemo(
-    () =>
-      historyVersions
-        .filter((item) => item.requestRef !== requestRef)
-        .map((item) => {
-          const target =
-            item.rewriteType === "pricing" ? "Pricing" : "Homepage";
-          return {
-            requestRef: item.requestRef,
-            label: `${target} | ${item.requestRef}`,
-          };
-        }),
+    () => {
+      const current = requestRef
+        ? historyVersions.find((item) => item.requestRef === requestRef)
+        : null;
+      const currentExperimentId = current?.experimentGroupId ?? null;
+      const candidates = historyVersions.filter(
+        (item) =>
+          item.requestRef !== requestRef &&
+          (!currentExperimentId || item.experimentGroupId === currentExperimentId),
+      );
+      const sorted = [...candidates].sort((left, right) => {
+        if (left.isControl && !right.isControl) {
+          return -1;
+        }
+        if (!left.isControl && right.isControl) {
+          return 1;
+        }
+        return right.createdAt.localeCompare(left.createdAt);
+      });
+
+      return sorted.map((item) => {
+        const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
+        const role = item.isControl
+          ? "Control (original input)"
+          : `Treatment v${item.versionNumber ?? "?"}`;
+        return {
+          requestRef: item.requestRef,
+          label: `${role} | ${target} | ${item.requestRef}`,
+        };
+      });
+    },
     [historyVersions, requestRef],
   );
-  const baselineOptions = useMemo(
-    () =>
-      comparisonSourceContent.trim().length > 0
-        ? [
-            {
-              requestRef: ORIGINAL_BASELINE_REF,
-              label: "Original Draft | Source content",
-            },
-            ...compareBaselineOptions,
-          ]
-        : compareBaselineOptions,
-    [comparisonSourceContent, compareBaselineOptions],
-  );
+  const baselineOptions = useMemo(() => compareBaselineOptions, [compareBaselineOptions]);
   const isOriginalBaselineSelected =
     selectedBaselineRef === ORIGINAL_BASELINE_REF;
   const selectedBaselineOutput = isOriginalBaselineSelected
@@ -257,6 +348,28 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     selectedBaselineRef && selectedBaselineRef !== ORIGINAL_BASELINE_REF
       ? historyVersions.find((item) => item.requestRef === selectedBaselineRef)
       : null;
+
+  useEffect(() => {
+    if (!compareMode) {
+      return;
+    }
+
+    const hasSelected =
+      selectedBaselineRef != null &&
+      baselineOptions.some((option) => option.requestRef === selectedBaselineRef);
+    if (hasSelected) {
+      return;
+    }
+
+    const preferredControl = baselineOptions.find((option) => {
+      const record = historyVersions.find(
+        (item) => item.requestRef === option.requestRef,
+      );
+      return Boolean(record?.isControl);
+    });
+
+    setSelectedBaselineRef(preferredControl?.requestRef ?? baselineOptions[0]?.requestRef ?? null);
+  }, [compareMode, baselineOptions, selectedBaselineRef, historyVersions]);
   const strategySnapshot = useMemo(() => {
     const parts: string[] = [];
     const targetLabel =
@@ -329,6 +442,22 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", goOffline);
     };
+  }, []);
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(
+      REWRITE_STUDIO_HYPOTHESIS_STORAGE_KEY,
+    );
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<RewriteHypothesis>;
+      setHypothesis(normalizeHypothesis(parsed));
+    } catch {
+      window.localStorage.removeItem(REWRITE_STUDIO_HYPOTHESIS_STORAGE_KEY);
+    }
   }, []);
 
   useEffect(() => {
@@ -591,6 +720,13 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
   useEffect(() => {
     window.localStorage.setItem(
+      REWRITE_STUDIO_HYPOTHESIS_STORAGE_KEY,
+      JSON.stringify(hypothesis),
+    );
+  }, [hypothesis]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
       REWRITE_STUDIO_INPUT_POLICY_STORAGE_KEY,
       JSON.stringify({ enforceSectionLabels }),
     );
@@ -603,6 +739,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       websiteUrl: initialData.defaultWebsiteUrl,
       content: "",
       notes: "",
+      hypothesis: DEFAULT_REWRITE_HYPOTHESIS,
       ...(initialData.defaultRewriteRequest ?? {}),
     });
     setUseCustomIcp(false);
@@ -617,6 +754,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       constraints: "",
       audience: "",
     });
+    setHypothesis(DEFAULT_REWRITE_HYPOTHESIS);
     setOutput("");
     setPreviousOutput("");
     setPreviousVersionCreatedAt(null);
@@ -681,7 +819,23 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (overrideIdempotencyKey?: string) => {
+    const controlledVariables = Array.from(new Set(hypothesis.controlledVariables));
+    const treatmentVariables = Array.from(new Set(hypothesis.treatmentVariables));
+    const successCriteria = hypothesis.successCriteria.trim();
+    if (controlledVariables.length < 2) {
+      setError("Select at least 2 controlled variables in Hypothesis.");
+      return;
+    }
+    if (treatmentVariables.length < 1) {
+      setError("Select at least 1 treatment variable in Hypothesis.");
+      return;
+    }
+    if (successCriteria.length < 8) {
+      setError("Success criteria is required in Hypothesis.");
+      return;
+    }
+
     if (useCustomIcp && customIcp.trim().length === 0) {
       setError("Custom ICP is required when ICP is set to Custom.");
       return;
@@ -706,15 +860,18 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setOutput("");
     setRequestRef(null);
     setCurrentVersionCreatedAt(null);
+    setIdempotentReplay(false);
     setRunning(true);
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
       const activeIdempotencyKey =
-        (request.idempotencyKey?.trim().length ?? 0) > 0
-          ? request.idempotencyKey
-          : createIdempotencyKey();
+        overrideIdempotencyKey && overrideIdempotencyKey.trim().length > 0
+          ? overrideIdempotencyKey
+          : (request.idempotencyKey?.trim().length ?? 0) > 0
+            ? request.idempotencyKey
+            : createIdempotencyKey();
       if (activeIdempotencyKey !== request.idempotencyKey) {
         setRequest((previous) => ({
           ...previous,
@@ -748,6 +905,13 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           },
         },
         rewriteStrategy: strategy,
+        hypothesis: {
+          type: hypothesis.type,
+          controlledVariables,
+          treatmentVariables,
+          successCriteria,
+          minimumDeltaLevel: hypothesis.minimumDeltaLevel,
+        },
       };
 
       const result = await streamRewrite(submissionRequest, {
@@ -756,17 +920,145 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           setOutput((previous) => previous + chunk);
         },
       });
+      setOutput(result.content);
       setRequestRef(result.requestRef);
       setCurrentVersionCreatedAt(
         result.requestCreatedAt ?? new Date().toISOString(),
       );
+      setIdempotentReplay(result.idempotentReplay);
+      const nextRequestRef = result.requestRef;
+      if (nextRequestRef) {
+        setHistoryVersions((previous) => {
+          const nextCreatedAt =
+            result.requestCreatedAt ?? new Date().toISOString();
+          const parentVersion = parentRequestRef
+            ? previous.find((item) => item.requestRef === parentRequestRef)
+            : null;
+          const inferredControlRequestRef =
+            parentVersion?.controlRequestRef ??
+            (parentVersion?.isControl ? parentVersion.requestRef : null) ??
+            (!parentRequestRef ? `${nextRequestRef}-control` : null);
+
+          const syntheticControl =
+            !parentRequestRef && inferredControlRequestRef
+              ? {
+                  requestRef: inferredControlRequestRef,
+                  isControl: true,
+                  controlRequestRef: inferredControlRequestRef,
+                  experimentGroupId: parentVersion?.experimentGroupId,
+                  parentRequestRef: null,
+                  versionNumber: 0,
+                  isWinner: false,
+                  winnerLabel: null,
+                  winnerMarkedAt: null,
+                  rewriteType: submissionRequest.rewriteType,
+                  createdAt: nextCreatedAt,
+                  outputMarkdown:
+                    submissionRequest.content?.trim().length
+                      ? submissionRequest.content
+                      : "_No pasted source content provided for this control baseline._",
+                  websiteUrl: submissionRequest.websiteUrl ?? null,
+                  sourceContent: submissionRequest.content ?? null,
+                  userNotes: submissionRequest.notes ?? "",
+                  strategicContext: {
+                    goal,
+                    icp: resolvedIcpLabel,
+                    differentiationFocus: differentiationFocus,
+                    objectionFocus: objectionFocus,
+                  },
+                  tone: strategy.tone,
+                  length: strategy.length,
+                  emphasis: [...strategy.emphasis],
+                  constraints: strategy.constraints ?? "",
+                  audience: strategy.audience ?? "",
+                  strategyContext: {
+                    target: submissionRequest.rewriteType,
+                    goal,
+                    icp: resolvedIcpLabel,
+                    tone: strategy.tone,
+                    length: strategy.length,
+                    emphasis: [...strategy.emphasis],
+                    constraints: strategy.constraints ?? "",
+                    audience: strategy.audience ?? "",
+                    focus: {
+                      differentiation: differentiationFocus,
+                      objection: objectionFocus,
+                    },
+                    schemaVersion: 1,
+                  },
+                  idempotencyKey: `${submissionRequest.idempotencyKey}:control`,
+                  hypothesis: submissionRequest.hypothesis,
+                }
+              : null;
+
+          const nextVersion = {
+            requestRef: nextRequestRef,
+            isControl: false,
+            controlRequestRef: inferredControlRequestRef,
+            rewriteType: submissionRequest.rewriteType,
+            createdAt: nextCreatedAt,
+            outputMarkdown: result.content,
+            websiteUrl: submissionRequest.websiteUrl ?? null,
+            sourceContent: submissionRequest.content ?? null,
+            userNotes: submissionRequest.notes ?? "",
+            strategicContext: {
+              goal,
+              icp: resolvedIcpLabel,
+              differentiationFocus: differentiationFocus,
+              objectionFocus: objectionFocus,
+            },
+            tone: strategy.tone,
+            length: strategy.length,
+            emphasis: [...strategy.emphasis],
+            constraints: strategy.constraints ?? "",
+            audience: strategy.audience ?? "",
+            strategyContext: {
+              target: submissionRequest.rewriteType,
+              goal,
+              icp: resolvedIcpLabel,
+              tone: strategy.tone,
+              length: strategy.length,
+              emphasis: [...strategy.emphasis],
+              constraints: strategy.constraints ?? "",
+              audience: strategy.audience ?? "",
+              focus: {
+                differentiation: differentiationFocus,
+                objection: objectionFocus,
+              },
+              schemaVersion: 1,
+            },
+            idempotencyKey: submissionRequest.idempotencyKey,
+            hypothesis: submissionRequest.hypothesis,
+            deltaMetrics:
+              result.deltaLexicalSimilarity == null
+                ? null
+                : {
+                    lexical_similarity: result.deltaLexicalSimilarity,
+                    delta_level: submissionRequest.hypothesis.minimumDeltaLevel,
+                  },
+          };
+          const withoutCurrent = previous.filter(
+            (item) => item.requestRef !== nextRequestRef,
+          );
+          const withoutControl = syntheticControl
+            ? withoutCurrent.filter(
+                (item) => item.requestRef !== syntheticControl.requestRef,
+              )
+            : withoutCurrent;
+          return syntheticControl
+            ? [nextVersion, syntheticControl, ...withoutControl]
+            : [nextVersion, ...withoutControl];
+        });
+      }
       setRequest((previous) => ({
         ...previous,
         idempotencyKey: createIdempotencyKey(),
       }));
       toast({
-        title: "Rewrite generated",
-        description: "Your output is ready to copy or export.",
+        title: result.idempotentReplay ? "Previous result returned" : "Rewrite generated",
+        description: result.idempotentReplay
+          ? "Duplicate request detected. Force a new variation to run a fresh generation."
+          : "Your output is ready to copy or export.",
       });
       setRefineMode(false);
       setDeltaInstructions("");
@@ -797,6 +1089,19 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
   const handleCancel = () => {
     abortRef.current?.abort();
+  };
+
+  const handleForceNewVariation = () => {
+    if (running) {
+      return;
+    }
+    const forcedIdempotencyKey = createIdempotencyKey();
+    setRequest((previous) => ({
+      ...previous,
+      idempotencyKey: forcedIdempotencyKey,
+    }));
+    setIdempotentReplay(false);
+    void handleSubmit(forcedIdempotencyKey);
   };
 
   const openVersion = (requestRefToOpen: string) => {
@@ -867,6 +1172,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       constraints: version.constraints ?? "",
       audience: version.audience ?? "",
     }));
+    setHypothesis(normalizeHypothesis(version.hypothesis));
     setRefineMode(false);
     setDeltaInstructions("");
     setCompareMode(false);
@@ -946,6 +1252,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       constraints: version.constraints ?? "",
       audience: version.audience ?? "",
     }));
+    setHypothesis(normalizeHypothesis(version.hypothesis));
     setRefineMode(false);
     setDeltaInstructions("");
     setCompareMode(false);
@@ -982,6 +1289,30 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       return;
     }
     downloadBlob(exported.filename, exported.blob);
+  };
+
+  const handleCompareExport = async (format: "markdown" | "html" | "pdf") => {
+    if (!requestRef) {
+      throw new Error("Generate a current rewrite before exporting comparison.");
+    }
+    if (!selectedBaselineRef || selectedBaselineRef === ORIGINAL_BASELINE_REF) {
+      throw new Error("Select a saved baseline version for server compare export.");
+    }
+    setCompareExportRunning(true);
+    try {
+      const exported = await exportRewriteComparison({
+        baselineRequestRef: selectedBaselineRef,
+        currentRequestRef: requestRef,
+        format,
+      });
+      if (format === "pdf") {
+        await printHtmlBlob(exported.blob);
+        return;
+      }
+      downloadBlob(exported.filename, exported.blob);
+    } finally {
+      setCompareExportRunning(false);
+    }
   };
 
   const handleMarkWinner = async (winnerRequestRef: string) => {
@@ -1068,8 +1399,29 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           currentRequestRef={requestRef}
           baselineTimestampLabel={baselineTimestampLabel}
           currentTimestampLabel={currentTimestampLabel}
+          baselineVersionNumber={baselineVersionRecord?.versionNumber ?? null}
+          currentVersionNumber={currentVersionRecord?.versionNumber ?? null}
           baselineIsWinner={Boolean(baselineVersionRecord?.isWinner)}
           currentIsWinner={Boolean(currentVersionRecord?.isWinner)}
+          baselineIsControl={Boolean(baselineVersionRecord?.isControl)}
+          currentIsControl={Boolean(currentVersionRecord?.isControl)}
+          hypothesisSummary={{
+            type:
+              currentVersionRecord?.hypothesis?.type ??
+              hypothesis.type,
+            minimumDeltaLevel:
+              currentVersionRecord?.hypothesis?.minimumDeltaLevel ??
+              hypothesis.minimumDeltaLevel,
+            controlledVariables:
+              currentVersionRecord?.hypothesis?.controlledVariables ??
+              hypothesis.controlledVariables,
+            treatmentVariables:
+              currentVersionRecord?.hypothesis?.treatmentVariables ??
+              hypothesis.treatmentVariables,
+            successCriteria:
+              currentVersionRecord?.hypothesis?.successCriteria ??
+              hypothesis.successCriteria,
+          }}
           onMarkBaselineWinner={
             baselineVersionRecord
               ? () => handleMarkWinner(baselineVersionRecord.requestRef)
@@ -1080,12 +1432,31 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               ? () => handleMarkWinner(currentVersionRecord.requestRef)
               : undefined
           }
-          winnerActionDisabled={winnerMutationRunning || running}
+          winnerActionDisabled={winnerMutationRunning || running || idempotentReplay}
           compareBaselineOptions={baselineOptions}
           selectedBaselineRef={selectedBaselineRef}
           originalBaselineMap={originalBaselineMap}
           originalBaselineMapLoading={originalBaselineMapLoading}
           originalBaselineMapError={originalBaselineMapError}
+          canServerExport={Boolean(
+            requestRef &&
+              selectedBaselineRef &&
+              selectedBaselineRef !== ORIGINAL_BASELINE_REF,
+          )}
+          exportingCompare={compareExportRunning}
+          onExportCompare={(format) => {
+            void handleCompareExport(format).catch((exportError: unknown) => {
+              const message =
+                exportError instanceof Error
+                  ? exportError.message
+                  : "Unable to export comparison.";
+              setError(message);
+              toast({
+                title: "Compare export failed",
+                description: message,
+              });
+            });
+          }}
           onSelectBaseline={setSelectedBaselineRef}
           onExitCompare={() => setCompareMode(false)}
         />
@@ -1101,12 +1472,14 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             <RewriteInputPanel
               value={request}
               strategy={strategy}
+              hypothesis={hypothesis}
               refineMode={refineMode}
               deltaInstructions={deltaInstructions}
               running={running}
               enforceSectionLabels={enforceSectionLabels}
               onChange={setRequest}
               onStrategyChange={setStrategy}
+              onHypothesisChange={setHypothesis}
               onEnforceSectionLabelsChange={setEnforceSectionLabels}
               onDeltaInstructionsChange={setDeltaInstructions}
               onSubmit={() => void handleSubmit()}
@@ -1200,6 +1573,24 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-4">
+              {idempotentReplay ? (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                  <p className="font-medium">
+                    Previous result returned (duplicate request detected).
+                  </p>
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="outline"
+                      disabled={running}
+                      onClick={handleForceNewVariation}
+                    >
+                      Force new variation
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
               <RewriteExecutiveSummaryCard
                 output={output}
                 compareMode={compareMode}
@@ -1219,6 +1610,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   isWinner: Boolean(currentVersionRecord?.isWinner),
                   winnerLabel: currentVersionRecord?.winnerLabel ?? null,
                   strategySnapshot,
+                  deltaMetrics: currentVersionRecord?.deltaMetrics ?? null,
+                  idempotentReplay,
                 }}
                 onRetry={() => void handleSubmit()}
               />
@@ -1283,6 +1676,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">
                       {item.rewriteType === "pricing" ? "Pricing" : "Homepage"}
+                    </Badge>
+                    <Badge variant="secondary">
+                      {item.isControl ? "Control" : "Treatment"}
                     </Badge>
                     <Badge variant="secondary">Saved</Badge>
                     {item.tone ? (

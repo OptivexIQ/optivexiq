@@ -11,7 +11,6 @@ import {
   FileCode2,
   FileText,
   FileType2,
-  Printer,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,8 +46,12 @@ type RewriteComparisonPanelProps = {
   currentRequestRef: string | null;
   baselineTimestampLabel: string;
   currentTimestampLabel: string;
+  baselineVersionNumber?: number | null;
+  currentVersionNumber?: number | null;
   baselineIsWinner?: boolean;
   currentIsWinner?: boolean;
+  baselineIsControl?: boolean;
+  currentIsControl?: boolean;
   onMarkBaselineWinner?: () => void | Promise<void>;
   onMarkCurrentWinner?: () => void | Promise<void>;
   winnerActionDisabled?: boolean;
@@ -60,6 +63,16 @@ type RewriteComparisonPanelProps = {
   originalBaselineMap: RewriteSectionMapResult | null;
   originalBaselineMapLoading: boolean;
   originalBaselineMapError: string | null;
+  canServerExport?: boolean;
+  exportingCompare?: boolean;
+  hypothesisSummary: {
+    type: string;
+    minimumDeltaLevel: string;
+    controlledVariables: string[];
+    treatmentVariables: string[];
+    successCriteria: string;
+  };
+  onExportCompare: (format: "markdown" | "html" | "pdf") => void;
   onSelectBaseline: (requestRef: string) => void;
   onExitCompare: () => void;
 };
@@ -230,8 +243,12 @@ export function RewriteComparisonPanel({
   currentRequestRef,
   baselineTimestampLabel,
   currentTimestampLabel,
+  baselineVersionNumber,
+  currentVersionNumber,
   baselineIsWinner = false,
   currentIsWinner = false,
+  baselineIsControl = false,
+  currentIsControl = false,
   onMarkBaselineWinner,
   onMarkCurrentWinner,
   winnerActionDisabled = false,
@@ -240,6 +257,10 @@ export function RewriteComparisonPanel({
   originalBaselineMap,
   originalBaselineMapLoading,
   originalBaselineMapError,
+  canServerExport = false,
+  exportingCompare = false,
+  hypothesisSummary,
+  onExportCompare,
   onSelectBaseline,
   onExitCompare,
 }: RewriteComparisonPanelProps) {
@@ -290,12 +311,10 @@ export function RewriteComparisonPanel({
     "comfortable",
   );
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const baselineVersionLabel = isOriginalBaselineSelected
-    ? "Version 0"
-    : "Version 1";
-  const baselineTitle = isOriginalBaselineSelected
-    ? "Original Draft"
-    : "Previous Draft";
+  const baselineVersionLabel = baselineIsControl
+    ? "Control (original input)"
+    : `Treatment v${baselineVersionNumber ?? "?"}`;
+  const baselineTitle = baselineIsControl ? "Original Input" : "Previous Draft";
   const baselineMeta = isOriginalBaselineSelected
     ? "Source content"
     : `${baselineTimestampLabel} | ${selectedBaselineRef ?? "No ref"}`;
@@ -381,107 +400,6 @@ export function RewriteComparisonPanel({
       (row) => row.changed || !row.hasPrevious || !row.hasCurrent,
     );
   }, [alignedRows, showUnchangedSections]);
-
-  const buildComparisonMarkdown = () => {
-    const lines: string[] = [];
-    lines.push("# Compare Versions");
-    lines.push("");
-    lines.push(`- ${baselineVersionLabel}: ${baselineTitle}`);
-    lines.push(`- Baseline: ${baselineMeta}`);
-    lines.push(`- Version 2: Current Generation`);
-    lines.push(`- Timestamp: ${currentTimestampLabel}`);
-    lines.push(`- Ref: ${currentRequestRef ?? "No ref"}`);
-    lines.push("");
-    lines.push("## Section Comparison");
-    lines.push("");
-
-    for (const row of visibleRows) {
-      lines.push(`### ${row.title}`);
-      lines.push(`Changed: ${row.changed ? "Yes" : "No"}`);
-      lines.push("");
-      lines.push("#### Previous");
-      lines.push(
-        row.hasPrevious ? row.previousBody : "Not present in previous draft.",
-      );
-      lines.push("");
-      lines.push("#### Current");
-      lines.push(
-        row.hasCurrent ? row.currentBody : "Not present in current generation.",
-      );
-      lines.push("");
-    }
-
-    return `${lines.join("\n").trimEnd()}\n`;
-  };
-
-  const toHtmlDocument = (markdown: string) => {
-    const escaped = escapeHtml(markdown);
-    return [
-      "<!doctype html>",
-      '<html lang="en">',
-      "<head>",
-      '  <meta charset="utf-8" />',
-      '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
-      "  <title>Rewrite Comparison Export</title>",
-      "  <style>",
-      "    body { font-family: Inter, Arial, sans-serif; margin: 24px; color: #111827; line-height: 1.6; }",
-      "    pre { white-space: pre-wrap; word-break: break-word; margin: 0; }",
-      "  </style>",
-      "</head>",
-      "<body>",
-      `  <pre>${escaped}</pre>`,
-      "</body>",
-      "</html>",
-      "",
-    ].join("\n");
-  };
-
-  const downloadContent = (filename: string, type: string, content: string) => {
-    const blob = new Blob([content], { type });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
-  const handleExport = (format: "markdown" | "html" | "pdf") => {
-    const markdown = buildComparisonMarkdown();
-    if (format === "markdown") {
-      downloadContent("rewrite-comparison.md", "text/markdown", markdown);
-      return;
-    }
-
-    const html = toHtmlDocument(markdown);
-    if (format === "html") {
-      downloadContent("rewrite-comparison.html", "text/html", html);
-      return;
-    }
-
-    const win = window.open("", "_blank", "noopener,noreferrer");
-    if (!win) {
-      return;
-    }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    win.print();
-  };
-
-  const handlePrint = () => {
-    const markdown = buildComparisonMarkdown();
-    const html = toHtmlDocument(markdown);
-    const win = window.open("", "_blank", "noopener,noreferrer");
-    if (!win) {
-      return;
-    }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    win.print();
-  };
 
   const handleCopySection = async (key: string, body: string) => {
     await navigator.clipboard.writeText(body);
@@ -689,6 +607,7 @@ export function RewriteComparisonPanel({
                     variant={baselineIsWinner ? "secondary" : "outline"}
                     disabled={
                       isOriginalBaselineSelected ||
+                      baselineIsControl ||
                       winnerActionDisabled ||
                       !onMarkBaselineWinner
                     }
@@ -700,11 +619,13 @@ export function RewriteComparisonPanel({
               </div>
               <div className="bg-secondary/20 px-4 py-3">
               <p className="text-xs font-semibold text-muted-foreground">
-                Version 2
+                {currentIsControl
+                  ? "Control (original input)"
+                  : `Treatment v${currentVersionNumber ?? "?"}`}
               </p>
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-foreground">
-                    Current Generation
+                    {currentIsControl ? "Original Input" : "Current Generation"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {currentTimestampLabel} | {currentRequestRef ?? "No ref"}
@@ -715,13 +636,51 @@ export function RewriteComparisonPanel({
                     type="button"
                     size="xs"
                     variant={currentIsWinner ? "secondary" : "outline"}
-                    disabled={winnerActionDisabled || !onMarkCurrentWinner}
+                    disabled={winnerActionDisabled || currentIsControl || !onMarkCurrentWinner}
                     onClick={() => void onMarkCurrentWinner?.()}
                   >
                     {currentIsWinner ? "Winner" : "Mark winner"}
                   </Button>
                 </div>
               </div>
+          </div>
+
+          <div className="border-t border-border/60 bg-card/10 px-4 py-3">
+            <p className="text-sm font-semibold text-foreground">
+              Experiment Summary
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded bg-secondary/40 px-2 py-1 text-foreground/85">
+                Hypothesis: {toDisplayLabel(hypothesisSummary.type.replaceAll("_", "-"))}
+              </span>
+              <span className="rounded bg-secondary/40 px-2 py-1 text-foreground/85">
+                Delta: {toDisplayLabel(hypothesisSummary.minimumDeltaLevel)}
+              </span>
+              <span className="rounded bg-secondary/40 px-2 py-1 text-foreground/85">
+                Locked controls:{" "}
+                {hypothesisSummary.controlledVariables.length > 0
+                  ? hypothesisSummary.controlledVariables
+                      .map((item) => toDisplayLabel(item.replaceAll("_", "-")))
+                      .join(", ")
+                  : "N/A"}
+              </span>
+              <span className="rounded bg-secondary/40 px-2 py-1 text-foreground/85">
+                Changed treatments:{" "}
+                {hypothesisSummary.treatmentVariables.length > 0
+                  ? hypothesisSummary.treatmentVariables
+                      .map((item) => toDisplayLabel(item.replaceAll("_", "-")))
+                      .join(", ")
+                  : "N/A"}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Success criteria:{" "}
+              <span className="text-foreground/90">
+                {hypothesisSummary.successCriteria.trim().length > 0
+                  ? hypothesisSummary.successCriteria
+                  : "N/A"}
+              </span>
+            </p>
           </div>
 
           <div className="border-t border-border/60 bg-card/10 px-4 py-3">
@@ -769,35 +728,31 @@ export function RewriteComparisonPanel({
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline" size="xs">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      disabled={!canServerExport || exportingCompare}
+                    >
                       <Download className="h-4 w-4" />
-                      Export
+                      {exportingCompare ? "Exporting..." : "Export"}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => handleExport("markdown")}>
+                    <DropdownMenuItem onSelect={() => onExportCompare("markdown")}>
                       <FileText className="h-4 w-4" />
                       Markdown (.md)
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleExport("html")}>
+                    <DropdownMenuItem onSelect={() => onExportCompare("html")}>
                       <FileCode2 className="h-4 w-4" />
                       HTML (.html)
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleExport("pdf")}>
+                    <DropdownMenuItem onSelect={() => onExportCompare("pdf")}>
                       <FileType2 className="h-4 w-4" />
                       PDF (.pdf)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={handlePrint}
-                >
-                  <Printer className="h-4 w-4" />
-                  Print
-                </Button>
               </div>
             </div>
           </div>

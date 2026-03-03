@@ -4,6 +4,8 @@ import type { RewriteGenerateRequest } from "@/features/rewrites/types/rewrites.
 export type RewriteHistoryRecord = {
   id: string;
   requestRef: string;
+  isControl: boolean;
+  controlRequestRef: string | null;
   experimentGroupId: string | null;
   parentRequestRef: string | null;
   versionNumber: number;
@@ -26,6 +28,11 @@ export type RewriteHistoryRecord = {
     };
     schemaVersion: number;
   };
+  hypothesis: RewriteGenerateRequest["hypothesis"];
+  promptVersion: number;
+  systemTemplateVersion: number;
+  modelTemperature: number;
+  deltaMetrics: Record<string, unknown> | null;
   rewriteType: RewriteGenerateRequest["rewriteType"];
   websiteUrl: string | null;
   notes: string | null;
@@ -37,6 +44,8 @@ export type RewriteHistoryRecord = {
 type RewriteHistoryRow = {
   id: string;
   request_ref: string;
+  is_control: boolean;
+  control_request_ref: string | null;
   experiment_group_id: string | null;
   parent_request_ref: string | null;
   version_number: number;
@@ -45,6 +54,15 @@ type RewriteHistoryRow = {
   winner_marked_at: string | null;
   idempotency_key: string;
   strategy_context: unknown;
+  hypothesis_type: unknown;
+  controlled_variables: unknown;
+  treatment_variables: unknown;
+  success_criteria: unknown;
+  minimum_delta_level: unknown;
+  prompt_version: unknown;
+  system_template_version: unknown;
+  model_temperature: unknown;
+  delta_metrics: unknown;
   rewrite_type: RewriteGenerateRequest["rewriteType"];
   website_url: string | null;
   notes: string | null;
@@ -73,6 +91,8 @@ function mapHistoryRow(row: RewriteHistoryRow): RewriteHistoryRecord {
   return {
     id: row.id,
     requestRef: row.request_ref,
+    isControl: row.is_control,
+    controlRequestRef: row.control_request_ref,
     experimentGroupId: row.experiment_group_id,
     parentRequestRef: row.parent_request_ref,
     versionNumber: row.version_number,
@@ -113,6 +133,61 @@ function mapHistoryRow(row: RewriteHistoryRow): RewriteHistoryRecord {
           ? strategy.schema_version
           : 1,
     },
+    hypothesis: {
+      type:
+        row.hypothesis_type === "positioning_shift" ||
+        row.hypothesis_type === "objection_attack" ||
+        row.hypothesis_type === "differentiation_emphasis" ||
+        row.hypothesis_type === "risk_reduction" ||
+        row.hypothesis_type === "authority_increase" ||
+        row.hypothesis_type === "clarity_simplification"
+          ? row.hypothesis_type
+          : "clarity_simplification",
+      controlledVariables: Array.isArray(row.controlled_variables)
+        ? row.controlled_variables.filter(
+            (item): item is RewriteGenerateRequest["hypothesis"]["controlledVariables"][number] =>
+              item === "audience" ||
+              item === "tone" ||
+              item === "structure" ||
+              item === "value_prop" ||
+              item === "cta_type" ||
+              item === "proof_points" ||
+              item === "pricing_frame",
+          )
+        : [],
+      treatmentVariables: Array.isArray(row.treatment_variables)
+        ? row.treatment_variables.filter(
+            (item): item is RewriteGenerateRequest["hypothesis"]["treatmentVariables"][number] =>
+              item === "headline" ||
+              item === "primary_cta" ||
+              item === "objection_handling" ||
+              item === "differentiators" ||
+              item === "risk_reversal" ||
+              item === "proof_depth" ||
+              item === "pricing_anchor",
+          )
+        : [],
+      successCriteria:
+        typeof row.success_criteria === "string" ? row.success_criteria : "",
+      minimumDeltaLevel:
+        row.minimum_delta_level === "light" ||
+        row.minimum_delta_level === "moderate" ||
+        row.minimum_delta_level === "strong"
+          ? row.minimum_delta_level
+          : "light",
+    },
+    promptVersion:
+      typeof row.prompt_version === "number" ? row.prompt_version : 1,
+    systemTemplateVersion:
+      typeof row.system_template_version === "number"
+        ? row.system_template_version
+        : 1,
+    modelTemperature:
+      typeof row.model_temperature === "number" ? row.model_temperature : 0.35,
+    deltaMetrics:
+      row.delta_metrics && typeof row.delta_metrics === "object"
+        ? (row.delta_metrics as Record<string, unknown>)
+        : null,
     rewriteType: row.rewrite_type,
     websiteUrl: row.website_url,
     notes: row.notes,
@@ -130,7 +205,7 @@ export async function listRewriteHistoryForUser(
   const { data, error } = await supabase
     .from("rewrite_generations")
     .select(
-      "id, request_ref, experiment_group_id, parent_request_ref, version_number, is_winner, winner_label, winner_marked_at, idempotency_key, strategy_context, rewrite_type, website_url, notes, source_content, output_markdown, created_at",
+      "id, request_ref, is_control, control_request_ref, experiment_group_id, parent_request_ref, version_number, is_winner, winner_label, winner_marked_at, idempotency_key, strategy_context, hypothesis_type, controlled_variables, treatment_variables, success_criteria, minimum_delta_level, prompt_version, system_template_version, model_temperature, delta_metrics, rewrite_type, website_url, notes, source_content, output_markdown, created_at",
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -151,7 +226,7 @@ export async function getRewriteHistoryByRequestRefForUser(
   const { data, error } = await supabase
     .from("rewrite_generations")
     .select(
-      "id, request_ref, experiment_group_id, parent_request_ref, version_number, is_winner, winner_label, winner_marked_at, idempotency_key, strategy_context, rewrite_type, website_url, notes, source_content, output_markdown, created_at",
+      "id, request_ref, is_control, control_request_ref, experiment_group_id, parent_request_ref, version_number, is_winner, winner_label, winner_marked_at, idempotency_key, strategy_context, hypothesis_type, controlled_variables, treatment_variables, success_criteria, minimum_delta_level, prompt_version, system_template_version, model_temperature, delta_metrics, rewrite_type, website_url, notes, source_content, output_markdown, created_at",
     )
     .eq("user_id", userId)
     .eq("request_ref", requestRef)
@@ -177,7 +252,7 @@ export async function getRewriteHistoryByIdempotencyKeyForUser(
   const { data, error } = await supabase
     .from("rewrite_generations")
     .select(
-      "id, request_ref, experiment_group_id, parent_request_ref, version_number, is_winner, winner_label, winner_marked_at, idempotency_key, strategy_context, rewrite_type, website_url, notes, source_content, output_markdown, created_at",
+      "id, request_ref, is_control, control_request_ref, experiment_group_id, parent_request_ref, version_number, is_winner, winner_label, winner_marked_at, idempotency_key, strategy_context, hypothesis_type, controlled_variables, treatment_variables, success_criteria, minimum_delta_level, prompt_version, system_template_version, model_temperature, delta_metrics, rewrite_type, website_url, notes, source_content, output_markdown, created_at",
     )
     .eq("user_id", userId)
     .eq("idempotency_key", key)

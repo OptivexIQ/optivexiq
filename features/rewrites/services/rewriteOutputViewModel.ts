@@ -21,8 +21,9 @@ export type RewriteOutputViewModel = {
   confidence: RewriteConfidence | null;
 };
 
-function toSummaryBullets(summaryMarkdown: string): string[] {
-  return summaryMarkdown
+function toSummaryBullets(controlMarkdown: string, treatmentMarkdown: string): string[] {
+  const combined = [controlMarkdown, treatmentMarkdown].filter(Boolean).join("\n");
+  return combined
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => /^[-*]\s+/.test(line))
@@ -125,9 +126,12 @@ export function buildRewriteOutputViewModel(markdown: string): RewriteOutputView
     };
   }
 
-  const rationaleParagraph = normalizeRationaleParagraph(structured.rationale);
+  const rationaleParagraph = normalizeRationaleParagraph(structured.changeSummary);
   return {
-    summaryBullets: toSummaryBullets(structured.strategySummary),
+    summaryBullets: toSummaryBullets(
+      structured.controlSummary,
+      structured.treatmentPlan,
+    ),
     copySections: splitRewriteSubsections(structured.proposedRewrite),
     rationaleSections:
       rationaleParagraph.length > 0

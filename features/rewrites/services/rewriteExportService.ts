@@ -8,6 +8,25 @@ type BuildRewriteExportDocumentParams = {
   rewriteType: RewriteType;
   outputMarkdown: string;
   format: RewriteExportFormat;
+  metadata?: {
+    requestRef?: string | null;
+    experimentGroupId?: string | null;
+    versionNumber?: number | null;
+    parentRequestRef?: string | null;
+    isWinner?: boolean;
+    winnerLabel?: string | null;
+    hypothesis?: {
+      type: string;
+      controlledVariables: string[];
+      treatmentVariables: string[];
+      successCriteria: string;
+      minimumDeltaLevel: string;
+    } | null;
+    deltaMetrics?: Record<string, unknown> | null;
+    promptVersion?: number | null;
+    systemTemplateVersion?: number | null;
+    modelTemperature?: number | null;
+  };
 };
 
 export type RewriteExportDocument = {
@@ -63,11 +82,110 @@ function toHtmlDocument(markdown: string) {
 function toStructuredMarkdownDocument(
   output: string,
   rewriteType: RewriteType,
+  metadata?: BuildRewriteExportDocumentParams["metadata"],
 ) {
   const model = buildRewriteOutputViewModel(output);
   const lines: string[] = [];
   lines.push(`# ${rewriteType === "pricing" ? "Pricing" : "Homepage"} Rewrite`);
   lines.push("");
+  lines.push("## Experiment Metadata");
+  lines.push(
+    `- Request ref: ${metadata?.requestRef?.trim() ? metadata.requestRef : "N/A"}`,
+  );
+  lines.push(
+    `- Experiment ID: ${metadata?.experimentGroupId?.trim() ? metadata.experimentGroupId : "N/A"}`,
+  );
+  lines.push(
+    `- Version: ${typeof metadata?.versionNumber === "number" ? metadata.versionNumber : "N/A"}`,
+  );
+  lines.push(
+    `- Parent version: ${metadata?.parentRequestRef?.trim() ? metadata.parentRequestRef : "N/A"}`,
+  );
+  lines.push(
+    `- Winner: ${metadata?.isWinner ? `yes${metadata.winnerLabel ? ` (${metadata.winnerLabel})` : ""}` : "no"}`,
+  );
+  lines.push("");
+
+  lines.push("## Hypothesis Contract");
+  lines.push(`- Type: ${metadata?.hypothesis?.type ?? "N/A"}`);
+  lines.push(
+    `- Controlled variables: ${
+      metadata?.hypothesis?.controlledVariables?.length
+        ? metadata.hypothesis.controlledVariables.join(", ")
+        : "N/A"
+    }`,
+  );
+  lines.push(
+    `- Treatment variables: ${
+      metadata?.hypothesis?.treatmentVariables?.length
+        ? metadata.hypothesis.treatmentVariables.join(", ")
+        : "N/A"
+    }`,
+  );
+  lines.push(
+    `- Success criteria: ${metadata?.hypothesis?.successCriteria?.trim() ? metadata.hypothesis.successCriteria : "N/A"}`,
+  );
+  lines.push(
+    `- Minimum delta level: ${metadata?.hypothesis?.minimumDeltaLevel ?? "N/A"}`,
+  );
+  lines.push("");
+
+  lines.push("## Delta Metrics");
+  lines.push(
+    `- Lexical similarity: ${
+      typeof metadata?.deltaMetrics?.lexical_similarity === "number"
+        ? metadata.deltaMetrics.lexical_similarity.toFixed(4)
+        : "N/A"
+    }`,
+  );
+  lines.push(
+    `- Headline changed: ${
+      typeof metadata?.deltaMetrics?.headline_changed === "boolean"
+        ? metadata.deltaMetrics.headline_changed
+          ? "yes"
+          : "no"
+        : "N/A"
+    }`,
+  );
+  lines.push(
+    `- CTA changed: ${
+      typeof metadata?.deltaMetrics?.cta_changed === "boolean"
+        ? metadata.deltaMetrics.cta_changed
+          ? "yes"
+          : "no"
+        : "N/A"
+    }`,
+  );
+  lines.push(
+    `- Structure changed: ${
+      typeof metadata?.deltaMetrics?.structure_changed === "boolean"
+        ? metadata.deltaMetrics.structure_changed
+          ? "yes"
+          : "no"
+        : "N/A"
+    }`,
+  );
+  lines.push(
+    `- Delta level: ${
+      typeof metadata?.deltaMetrics?.delta_level === "string"
+        ? metadata.deltaMetrics.delta_level
+        : "N/A"
+    }`,
+  );
+  lines.push("");
+
+  lines.push("## Prompt & Model Metadata");
+  lines.push(
+    `- Prompt version: ${typeof metadata?.promptVersion === "number" ? metadata.promptVersion : "N/A"}`,
+  );
+  lines.push(
+    `- System template version: ${typeof metadata?.systemTemplateVersion === "number" ? metadata.systemTemplateVersion : "N/A"}`,
+  );
+  lines.push(
+    `- Model temperature: ${typeof metadata?.modelTemperature === "number" ? metadata.modelTemperature.toFixed(2) : "N/A"}`,
+  );
+  lines.push("");
+
   lines.push("## Executive Rewrite Summary");
   if (model.summaryBullets.length > 0) {
     for (const bullet of model.summaryBullets.slice(0, 3)) {
@@ -110,6 +228,7 @@ export function buildRewriteExportDocument(
   const structuredMarkdown = toStructuredMarkdownDocument(
     params.outputMarkdown,
     params.rewriteType,
+    params.metadata,
   );
 
   if (params.format === "markdown") {

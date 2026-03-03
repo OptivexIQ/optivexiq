@@ -10,6 +10,10 @@ type SaveRewriteRecordParams = {
   input: RewriteGenerateRequestValues;
   outputMarkdown: string;
   model: string;
+  promptVersion: number;
+  systemTemplateVersion: number;
+  modelTemperature: number;
+  deltaMetrics: Record<string, unknown> | null;
   tokensInput: number;
   tokensOutput: number;
   costCents: number;
@@ -19,6 +23,7 @@ type PersistedLineage = {
   experimentGroupId: string;
   parentRequestRef: string | null;
   versionNumber: number;
+  controlRequestRef: string | null;
 };
 
 function normalizeNullable(value: string | undefined) {
@@ -53,10 +58,41 @@ function toPersistedStrategyContext(input: RewriteGenerateRequestValues) {
   };
 }
 
+function toPersistedHypothesis(input: RewriteGenerateRequestValues) {
+  return {
+    hypothesis_type: input.hypothesis.type,
+    controlled_variables: input.hypothesis.controlledVariables,
+    treatment_variables: input.hypothesis.treatmentVariables,
+    success_criteria: input.hypothesis.successCriteria.trim(),
+    minimum_delta_level: input.hypothesis.minimumDeltaLevel,
+  };
+}
+
 export function generateRewriteRequestRef() {
   const timestamp = Date.now();
   const randomSuffix = randomInt(0, 1000).toString().padStart(3, "0");
   return `RW-${timestamp}-${randomSuffix}`;
+}
+
+function buildControlRequestRef(treatmentRequestRef: string) {
+  return `${treatmentRequestRef}-control`;
+}
+
+function buildControlOutputMarkdown(input: RewriteGenerateRequestValues) {
+  const lines: string[] = [];
+  lines.push("## Original Input (Control)");
+  if (input.websiteUrl?.trim()) {
+    lines.push(`- URL: ${input.websiteUrl.trim()}`);
+  }
+  lines.push("");
+  if (input.content?.trim()) {
+    lines.push(input.content.trim());
+  } else {
+    lines.push(
+      "_No pasted source content provided for this control baseline._",
+    );
+  }
+  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 export async function saveRewriteRecord(
@@ -81,12 +117,13 @@ export async function saveRewriteRecord(
         experimentGroupId: randomUUID(),
         parentRequestRef: null,
         versionNumber: 1,
+        controlRequestRef: null,
       };
     }
 
     const { data, error } = await supabase
       .from("rewrite_generations")
-      .select("experiment_group_id, version_number")
+      .select("experiment_group_id, version_number, control_request_ref")
       .eq("user_id", params.userId)
       .eq("request_ref", parentRequestRef)
       .maybeSingle();
@@ -103,6 +140,7 @@ export async function saveRewriteRecord(
         experimentGroupId: randomUUID(),
         parentRequestRef: null,
         versionNumber: 1,
+        controlRequestRef: null,
       };
     }
 
@@ -117,6 +155,7 @@ export async function saveRewriteRecord(
         experimentGroupId: randomUUID(),
         parentRequestRef: null,
         versionNumber: 1,
+        controlRequestRef: null,
       };
     }
 
@@ -124,10 +163,61 @@ export async function saveRewriteRecord(
       experimentGroupId: data.experiment_group_id as string,
       parentRequestRef,
       versionNumber: Math.max(1, Number(data.version_number ?? 1) + 1),
+      controlRequestRef:
+        typeof data.control_request_ref === "string" &&
+        data.control_request_ref.trim().length > 0
+          ? data.control_request_ref.trim()
+          : null,
     };
   };
 
   const lineage = await resolveLineage();
+  const controlRequestRef =
+    lineage.controlRequestRef ??
+    (lineage.parentRequestRef ? null : buildControlRequestRef(params.requestRef));
+
+  if (controlRequestRef && !lineage.parentRequestRef) {
+    const controlIdempotencyKey = `${params.input.idempotencyKey}:control`;
+    const { error: controlError } = await supabase.from("rewrite_generations").insert({
+      user_id: params.userId,
+      request_id: `${params.requestId}:control`,
+      request_ref: controlRequestRef,
+      idempotency_key: controlIdempotencyKey,
+      experiment_group_id: lineage.experimentGroupId,
+      parent_request_ref: null,
+      version_number: 0,
+      is_control: true,
+      control_request_ref: controlRequestRef,
+      rewrite_type: params.input.rewriteType,
+      website_url: normalizeNullable(params.input.websiteUrl),
+      notes: toPersistedNotes(params.input),
+      strategy_context: toPersistedStrategyContext(params.input),
+      ...toPersistedHypothesis(params.input),
+      source_content: normalizeNullable(params.input.content),
+      output_markdown: buildControlOutputMarkdown(params.input),
+      rewrite_output_schema_version: 1,
+      prompt_version: Math.max(1, Math.floor(params.promptVersion)),
+      system_template_version: Math.max(
+        1,
+        Math.floor(params.systemTemplateVersion),
+      ),
+      model_temperature: 0,
+      delta_metrics: null,
+      model: "control_baseline",
+      tokens_input: 0,
+      tokens_output: 0,
+      cost_cents: 0,
+    });
+
+    if (controlError && controlError.code !== "23505") {
+      logger.error("Failed to persist control baseline rewrite generation.", controlError, {
+        user_id: params.userId,
+        request_id: params.requestId,
+        request_ref: controlRequestRef,
+      });
+      return { ok: false, error: controlError.message };
+    }
+  }
 
   const { error } = await supabase.from("rewrite_generations").insert({
     user_id: params.userId,
@@ -137,13 +227,23 @@ export async function saveRewriteRecord(
     experiment_group_id: lineage.experimentGroupId,
     parent_request_ref: lineage.parentRequestRef,
     version_number: lineage.versionNumber,
+    is_control: false,
+    control_request_ref: controlRequestRef,
     rewrite_type: params.input.rewriteType,
     website_url: normalizeNullable(params.input.websiteUrl),
     notes: toPersistedNotes(params.input),
     strategy_context: toPersistedStrategyContext(params.input),
+    ...toPersistedHypothesis(params.input),
     source_content: normalizeNullable(params.input.content),
     output_markdown: params.outputMarkdown,
     rewrite_output_schema_version: 1,
+    prompt_version: Math.max(1, Math.floor(params.promptVersion)),
+    system_template_version: Math.max(
+      1,
+      Math.floor(params.systemTemplateVersion),
+    ),
+    model_temperature: Math.max(0, Math.min(2, params.modelTemperature)),
+    delta_metrics: params.deltaMetrics,
     model: params.model,
     tokens_input: Math.max(0, Math.floor(params.tokensInput)),
     tokens_output: Math.max(0, Math.floor(params.tokensOutput)),

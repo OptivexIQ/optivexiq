@@ -11,6 +11,9 @@ export const REPORT_MUTATION_PATHS = new Set<string>([
 export type QuotaAction = "generate" | "gapReport";
 
 export function isRewriteExportPath(pathname: string): boolean {
+  if (pathname === "/api/rewrites/compare-export") {
+    return true;
+  }
   return /^\/api\/rewrites\/[^/]+\/export$/.test(pathname);
 }
 

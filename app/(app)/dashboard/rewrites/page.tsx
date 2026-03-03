@@ -181,6 +181,8 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
             const strategy = item.strategyContext;
             return {
               requestRef: item.requestRef,
+              isControl: item.isControl,
+              controlRequestRef: item.controlRequestRef,
               experimentGroupId: item.experimentGroupId ?? undefined,
               parentRequestRef: item.parentRequestRef ?? undefined,
               versionNumber: item.versionNumber,
@@ -205,6 +207,11 @@ export default async function RewritesPage({ searchParams }: RewritesPageProps) 
               constraints: strategy.constraints || undefined,
               audience: strategy.audience || undefined,
               idempotencyKey: item.idempotencyKey,
+              hypothesis: item.hypothesis,
+              promptVersion: item.promptVersion,
+              systemTemplateVersion: item.systemTemplateVersion,
+              modelTemperature: item.modelTemperature,
+              deltaMetrics: item.deltaMetrics,
               strategyContext: {
                 target: strategy.target,
                 goal: strategy.goal,

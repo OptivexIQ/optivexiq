@@ -16,6 +16,34 @@ export type RewriteEmphasis =
   | "pricing-clarity"
   | "proof-credibility";
 
+export type RewriteHypothesisType =
+  | "positioning_shift"
+  | "objection_attack"
+  | "differentiation_emphasis"
+  | "risk_reduction"
+  | "authority_increase"
+  | "clarity_simplification";
+
+export type RewriteControlledVariable =
+  | "audience"
+  | "tone"
+  | "structure"
+  | "value_prop"
+  | "cta_type"
+  | "proof_points"
+  | "pricing_frame";
+
+export type RewriteTreatmentVariable =
+  | "headline"
+  | "primary_cta"
+  | "objection_handling"
+  | "differentiators"
+  | "risk_reversal"
+  | "proof_depth"
+  | "pricing_anchor";
+
+export type RewriteMinimumDeltaLevel = "light" | "moderate" | "strong";
+
 export type RewriteStrategicContext = {
   target: RewriteType;
   goal: RewriteGoal;
@@ -34,6 +62,14 @@ export type RewriteStrategy = {
   audience?: string;
 };
 
+export type RewriteHypothesis = {
+  type: RewriteHypothesisType;
+  controlledVariables: RewriteControlledVariable[];
+  treatmentVariables: RewriteTreatmentVariable[];
+  successCriteria: string;
+  minimumDeltaLevel: RewriteMinimumDeltaLevel;
+};
+
 export type RewriteGenerateRequest = {
   rewriteType: RewriteType;
   idempotencyKey: string;
@@ -43,6 +79,7 @@ export type RewriteGenerateRequest = {
   notes?: string | null;
   strategicContext?: RewriteStrategicContext;
   rewriteStrategy?: RewriteStrategy;
+  hypothesis: RewriteHypothesis;
 };
 
 export type RewriteStreamOptions = {
@@ -55,6 +92,8 @@ export type RewriteStreamResult = {
   requestId: string | null;
   requestRef: string | null;
   requestCreatedAt: string | null;
+  idempotentReplay: boolean;
+  deltaLexicalSimilarity: number | null;
 };
 
 export type RewriteSectionMapResult = {
@@ -83,6 +122,8 @@ export type RewriteStudioInitialData = {
   };
   historyVersions?: Array<{
     requestRef: string;
+    isControl?: boolean;
+    controlRequestRef?: string | null;
     experimentGroupId?: string;
     parentRequestRef?: string | null;
     versionNumber?: number;
@@ -105,6 +146,11 @@ export type RewriteStudioInitialData = {
       };
       schemaVersion?: number;
     };
+    hypothesis?: RewriteHypothesis;
+    promptVersion?: number;
+    systemTemplateVersion?: number;
+    modelTemperature?: number;
+    deltaMetrics?: Record<string, unknown> | null;
     rewriteType: RewriteType;
     createdAt: string;
     outputMarkdown: string;
