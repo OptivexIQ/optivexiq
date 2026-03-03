@@ -8,15 +8,17 @@ import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewrit
 type RewriteExecutiveSummaryCardProps = {
   output: string;
   compareMode: boolean;
+  confidenceOverride?: string | null;
 };
 
 export function RewriteExecutiveSummaryCard({
   output,
   compareMode,
+  confidenceOverride,
 }: RewriteExecutiveSummaryCardProps) {
   const model = useMemo(() => buildRewriteOutputViewModel(output), [output]);
   const bullets = model.summaryBullets;
-  const confidence = model.confidence;
+  const confidence = confidenceOverride;
   const summaryParagraph = bullets.join(" ");
   const sanitizeUrl = (url: string) => {
     if (url.startsWith("#")) {

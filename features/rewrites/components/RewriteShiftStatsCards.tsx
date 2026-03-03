@@ -1,11 +1,14 @@
 ﻿"use client";
 
 import { CheckCircle2, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
-import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
 
 type RewriteShiftStatsCardsProps = {
-  output: string;
   running: boolean;
+  shiftStatsOverride?: {
+    clarityShift: string;
+    objectionShift: string;
+    positioningShift: "Strong" | "Moderate" | "Weak" | "Improving" | "Needs Work";
+  } | null;
 };
 
 function normalizeShiftValue(value: string) {
@@ -40,10 +43,10 @@ function normalizeShiftValue(value: string) {
 }
 
 export function RewriteShiftStatsCards({
-  output,
   running,
+  shiftStatsOverride,
 }: RewriteShiftStatsCardsProps) {
-  const shiftStats = buildRewriteOutputViewModel(output).shiftStats;
+  const shiftStats = shiftStatsOverride;
   if (!shiftStats) {
     const helperText = running
       ? "Generating shift metrics from this rewrite..."

@@ -39,7 +39,7 @@ import {
   streamRewrite,
 } from "@/features/rewrites/services/rewritesClient";
 import { hasAnyAllowedSectionLabel } from "@/features/rewrites/services/sectionLabelUtils";
-import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
+import { buildDeterministicRewriteMetrics } from "@/features/rewrites/services/rewriteMetricsViewModel";
 import { markWinnerAction } from "@/features/rewrites/actions/markWinner";
 import type {
   RewriteExportFormat,
@@ -377,10 +377,15 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     strategy.length,
     strategy.emphasis,
   ]);
-  const outputViewModel = useMemo(
-    () => buildRewriteOutputViewModel(output),
-    [output],
+  const deterministicMetrics = useMemo(
+    () =>
+      buildDeterministicRewriteMetrics({
+        deltaMetrics: currentVersionRecord?.deltaMetrics,
+        hypothesis: currentVersionRecord?.hypothesis ?? hypothesis,
+      }),
+    [currentVersionRecord?.deltaMetrics, currentVersionRecord?.hypothesis, hypothesis],
   );
+  const effectiveConfidence = deterministicMetrics.confidence;
   const studioStatus = useMemo(() => {
     if (!isOnline) {
       return "offline" as const;
@@ -1467,8 +1472,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {outputViewModel.confidence ? (
-                    <span>Confidence Score: {outputViewModel.confidence}</span>
+                  {effectiveConfidence ? (
+                    <span>Confidence Score: {effectiveConfidence}</span>
                   ) : null}
                   <span className={studioStatusToneClass}>
                     {studioStatus === "processing"
@@ -1522,8 +1527,12 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               <RewriteExecutiveSummaryCard
                 output={output}
                 compareMode={compareMode}
+                confidenceOverride={effectiveConfidence}
               />
-              <RewriteShiftStatsCards output={output} running={running} />
+              <RewriteShiftStatsCards
+                running={running}
+                shiftStatsOverride={deterministicMetrics.shiftStats}
+              />
               <RewriteOutputPanel
                 rewriteType={request.rewriteType}
                 running={running}
