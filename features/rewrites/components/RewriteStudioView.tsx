@@ -40,7 +40,6 @@ import {
 } from "@/features/rewrites/services/rewritesClient";
 import { hasAnyAllowedSectionLabel } from "@/features/rewrites/services/sectionLabelUtils";
 import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
-import { buildRewriteExportDocument } from "@/features/rewrites/services/rewriteExportService";
 import { markWinnerAction } from "@/features/rewrites/actions/markWinner";
 import type {
   RewriteExportFormat,
@@ -1208,15 +1207,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   };
 
   const handleCopy = async () => {
-    const exportDocument = buildRewriteExportDocument({
-      rewriteType: request.rewriteType,
-      outputMarkdown: output,
-      format: "markdown",
-    });
-    const markdown =
-      typeof exportDocument.content === "string"
-        ? exportDocument.content
-        : new TextDecoder().decode(exportDocument.content);
+    const markdown = requestRef
+      ? await (await exportRewrite({ requestRef, format: "markdown" })).blob.text()
+      : output;
     await navigator.clipboard.writeText(markdown);
     toast({ title: "Copied", description: "Rewrite copied as markdown." });
   };

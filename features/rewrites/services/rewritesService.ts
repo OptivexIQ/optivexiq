@@ -84,6 +84,10 @@ function buildSystemPrompt(type: RewriteGenerateRequestValues["rewriteType"]) {
     "  - Confidence: percentage between 0% and 100% (example: 84%)",
     "- In Proposed Rewrite, include explicit labeled lines for 'Primary CTA' and 'Final CTA' when present in source content.",
     "- Change Summary must contain section-level changes with what changed and why.",
+    "- Change Summary must include a 'Variable Compliance' subsection with exact key lines:",
+    "  - Controlled variable: <key> | status: stable | evidence: <short note>",
+    "  - Treatment variable: <key> | status: changed | evidence: <short note>",
+    "  - Use exact keys from the experiment contract (for example: cta_type, proof_points, primary_cta).",
     "- For minimum_delta_level=moderate or strong, Change Summary must include at least 5 bullets.",
     "- For minimum_delta_level=strong, Change Summary should include 8-10 bullets where feasible.",
     "Output sections:",
@@ -176,6 +180,7 @@ function buildUserPrompt(input: RewriteGenerateRequestValues, context: string) {
       "- Then output Treatment Plan (exactly 3 bullets) describing what will change and why.",
       "- Then output Proposed Rewrite.",
       "- Then output Change Summary with per-section changes and why.",
+      "- In Change Summary include 'Variable Compliance' lines for every controlled and treatment variable using exact key names.",
       "- Then output Confidence & Risk with confidence and key residual risks.",
     ].join("\n"),
   ]

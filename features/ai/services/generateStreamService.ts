@@ -493,15 +493,34 @@ function containsContractToken(source: string, token: string) {
   return normalizedSource.includes(normalizedToken);
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasVariableComplianceLine(params: {
+  changeSummary: string;
+  kind: "Controlled" | "Treatment";
+  variable: string;
+  status: "stable" | "changed";
+}) {
+  const pattern = new RegExp(
+    String.raw`(?:^|\n)\s*[-*]\s*${params.kind}\s+variable:\s*${escapeRegExp(params.variable)}\s*\|\s*status:\s*${params.status}\b`,
+    "i",
+  );
+  return pattern.test(params.changeSummary);
+}
+
 function validateHypothesisContract(params: {
   structured: {
     experimentSetup: string;
+    changeSummary: string;
   };
   rewriteInput: RewriteGenerateRequestValues;
   metrics: RewriteDeltaMetrics;
 }) {
   const { structured, rewriteInput, metrics } = params;
   const experimentSetup = structured.experimentSetup;
+  const changeSummary = structured.changeSummary;
   const violations: string[] = [];
 
   if (!containsContractToken(experimentSetup, rewriteInput.hypothesis.type)) {
@@ -521,11 +540,35 @@ function validateHypothesisContract(params: {
     if (!containsContractToken(experimentSetup, variable)) {
       violations.push(`Experiment Setup missing controlled variable: ${variable}.`);
     }
+    if (
+      !hasVariableComplianceLine({
+        changeSummary,
+        kind: "Controlled",
+        variable,
+        status: "stable",
+      })
+    ) {
+      violations.push(
+        `Change Summary missing compliance line: Controlled variable: ${variable} | status: stable.`,
+      );
+    }
   }
 
   for (const variable of rewriteInput.hypothesis.treatmentVariables) {
     if (!containsContractToken(experimentSetup, variable)) {
       violations.push(`Experiment Setup missing treatment variable: ${variable}.`);
+    }
+    if (
+      !hasVariableComplianceLine({
+        changeSummary,
+        kind: "Treatment",
+        variable,
+        status: "changed",
+      })
+    ) {
+      violations.push(
+        `Change Summary missing compliance line: Treatment variable: ${variable} | status: changed.`,
+      );
     }
   }
 
