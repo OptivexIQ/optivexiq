@@ -83,7 +83,7 @@ export function ReportHeader({
             </h1>
             <Badge variant="chart-3">{formatStatusLabel(report.status)}</Badge>
           </div>
-          <div className="grid gap-3 pt-1 text-sm sm:grid-cols-3">
+          <div className="grid gap-3 pt-1 text-sm sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1.5fr)_minmax(0,0.75fr)]">
             <div className="sm:pr-4 sm:border-r sm:border-border/60">
               <p className="text-sm font-medium text-muted-foreground">
                 ICP Role
