@@ -93,6 +93,10 @@ export type RewriteStreamResult = {
   requestRef: string | null;
   requestCreatedAt: string | null;
   idempotentReplay: boolean;
+  experimentGroupId: string | null;
+  parentRequestRef: string | null;
+  controlRequestRef: string | null;
+  versionNumber: number | null;
   deltaLexicalSimilarity: number | null;
 };
 

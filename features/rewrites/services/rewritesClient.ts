@@ -9,6 +9,7 @@ import type {
   RewriteSectionMapResult,
   RewriteStreamResult,
   RewriteStreamOptions,
+  RewriteStudioInitialData,
 } from "@/features/rewrites/types/rewrites.types";
 import { rewriteGenerateRequestSchema } from "@/features/rewrites/validators/rewritesSchema";
 import { rewriteSectionMapRequestSchema } from "@/features/rewrites/validators/rewriteSectionMapSchema";
@@ -94,12 +95,40 @@ export async function streamRewrite(
     requestRef: response.headers.get("x-rewrite-ref"),
     requestCreatedAt: response.headers.get("x-rewrite-created-at"),
     idempotentReplay: response.headers.get("x-idempotent-replay") === "true",
+    experimentGroupId: response.headers.get("x-rewrite-experiment-group-id"),
+    parentRequestRef: response.headers.get("x-rewrite-parent-request-ref"),
+    controlRequestRef: response.headers.get("x-rewrite-control-request-ref"),
+    versionNumber: (() => {
+      const raw = response.headers.get("x-rewrite-version-number");
+      if (!raw) {
+        return null;
+      }
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    })(),
     deltaLexicalSimilarity:
       parsedDeltaLexicalSimilarity != null &&
       Number.isFinite(parsedDeltaLexicalSimilarity)
         ? parsedDeltaLexicalSimilarity
         : null,
   };
+}
+
+export async function fetchRewriteHistory(limit = 20): Promise<
+  NonNullable<RewriteStudioInitialData["historyVersions"]>
+> {
+  const response = await fetch(
+    `/api/rewrites/history?limit=${encodeURIComponent(String(limit))}`,
+    {
+      method: "GET",
+    },
+  );
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw toHttpError(response.status, payload);
+  }
+  const versions = Array.isArray(payload?.versions) ? payload.versions : [];
+  return versions as NonNullable<RewriteStudioInitialData["historyVersions"]>;
 }
 
 export async function exportRewriteComparison(input: {

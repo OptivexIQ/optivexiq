@@ -184,6 +184,7 @@ async function saveRewriteRecordWithRetry(
         experimentGroupId: string;
         versionNumber: number;
         parentRequestRef: string | null;
+        controlRequestRef: string | null;
       };
     }
   | { ok: false; error: string }
@@ -482,17 +483,106 @@ function maxLexicalSimilarityForDelta(level: "light" | "moderate" | "strong") {
   return 0.85;
 }
 
+function normalizeContractText(value: string) {
+  return value.toLowerCase().replace(/[_-]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function containsContractToken(source: string, token: string) {
+  const normalizedSource = normalizeContractText(source);
+  const normalizedToken = normalizeContractText(token);
+  return normalizedSource.includes(normalizedToken);
+}
+
+function validateHypothesisContract(params: {
+  structured: {
+    experimentSetup: string;
+  };
+  rewriteInput: RewriteGenerateRequestValues;
+  metrics: RewriteDeltaMetrics;
+}) {
+  const { structured, rewriteInput, metrics } = params;
+  const experimentSetup = structured.experimentSetup;
+  const violations: string[] = [];
+
+  if (!containsContractToken(experimentSetup, rewriteInput.hypothesis.type)) {
+    violations.push("Experiment Setup must include the exact hypothesis type.");
+  }
+
+  if (
+    !containsContractToken(
+      experimentSetup,
+      rewriteInput.hypothesis.minimumDeltaLevel,
+    )
+  ) {
+    violations.push("Experiment Setup must include the exact minimum delta level.");
+  }
+
+  for (const variable of rewriteInput.hypothesis.controlledVariables) {
+    if (!containsContractToken(experimentSetup, variable)) {
+      violations.push(`Experiment Setup missing controlled variable: ${variable}.`);
+    }
+  }
+
+  for (const variable of rewriteInput.hypothesis.treatmentVariables) {
+    if (!containsContractToken(experimentSetup, variable)) {
+      violations.push(`Experiment Setup missing treatment variable: ${variable}.`);
+    }
+  }
+
+  if (
+    rewriteInput.hypothesis.treatmentVariables.includes("headline") &&
+    !metrics.headline_changed
+  ) {
+    violations.push("Treatment variable 'headline' was selected but headline did not change.");
+  }
+
+  if (
+    rewriteInput.hypothesis.treatmentVariables.includes("primary_cta") &&
+    !metrics.cta_changed
+  ) {
+    violations.push("Treatment variable 'primary_cta' was selected but primary CTA did not change.");
+  }
+
+  if (
+    rewriteInput.hypothesis.controlledVariables.includes("cta_type") &&
+    metrics.cta_changed
+  ) {
+    violations.push("Controlled variable 'cta_type' must remain fixed but CTA changed.");
+  }
+
+  if (
+    rewriteInput.hypothesis.controlledVariables.includes("structure") &&
+    metrics.structure_changed
+  ) {
+    violations.push("Controlled variable 'structure' must remain fixed but structure changed.");
+  }
+
+  return {
+    ok: violations.length === 0,
+    violations,
+  };
+}
+
 function buildIncreaseVariationRetryRequest(params: {
   baseRequest: OpenAIRequest;
   currentOutput: string;
   minimumDeltaLevel: "light" | "moderate" | "strong";
   lexicalSimilarity: number;
+  contractViolations?: string[];
 }): OpenAIRequest {
+  const contractSection =
+    params.contractViolations && params.contractViolations.length > 0
+      ? [
+          "You must also satisfy these contract corrections:",
+          ...params.contractViolations.map((item) => `- ${item}`),
+        ].join("\n")
+      : "";
   const stricter = [
     "Retry instruction: increase variation.",
     `Minimum delta: ${params.minimumDeltaLevel}.`,
-    `Current lexical similarity is too high (${(params.lexicalSimilarity * 100).toFixed(1)}%).`,
+    `Current lexical similarity: ${(params.lexicalSimilarity * 100).toFixed(1)}%. Increase variation where required to satisfy the contract.`,
     "Avoid close paraphrase, use new framing, and materially rewrite headlines/CTAs and section language while preserving factual truth.",
+    contractSection,
     "Return the full response again in the required six-section format.",
   ].join("\n");
 
@@ -596,6 +686,24 @@ export async function handleGenerateStream(params: {
           "x-request-id": requestId,
           "x-rewrite-ref": existing.requestRef,
           "x-rewrite-created-at": existing.createdAt,
+          ...(existing.experimentGroupId
+            ? {
+                "x-rewrite-experiment-group-id": existing.experimentGroupId,
+              }
+            : {}),
+          ...(typeof existing.versionNumber === "number"
+            ? { "x-rewrite-version-number": String(existing.versionNumber) }
+            : {}),
+          ...(existing.parentRequestRef
+            ? {
+                "x-rewrite-parent-request-ref": existing.parentRequestRef,
+              }
+            : {}),
+          ...(existing.controlRequestRef
+            ? {
+                "x-rewrite-control-request-ref": existing.controlRequestRef,
+              }
+            : {}),
           "x-idempotent-replay": "true",
         },
       });
@@ -606,6 +714,8 @@ export async function handleGenerateStream(params: {
   const rewriteCreatedAt = isRewriteRequest ? new Date().toISOString() : null;
   let completedExperimentGroupId: string | null = null;
   let completedVersionNumber: number | null = null;
+  let completedParentRequestRef: string | null = null;
+  let completedControlRequestRef: string | null = null;
 
   logger.info("AI stream requested.", {
     requestId,
@@ -718,7 +828,13 @@ export async function handleGenerateStream(params: {
         const threshold = maxLexicalSimilarityForDelta(
           rewriteInput.hypothesis.minimumDeltaLevel,
         );
-        if (computedMetrics.lexical_similarity <= threshold) {
+        const contractValidation = validateHypothesisContract({
+          structured,
+          rewriteInput,
+          metrics: computedMetrics,
+        });
+        const passesVariation = computedMetrics.lexical_similarity <= threshold;
+        if (passesVariation && contractValidation.ok) {
           output = candidateOutput;
           deltaMetrics = computedMetrics;
           break;
@@ -730,8 +846,15 @@ export async function handleGenerateStream(params: {
             currentOutput: candidateOutput,
             minimumDeltaLevel: rewriteInput.hypothesis.minimumDeltaLevel,
             lexicalSimilarity: computedMetrics.lexical_similarity,
+            contractViolations: contractValidation.violations,
           });
           continue;
+        }
+
+        if (!contractValidation.ok) {
+          throw new Error(
+            `We could not satisfy the hypothesis contract for this variation. ${contractValidation.violations[0] ?? "Please adjust controlled/treatment variables and retry."}`,
+          );
         }
 
         throw new Error(
@@ -869,6 +992,8 @@ export async function handleGenerateStream(params: {
       } else {
         completedExperimentGroupId = persistResult.lineage.experimentGroupId;
         completedVersionNumber = persistResult.lineage.versionNumber;
+        completedParentRequestRef = persistResult.lineage.parentRequestRef;
+        completedControlRequestRef = persistResult.lineage.controlRequestRef;
         void emitRewriteTelemetryEvent({
           userId,
           requestId,
@@ -911,6 +1036,18 @@ export async function handleGenerateStream(params: {
           "x-request-id": requestId,
           "x-rewrite-ref": rewriteRef,
           "x-rewrite-created-at": rewriteCreatedAt,
+          ...(completedExperimentGroupId
+            ? { "x-rewrite-experiment-group-id": completedExperimentGroupId }
+            : {}),
+          ...(typeof completedVersionNumber === "number"
+            ? { "x-rewrite-version-number": String(completedVersionNumber) }
+            : {}),
+          ...(completedParentRequestRef
+            ? { "x-rewrite-parent-request-ref": completedParentRequestRef }
+            : {}),
+          ...(completedControlRequestRef
+            ? { "x-rewrite-control-request-ref": completedControlRequestRef }
+            : {}),
           "x-rewrite-delta-lexical-similarity": String(
             deltaMetrics.lexical_similarity,
           ),
@@ -1351,6 +1488,9 @@ export async function handleGenerateStream(params: {
                 completedExperimentGroupId =
                   persistResult.lineage.experimentGroupId;
                 completedVersionNumber = persistResult.lineage.versionNumber;
+                completedParentRequestRef = persistResult.lineage.parentRequestRef;
+                completedControlRequestRef =
+                  persistResult.lineage.controlRequestRef;
                 void emitRewriteTelemetryEvent({
                   userId,
                   requestId,

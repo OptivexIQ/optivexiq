@@ -34,6 +34,7 @@ import { RewriteStudioHeader } from "@/features/rewrites/components/RewriteStudi
 import {
   exportRewrite,
   exportRewriteComparison,
+  fetchRewriteHistory,
   mapRewriteSections,
   streamRewrite,
 } from "@/features/rewrites/services/rewritesClient";
@@ -87,20 +88,6 @@ function downloadBlob(filename: string, blob: Blob) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(link.href);
-}
-
-async function printHtmlBlob(blob: Blob) {
-  const html = await blob.text();
-  const win = window.open("", "_blank", "noopener,noreferrer");
-  if (!win) {
-    throw new Error("Popup blocked. Enable popups to export PDF.");
-  }
-
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.print();
 }
 
 function formatHistoryTimestamp(value: string) {
@@ -928,127 +915,73 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       setIdempotentReplay(result.idempotentReplay);
       const nextRequestRef = result.requestRef;
       if (nextRequestRef) {
-        setHistoryVersions((previous) => {
-          const nextCreatedAt =
-            result.requestCreatedAt ?? new Date().toISOString();
-          const parentVersion = parentRequestRef
-            ? previous.find((item) => item.requestRef === parentRequestRef)
-            : null;
-          const inferredControlRequestRef =
-            parentVersion?.controlRequestRef ??
-            (parentVersion?.isControl ? parentVersion.requestRef : null) ??
-            (!parentRequestRef ? `${nextRequestRef}-control` : null);
-
-          const syntheticControl =
-            !parentRequestRef && inferredControlRequestRef
-              ? {
-                  requestRef: inferredControlRequestRef,
-                  isControl: true,
-                  controlRequestRef: inferredControlRequestRef,
-                  experimentGroupId: parentVersion?.experimentGroupId,
-                  parentRequestRef: null,
-                  versionNumber: 0,
-                  isWinner: false,
-                  winnerLabel: null,
-                  winnerMarkedAt: null,
-                  rewriteType: submissionRequest.rewriteType,
-                  createdAt: nextCreatedAt,
-                  outputMarkdown:
-                    submissionRequest.content?.trim().length
-                      ? submissionRequest.content
-                      : "_No pasted source content provided for this control baseline._",
-                  websiteUrl: submissionRequest.websiteUrl ?? null,
-                  sourceContent: submissionRequest.content ?? null,
-                  userNotes: submissionRequest.notes ?? "",
-                  strategicContext: {
-                    goal,
-                    icp: resolvedIcpLabel,
-                    differentiationFocus: differentiationFocus,
-                    objectionFocus: objectionFocus,
-                  },
-                  tone: strategy.tone,
-                  length: strategy.length,
-                  emphasis: [...strategy.emphasis],
-                  constraints: strategy.constraints ?? "",
-                  audience: strategy.audience ?? "",
-                  strategyContext: {
-                    target: submissionRequest.rewriteType,
-                    goal,
-                    icp: resolvedIcpLabel,
-                    tone: strategy.tone,
-                    length: strategy.length,
-                    emphasis: [...strategy.emphasis],
-                    constraints: strategy.constraints ?? "",
-                    audience: strategy.audience ?? "",
-                    focus: {
-                      differentiation: differentiationFocus,
-                      objection: objectionFocus,
-                    },
-                    schemaVersion: 1,
-                  },
-                  idempotencyKey: `${submissionRequest.idempotencyKey}:control`,
-                  hypothesis: submissionRequest.hypothesis,
-                }
-              : null;
-
-          const nextVersion = {
-            requestRef: nextRequestRef,
-            isControl: false,
-            controlRequestRef: inferredControlRequestRef,
-            rewriteType: submissionRequest.rewriteType,
-            createdAt: nextCreatedAt,
-            outputMarkdown: result.content,
-            websiteUrl: submissionRequest.websiteUrl ?? null,
-            sourceContent: submissionRequest.content ?? null,
-            userNotes: submissionRequest.notes ?? "",
-            strategicContext: {
-              goal,
-              icp: resolvedIcpLabel,
-              differentiationFocus: differentiationFocus,
-              objectionFocus: objectionFocus,
-            },
-            tone: strategy.tone,
-            length: strategy.length,
-            emphasis: [...strategy.emphasis],
-            constraints: strategy.constraints ?? "",
-            audience: strategy.audience ?? "",
-            strategyContext: {
-              target: submissionRequest.rewriteType,
-              goal,
-              icp: resolvedIcpLabel,
+        try {
+          const latestVersions = await refreshHistoryVersions();
+          const canonical = latestVersions.find(
+            (item) => item.requestRef === nextRequestRef,
+          );
+          if (canonical?.createdAt) {
+            setCurrentVersionCreatedAt(canonical.createdAt);
+          }
+        } catch {
+          setHistoryVersions((previous) => {
+            const nextCreatedAt =
+              result.requestCreatedAt ?? new Date().toISOString();
+            const fallbackVersion = {
+              requestRef: nextRequestRef,
+              isControl: false,
+              controlRequestRef: result.controlRequestRef ?? undefined,
+              experimentGroupId: result.experimentGroupId ?? undefined,
+              parentRequestRef: result.parentRequestRef ?? undefined,
+              versionNumber: result.versionNumber ?? 1,
+              rewriteType: submissionRequest.rewriteType,
+              createdAt: nextCreatedAt,
+              outputMarkdown: result.content,
+              websiteUrl: submissionRequest.websiteUrl ?? null,
+              sourceContent: submissionRequest.content ?? null,
+              userNotes: submissionRequest.notes ?? "",
+              strategicContext: {
+                goal,
+                icp: resolvedIcpLabel,
+                differentiationFocus: differentiationFocus,
+                objectionFocus: objectionFocus,
+              },
               tone: strategy.tone,
               length: strategy.length,
               emphasis: [...strategy.emphasis],
               constraints: strategy.constraints ?? "",
               audience: strategy.audience ?? "",
-              focus: {
-                differentiation: differentiationFocus,
-                objection: objectionFocus,
+              strategyContext: {
+                target: submissionRequest.rewriteType,
+                goal,
+                icp: resolvedIcpLabel,
+                tone: strategy.tone,
+                length: strategy.length,
+                emphasis: [...strategy.emphasis],
+                constraints: strategy.constraints ?? "",
+                audience: strategy.audience ?? "",
+                focus: {
+                  differentiation: differentiationFocus,
+                  objection: objectionFocus,
+                },
+                schemaVersion: 1,
               },
-              schemaVersion: 1,
-            },
-            idempotencyKey: submissionRequest.idempotencyKey,
-            hypothesis: submissionRequest.hypothesis,
-            deltaMetrics:
-              result.deltaLexicalSimilarity == null
-                ? null
-                : {
-                    lexical_similarity: result.deltaLexicalSimilarity,
-                    delta_level: submissionRequest.hypothesis.minimumDeltaLevel,
-                  },
-          };
-          const withoutCurrent = previous.filter(
-            (item) => item.requestRef !== nextRequestRef,
-          );
-          const withoutControl = syntheticControl
-            ? withoutCurrent.filter(
-                (item) => item.requestRef !== syntheticControl.requestRef,
-              )
-            : withoutCurrent;
-          return syntheticControl
-            ? [nextVersion, syntheticControl, ...withoutControl]
-            : [nextVersion, ...withoutControl];
-        });
+              idempotencyKey: submissionRequest.idempotencyKey,
+              hypothesis: submissionRequest.hypothesis,
+              deltaMetrics:
+                result.deltaLexicalSimilarity == null
+                  ? null
+                  : {
+                      lexical_similarity: result.deltaLexicalSimilarity,
+                      delta_level: submissionRequest.hypothesis.minimumDeltaLevel,
+                    },
+            };
+            return [
+              fallbackVersion,
+              ...previous.filter((item) => item.requestRef !== nextRequestRef),
+            ];
+          });
+        }
       }
       setRequest((previous) => ({
         ...previous,
@@ -1102,6 +1035,12 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }));
     setIdempotentReplay(false);
     void handleSubmit(forcedIdempotencyKey);
+  };
+
+  const refreshHistoryVersions = async () => {
+    const latest = await fetchRewriteHistory(20);
+    setHistoryVersions(latest);
+    return latest;
   };
 
   const openVersion = (requestRefToOpen: string) => {
@@ -1269,11 +1208,15 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   };
 
   const handleCopy = async () => {
-    const markdown = buildRewriteExportDocument({
+    const exportDocument = buildRewriteExportDocument({
       rewriteType: request.rewriteType,
       outputMarkdown: output,
       format: "markdown",
-    }).content;
+    });
+    const markdown =
+      typeof exportDocument.content === "string"
+        ? exportDocument.content
+        : new TextDecoder().decode(exportDocument.content);
     await navigator.clipboard.writeText(markdown);
     toast({ title: "Copied", description: "Rewrite copied as markdown." });
   };
@@ -1284,10 +1227,6 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }
 
     const exported = await exportRewrite({ requestRef, format });
-    if (format === "pdf") {
-      await printHtmlBlob(exported.blob);
-      return;
-    }
     downloadBlob(exported.filename, exported.blob);
   };
 
@@ -1305,10 +1244,6 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         currentRequestRef: requestRef,
         format,
       });
-      if (format === "pdf") {
-        await printHtmlBlob(exported.blob);
-        return;
-      }
       downloadBlob(exported.filename, exported.blob);
     } finally {
       setCompareExportRunning(false);

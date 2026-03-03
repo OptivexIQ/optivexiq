@@ -156,7 +156,11 @@ export async function GET(
       metadata: { format, audit_action: "single_export" },
     });
 
-    return new NextResponse(document.content, {
+    const responseBody =
+      typeof document.content === "string"
+        ? document.content
+        : new Blob([Uint8Array.from(document.content)]);
+    return new NextResponse(responseBody, {
       status: 200,
       headers: {
         "content-type": document.contentType,

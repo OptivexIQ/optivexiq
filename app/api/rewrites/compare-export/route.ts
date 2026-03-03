@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { createSupabaseAdminClient } from "@/services/supabase/admin";
 import { createSupabaseServerReadOnlyClient } from "@/services/supabase/server";
 import { emitRewriteTelemetryEvent } from "@/features/rewrites/services/rewriteTelemetryService";
+import { buildSimplePdfFromMarkdown } from "@/features/rewrites/services/rewriteExportService";
 
 const payloadSchema = z
   .object({
@@ -219,11 +220,18 @@ export async function POST(request: NextRequest) {
       orderedRows,
       payload.controlRequestRef ?? null,
     );
-    const content = payload.format === "markdown" ? markdown : toHtmlDocument(markdown);
+    const content =
+      payload.format === "markdown"
+        ? markdown
+        : payload.format === "pdf"
+          ? buildSimplePdfFromMarkdown(markdown)
+          : toHtmlDocument(markdown);
     const contentType =
       payload.format === "markdown"
         ? "text/markdown; charset=utf-8"
-        : "text/html; charset=utf-8";
+        : payload.format === "pdf"
+          ? "application/pdf"
+          : "text/html; charset=utf-8";
     const extension =
       payload.format === "markdown" ? "md" : payload.format === "html" ? "html" : "pdf";
     const filename = `rewrite-comparison.${extension}`;

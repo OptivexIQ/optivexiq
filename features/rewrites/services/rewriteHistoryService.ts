@@ -104,6 +104,7 @@ export async function saveRewriteRecord(
         experimentGroupId: string;
         versionNumber: number;
         parentRequestRef: string | null;
+        controlRequestRef: string | null;
       };
     }
   | { ok: false; error: string }
@@ -272,6 +273,7 @@ export async function saveRewriteRecord(
             experimentGroupId: lineage.experimentGroupId,
             versionNumber: lineage.versionNumber,
             parentRequestRef: lineage.parentRequestRef,
+            controlRequestRef,
           },
         };
       }
@@ -291,6 +293,7 @@ export async function saveRewriteRecord(
       experimentGroupId: lineage.experimentGroupId,
       versionNumber: lineage.versionNumber,
       parentRequestRef: lineage.parentRequestRef,
+      controlRequestRef,
     },
   };
 }

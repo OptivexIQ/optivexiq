@@ -32,7 +32,7 @@ type BuildRewriteExportDocumentParams = {
 export type RewriteExportDocument = {
   filename: string;
   contentType: string;
-  content: string;
+  content: Uint8Array | string;
 };
 
 function toMarkdownDocument(output: string) {
@@ -77,6 +77,65 @@ function toHtmlDocument(markdown: string) {
     "</html>",
     "",
   ].join("\n");
+}
+
+function escapePdfText(value: string) {
+  return value
+    .replaceAll("\\", "\\\\")
+    .replaceAll("(", "\\(")
+    .replaceAll(")", "\\)")
+    .replace(/[^\x20-\x7E]/g, "");
+}
+
+export function buildSimplePdfFromMarkdown(markdown: string) {
+  const encoder = new TextEncoder();
+  const byteLength = (value: string) => encoder.encode(value).length;
+  const lines = toPlainTextDocument(markdown)
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line, index, all) => line.length > 0 || (index > 0 && all[index - 1].length > 0))
+    .slice(0, 45);
+  const contentLines: string[] = ["BT", "/F1 11 Tf", "50 760 Td"];
+  for (let index = 0; index < lines.length; index += 1) {
+    const escaped = escapePdfText(lines[index]);
+    if (index > 0) {
+      contentLines.push("0 -14 Td");
+    }
+    contentLines.push(`(${escaped}) Tj`);
+  }
+  contentLines.push("ET");
+  const stream = `${contentLines.join("\n")}\n`;
+
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+    `5 0 obj\n<< /Length ${byteLength(stream)} >>\nstream\n${stream}endstream\nendobj\n`,
+  ];
+
+  let body = "%PDF-1.4\n";
+  const offsets: number[] = [0];
+  for (const object of objects) {
+    offsets.push(byteLength(body));
+    body += object;
+  }
+
+  const xrefStart = byteLength(body);
+  body += `xref
+0 ${objects.length + 1}
+0000000000 65535 f 
+`;
+  for (let i = 1; i < offsets.length; i += 1) {
+    body += `${offsets[i].toString().padStart(10, "0")} 00000 n \n`;
+  }
+  body += `trailer
+<< /Size ${objects.length + 1} /Root 1 0 R >>
+startxref
+${xrefStart}
+%%EOF`;
+
+  return encoder.encode(body);
 }
 
 function toStructuredMarkdownDocument(
@@ -257,7 +316,7 @@ export function buildRewriteExportDocument(
 
   return {
     filename: `${base}.pdf`,
-    contentType: "text/html; charset=utf-8",
-    content: toHtmlDocument(structuredMarkdown),
+    contentType: "application/pdf",
+    content: buildSimplePdfFromMarkdown(structuredMarkdown),
   };
 }
