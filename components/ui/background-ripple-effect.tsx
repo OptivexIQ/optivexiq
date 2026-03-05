@@ -151,20 +151,6 @@ export function BackgroundRippleEffect({
               WebkitMaskImage: `radial-gradient(${SPOTLIGHT_INNER}px circle at center, white, transparent)`,
             }}
           />
-          <div
-            className="absolute"
-            style={{
-              left: mousePosition.x,
-              top: mousePosition.y,
-              width: SPOTLIGHT_SIZE,
-              height: SPOTLIGHT_SIZE,
-              transform: "translate(-50%, -50%)",
-              background:
-                "radial-gradient(circle at center, hsl(200 90% 60% / 0.28) 0%, hsl(200 90% 60% / 0.08) 60%, transparent 100%)",
-              maskImage: `radial-gradient(${SPOTLIGHT_INNER}px circle at center, white, transparent)`,
-              WebkitMaskImage: `radial-gradient(${SPOTLIGHT_INNER}px circle at center, white, transparent)`,
-            }}
-          />
         </div>
       ) : null}
 
