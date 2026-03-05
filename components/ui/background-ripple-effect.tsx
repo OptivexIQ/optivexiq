@@ -11,19 +11,22 @@ const BASE_MASK =
 
 interface BackgroundRippleEffectProps {
   className?: string;
+  showSpotlightReveal?: boolean;
 }
 
 export function BackgroundRippleEffect({
   className = "absolute inset-0",
+  showSpotlightReveal = true,
 }: BackgroundRippleEffectProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isDesktopPointer, setIsDesktopPointer] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [grid, setGrid] = useState({ cols: 1, rows: 1 });
   const [mousePosition, setMousePosition] = useState({ x: -9999, y: -9999 });
-  const [clickedCell, setClickedCell] = useState<{ row: number; col: number } | null>(
-    null,
-  );
+  const [clickedCell, setClickedCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(hover: hover) and (pointer: fine)");
@@ -107,12 +110,11 @@ export function BackgroundRippleEffect({
 
   const cellCount = grid.cols * grid.rows;
   const isInteractive = isDesktopPointer && !prefersReducedMotion;
+  const spotlightLeft = mousePosition.x - SPOTLIGHT_SIZE / 2;
+  const spotlightTop = mousePosition.y - SPOTLIGHT_SIZE / 2;
 
   return (
-    <div
-      ref={ref}
-      className={className}
-    >
+    <div ref={ref} className={className}>
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -124,7 +126,7 @@ export function BackgroundRippleEffect({
         }}
       />
 
-      {isInteractive ? (
+      {isInteractive && showSpotlightReveal ? (
         <div
           className="absolute inset-0 z-10 pointer-events-none"
           style={{
@@ -132,6 +134,23 @@ export function BackgroundRippleEffect({
             WebkitMaskImage: BASE_MASK,
           }}
         >
+          <div
+            className="absolute"
+            style={{
+              left: mousePosition.x,
+              top: mousePosition.y,
+              width: SPOTLIGHT_SIZE,
+              height: SPOTLIGHT_SIZE,
+              transform: "translate(-50%, -50%)",
+              backgroundImage:
+                "linear-gradient(to right, hsl(210 72% 62% / 0.5) 1px, transparent 1px), linear-gradient(to bottom, hsl(210 72% 62% / 0.5) 1px, transparent 1px)",
+              backgroundSize: "44px 44px",
+              // Lock reveal grid lines to the same origin as the base grid.
+              backgroundPosition: `${-spotlightLeft}px ${-spotlightTop}px`,
+              maskImage: `radial-gradient(${SPOTLIGHT_INNER}px circle at center, white, transparent)`,
+              WebkitMaskImage: `radial-gradient(${SPOTLIGHT_INNER}px circle at center, white, transparent)`,
+            }}
+          />
           <div
             className="absolute"
             style={{
@@ -177,19 +196,19 @@ export function BackgroundRippleEffect({
               <div key={index} className="overflow-hidden">
                 <motion.div
                   initial={{ opacity: 0 }}
-                whileHover={{ opacity: [0, 1, 0.5] }}
-                transition={{ duration: 0.5, ease: "backOut" }}
-                animate={
-                  clickedCell
-                    ? {
-                        opacity: [0, clickPeakOpacity, 0],
-                        transition: { duration: clickDuration },
-                      }
-                    : { opacity: 0 }
-                }
-                className="h-full w-full bg-[rgba(14,165,233,0.16)]"
-              />
-            </div>
+                  whileHover={{ opacity: [0, 1, 0.5] }}
+                  transition={{ duration: 0.5, ease: "backOut" }}
+                  animate={
+                    clickedCell
+                      ? {
+                          opacity: [0, clickPeakOpacity, 0],
+                          transition: { duration: clickDuration },
+                        }
+                      : { opacity: 0 }
+                  }
+                  className="h-full w-full bg-[rgba(14,165,233,0.2)]"
+                />
+              </div>
             );
           })}
         </div>
