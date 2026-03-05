@@ -1,20 +1,12 @@
 import Link from "next/link";
 import { Circle } from "lucide-react";
+import { SubtleBackgroundGrid } from "@/components/ui/background-ripple-effect";
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden pt-28 pb-20 md:pt-36 md:pb-28">
-      {/* Subtle grid background */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, hsl(0 0% 100% / 0.06) 1px, transparent 1px), linear-gradient(to bottom, hsl(0 0% 100% / 0.06) 1px, transparent 1px)",
-          backgroundSize: "44px 44px",
-          maskImage:
-            "radial-gradient(circle at 50% 0%, black 0%, black 55%, transparent 78%)",
-        }}
-      />
+      {/* Subtle grid background + desktop cell hover effect */}
+      <SubtleBackgroundGrid />
 
       {/* Top radial glow */}
       <div
@@ -366,4 +358,3 @@ export function Hero() {
     </section>
   );
 }
-
