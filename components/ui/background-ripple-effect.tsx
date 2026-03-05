@@ -11,12 +11,12 @@ const BASE_MASK =
 
 interface BackgroundRippleEffectProps {
   className?: string;
-  showSpotlightReveal?: boolean;
+  showAccentGridReveal?: boolean;
 }
 
 export function BackgroundRippleEffect({
   className = "absolute inset-0",
-  showSpotlightReveal = true,
+  showAccentGridReveal = true,
 }: BackgroundRippleEffectProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isDesktopPointer, setIsDesktopPointer] = useState(false);
@@ -126,7 +126,7 @@ export function BackgroundRippleEffect({
         }}
       />
 
-      {isInteractive && showSpotlightReveal ? (
+      {isInteractive && showAccentGridReveal ? (
         <div
           className="absolute inset-0 z-10 pointer-events-none"
           style={{
