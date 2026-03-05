@@ -2,7 +2,7 @@ import { Circle } from "lucide-react";
 
 export function HeroDashboardPreview() {
   return (
-    <div className="relative z-30 mx-auto mt-16 max-w-5xl md:mt-20">
+    <div className="relative z-30 mx-auto mt-16 max-w-6xl md:mt-20">
       <div className="rounded-2xl border border-border/70 bg-card/40 p-1 shadow-xl shadow-black/30">
         <div className="rounded-[1.15rem] bg-card">
           <div className="p-6 md:p-7">
