@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -21,6 +26,7 @@ import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPa
 import { RewriteComparisonPanel } from "@/features/rewrites/components/RewriteComparisonPanel";
 import { RewriteExecutiveSummaryCard } from "@/features/rewrites/components/RewriteExecutiveSummaryCard";
 import { RewriteHistoryCard } from "@/features/rewrites/components/RewriteHistoryCard";
+import { RewriteMutationStatusBanner } from "@/features/rewrites/components/RewriteMutationStatusBanner";
 import { RewriteOutputPanel } from "@/features/rewrites/components/RewriteOutputPanel";
 import { RewriteOutputActionBar } from "@/features/rewrites/components/RewriteOutputActionBar";
 import { RewriteRunStateBar } from "@/features/rewrites/components/RewriteRunStateBar";
@@ -49,6 +55,7 @@ import type {
   RewriteStrategy,
   RewriteStudioInitialData,
 } from "@/features/rewrites/types/rewrites.types";
+import { ChevronDown } from "lucide-react";
 
 type RewriteStudioViewProps = {
   initialData: RewriteStudioInitialData;
@@ -199,6 +206,23 @@ function runStageLabel(
   }
 }
 
+function serverStageLabel(stage: string | null | undefined) {
+  switch (stage) {
+    case "persistence":
+      return "Persisted to history";
+    case "delta_enforcement":
+      return "Structured contract enforcement";
+    case "stream_start":
+      return "Provider stream start";
+    case "stream_prime":
+      return "Provider stream prime";
+    case "stream_runtime":
+      return "Provider stream runtime";
+    default:
+      return stage;
+  }
+}
+
 export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const { toast } = useToast();
   const abortRef = useRef<AbortController | null>(null);
@@ -307,6 +331,18 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     | "completed"
     | "failed"
   >("idle");
+  const [serverStage, setServerStage] = useState<string | null>(
+    initialData.initialRequestRef ? "persistence" : null,
+  );
+  const [serverOutcome, setServerOutcome] = useState<"completed" | "failed" | null>(
+    initialData.initialRequestRef ? "completed" : null,
+  );
+  const [mutationFeedback, setMutationFeedback] = useState<{
+    kind: "open" | "restore" | "export" | "mark_winner";
+    status: "running" | "success" | "error";
+    message: string;
+  } | null>(null);
+  const [expandedHistoryGroups, setExpandedHistoryGroups] = useState<string[]>([]);
 
   const selectedIcpLabel = useCustomIcp ? customIcp.trim() : profileIcp;
   const resolvedIcpLabel =
@@ -406,9 +442,18 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     return { total, winners, controls, experiments };
   }, [historyVersions]);
   const filteredHistoryVersions = useMemo(() => {
-    const sorted = [...historyVersions].sort((left, right) =>
-      right.createdAt.localeCompare(left.createdAt),
-    );
+    const sorted = [...historyVersions].sort((left, right) => {
+      if (left.isWinner !== right.isWinner) {
+        return left.isWinner ? -1 : 1;
+      }
+      if (left.isControl !== right.isControl) {
+        return left.isControl ? -1 : 1;
+      }
+      if ((left.versionNumber ?? 0) !== (right.versionNumber ?? 0)) {
+        return (right.versionNumber ?? 0) - (left.versionNumber ?? 0);
+      }
+      return right.createdAt.localeCompare(left.createdAt);
+    });
 
     if (historyFilter === "winner") {
       return sorted.filter((item) => item.isWinner);
@@ -429,6 +474,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         key: string;
         label: string;
         items: typeof filteredHistoryVersions;
+        winnerCount: number;
+        controlCount: number;
       }
     >();
 
@@ -438,17 +485,51 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         const label = item.experimentGroupId?.trim()
           ? `Experiment ${item.experimentGroupId}`
           : "Ungrouped versions";
-        groups.set(key, { key, label, items: [] });
+        groups.set(key, { key, label, items: [], winnerCount: 0, controlCount: 0 });
       }
-      groups.get(key)?.items.push(item);
+      const group = groups.get(key);
+      if (!group) {
+        continue;
+      }
+      group.items.push(item);
+      if (item.isWinner) {
+        group.winnerCount += 1;
+      }
+      if (item.isControl) {
+        group.controlCount += 1;
+      }
     }
 
     return Array.from(groups.values()).sort((left, right) => {
+      if (left.winnerCount !== right.winnerCount) {
+        return right.winnerCount - left.winnerCount;
+      }
       const leftDate = left.items[0]?.createdAt ?? "";
       const rightDate = right.items[0]?.createdAt ?? "";
       return rightDate.localeCompare(leftDate);
     });
   }, [filteredHistoryVersions]);
+
+  useEffect(() => {
+    if (groupedHistoryVersions.length === 0) {
+      setExpandedHistoryGroups([]);
+      return;
+    }
+
+    setExpandedHistoryGroups((previous) => {
+      const next = previous.filter((key) =>
+        groupedHistoryVersions.some((group) => group.key === key),
+      );
+      if (next.length > 0) {
+        return next;
+      }
+      const currentGroupKey =
+        groupedHistoryVersions.find((group) =>
+          group.items.some((item) => item.requestRef === requestRef),
+        )?.key ?? groupedHistoryVersions[0]?.key;
+      return currentGroupKey ? [currentGroupKey] : [];
+    });
+  }, [groupedHistoryVersions, requestRef]);
 
   useEffect(() => {
     if (!compareMode) {
@@ -893,6 +974,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setRefineMode(false);
     setDeltaInstructions("");
     setError(null);
+    setServerStage(null);
+    setServerOutcome(null);
+    setMutationFeedback(null);
     setRequestRef(null);
     setCurrentVersionCreatedAt(null);
     setOriginalBaselineMap(null);
@@ -934,6 +1018,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setOriginalBaselineMapLoading(false);
     setOriginalBaselineMapError(null);
     setError(null);
+    setServerStage(null);
+    setServerOutcome(null);
+    setMutationFeedback(null);
     setRunStage("idle");
     toast({
       title: "Rewrite duplicated",
@@ -997,8 +1084,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setRequestRef(null);
     setCurrentVersionCreatedAt(null);
     setIdempotentReplay(false);
+    setMutationFeedback(null);
     setRunning(true);
     setRunStage("preparing_request");
+    setServerStage(null);
+    setServerOutcome(null);
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -1061,6 +1151,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       setRunStage("validating_output");
       setOutput(result.content);
       setRequestRef(result.requestRef);
+      setServerStage(result.serverStage);
+      setServerOutcome(result.serverOutcome);
       setCurrentVersionCreatedAt(
         result.requestCreatedAt ?? new Date().toISOString(),
       );
@@ -1155,6 +1247,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     } catch (submissionError) {
       if (controller.signal.aborted) {
         setError("Generation canceled.");
+        setServerOutcome("failed");
       } else {
         const message =
           submissionError instanceof Error
@@ -1162,6 +1255,35 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             : isHttpError(submissionError)
               ? submissionError.message
               : "Unable to generate rewrite.";
+        if (
+          submissionError &&
+          typeof submissionError === "object" &&
+          "stage" in submissionError &&
+          typeof (submissionError as { stage?: unknown }).stage === "string"
+        ) {
+          setServerStage((submissionError as { stage: string }).stage);
+        }
+        if (
+          submissionError &&
+          typeof submissionError === "object" &&
+          "outcome" in submissionError &&
+          ((submissionError as { outcome?: unknown }).outcome === "completed" ||
+            (submissionError as { outcome?: unknown }).outcome === "failed")
+        ) {
+          setServerOutcome(
+            (submissionError as { outcome: "completed" | "failed" }).outcome,
+          );
+        } else {
+          setServerOutcome("failed");
+        }
+        if (
+          submissionError &&
+          typeof submissionError === "object" &&
+          "requestRef" in submissionError &&
+          typeof (submissionError as { requestRef?: unknown }).requestRef === "string"
+        ) {
+          setRequestRef((submissionError as { requestRef: string }).requestRef);
+        }
         if (
           /shift stats contract validation/i.test(message) ||
           /metrics contract validation/i.test(message) ||
@@ -1201,6 +1323,21 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     return latest;
   };
 
+  const announceMutation = (
+    kind: "open" | "restore" | "export" | "mark_winner",
+    status: "running" | "success" | "error",
+    message: string,
+  ) => {
+    setMutationFeedback({ kind, status, message });
+    if (status !== "running") {
+      window.setTimeout(() => {
+        setMutationFeedback((previous) =>
+          previous?.kind === kind && previous.status === status ? null : previous,
+        );
+      }, 2500);
+    }
+  };
+
   const openVersion = (requestRefToOpen: string) => {
     const version = historyVersions.find(
       (item) => item.requestRef === requestRefToOpen,
@@ -1210,6 +1347,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }
     setHistoryAction({ type: "open", requestRef: requestRefToOpen });
     setRunStage("restoring_version");
+    setServerStage("persistence");
+    setServerOutcome("completed");
+    announceMutation("open", "running", "Opening saved version in the active workspace.");
 
     setRequest((previous) => ({
       ...previous,
@@ -1282,6 +1422,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setError(null);
     setHistoryOpen(false);
     setRunStage("completed");
+    announceMutation("open", "success", "Saved version loaded into the active workspace.");
     setTimeout(() => setHistoryAction(null), 300);
   };
 
@@ -1294,6 +1435,13 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }
     setHistoryAction({ type: "restore", requestRef: requestRefToRestore });
     setRunStage("restoring_version");
+    setServerStage("persistence");
+    setServerOutcome("completed");
+    announceMutation(
+      "restore",
+      "running",
+      "Restoring selected version as the active working state.",
+    );
 
     setRequest((previous) => ({
       ...previous,
@@ -1370,6 +1518,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       title: "Version restored",
       description: "Version loaded as active workspace state.",
     });
+    announceMutation(
+      "restore",
+      "success",
+      "Selected version restored as the active workspace state.",
+    );
     setTimeout(() => setHistoryAction(null), 300);
   };
 
@@ -1389,9 +1542,18 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }
 
     setExportRunning(true);
+    announceMutation("export", "running", `Preparing ${format.toUpperCase()} export package.`);
     try {
       const exported = await exportRewrite({ requestRef, format });
       downloadBlob(exported.filename, exported.blob);
+      announceMutation("export", "success", `${format.toUpperCase()} export downloaded.`);
+    } catch (exportError) {
+      announceMutation(
+        "export",
+        "error",
+        exportError instanceof Error ? exportError.message : "Unable to export rewrite.",
+      );
+      throw exportError;
     } finally {
       setExportRunning(false);
     }
@@ -1409,6 +1571,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       );
     }
     setCompareExportRunning(true);
+    announceMutation(
+      "export",
+      "running",
+      `Preparing compare export in ${format.toUpperCase()} format.`,
+    );
     try {
       const exported = await exportRewriteComparison({
         baselineRequestRef: selectedBaselineRef,
@@ -1416,6 +1583,20 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         format,
       });
       downloadBlob(exported.filename, exported.blob);
+      announceMutation(
+        "export",
+        "success",
+        `Compare export downloaded in ${format.toUpperCase()} format.`,
+      );
+    } catch (exportError) {
+      announceMutation(
+        "export",
+        "error",
+        exportError instanceof Error
+          ? exportError.message
+          : "Unable to export rewrite comparison.",
+      );
+      throw exportError;
     } finally {
       setCompareExportRunning(false);
     }
@@ -1424,11 +1605,13 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const handleMarkWinner = async (winnerRequestRef: string) => {
     setWinnerMutationRunning(true);
     setRunStage("marking_winner");
+    announceMutation("mark_winner", "running", "Updating winner state for this experiment.");
     try {
       const result = await markWinnerAction({ requestRef: winnerRequestRef });
       if (result.error !== null) {
         setError(result.error);
         setRunStage("failed");
+        announceMutation("mark_winner", "error", result.error);
         toast({
           title: "Unable to mark winner",
           description: result.error,
@@ -1460,6 +1643,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         description: "Winning version updated for this experiment.",
       });
       setRunStage("completed");
+      announceMutation(
+        "mark_winner",
+        "success",
+        "Winner designation updated across the active experiment group.",
+      );
     } finally {
       setWinnerMutationRunning(false);
     }
@@ -1670,9 +1858,30 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   </div>
                 </div>
               ) : null}
+              {mutationFeedback ? (
+                <RewriteMutationStatusBanner
+                  status={mutationFeedback.status}
+                  title={
+                    mutationFeedback.kind === "open"
+                      ? "Opening version"
+                      : mutationFeedback.kind === "restore"
+                        ? "Restoring version"
+                        : mutationFeedback.kind === "export"
+                          ? "Export workflow"
+                          : "Winner update"
+                  }
+                  detail={mutationFeedback.message}
+                />
+              ) : null}
               <RewriteRunStateBar
                 status={studioStatus}
-                stageLabel={runStage === "idle" ? null : runStageLabel(runStage)}
+                stageLabel={
+                  runStage !== "idle"
+                    ? runStageLabel(runStage)
+                    : serverStage
+                      ? serverStageLabel(serverStage)
+                      : null
+                }
                 confidence={effectiveConfidence}
                 deltaScore={deltaScoreLabel}
                 experimentId={currentVersionRecord?.experimentGroupId ?? null}
@@ -1681,6 +1890,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                 isWinner={Boolean(currentVersionRecord?.isWinner)}
                 winnerLabel={currentVersionRecord?.winnerLabel ?? null}
                 idempotentReplay={idempotentReplay}
+                serverStage={serverStage}
+                serverOutcome={serverOutcome}
+                parentRequestRef={currentVersionRecord?.parentRequestRef ?? null}
+                controlRequestRef={currentVersionRecord?.controlRequestRef ?? null}
               />
               <RewriteExecutiveSummaryCard
                 output={output}
@@ -1750,7 +1963,10 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       )}
 
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-xl">
+        <SheetContent
+          side="right"
+          className="flex h-full w-full flex-col overflow-hidden sm:max-w-xl"
+        >
           <SheetHeader>
             <SheetTitle>Version History</SheetTitle>
             <SheetDescription>
@@ -1758,8 +1974,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-6 space-y-4 overflow-y-auto pr-1">
-            <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+          <div className="mt-6 flex min-h-0 flex-1 flex-col">
+            <div className="sticky top-0 z-10 border-b border-border/60 bg-background pb-4">
+              <div className="rounded-xl border border-border/60 bg-card/40 p-4">
               <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                 <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
                   {historySummary.total} saved versions
@@ -1797,47 +2014,76 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                 ))}
               </div>
             </div>
-            {filteredHistoryVersions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No rewrite versions match the current filter.
-              </p>
-            ) : (
-              groupedHistoryVersions.map((group) => (
-                <section key={group.key} className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {group.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {group.items.length} version{group.items.length === 1 ? "" : "s"}
-                      </p>
-                    </div>
-                  </div>
-                  {group.items.map((item) => (
-                    <RewriteHistoryCard
-                      key={item.requestRef}
-                      item={item}
-                      timestampLabel={formatHistoryTimestamp(item.createdAt)}
-                      busyAction={
-                        historyAction?.requestRef === item.requestRef
-                          ? historyAction.type
-                          : null
+            </div>
+            <div
+              className="min-h-0 flex-1 overflow-y-auto pr-4 pt-4 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-[3px] [&::-webkit-scrollbar-thumb]:border-background [&::-webkit-scrollbar-thumb]:bg-border/70"
+            >
+              <div className="space-y-4">
+                {filteredHistoryVersions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No rewrite versions match the current filter.
+                  </p>
+                ) : (
+                  groupedHistoryVersions.map((group) => (
+                    <Collapsible
+                      key={group.key}
+                      open={expandedHistoryGroups.includes(group.key)}
+                      onOpenChange={(open) =>
+                        setExpandedHistoryGroups((previous) =>
+                          open
+                            ? Array.from(new Set([...previous, group.key]))
+                            : previous.filter((item) => item !== group.key),
+                        )
                       }
-                      actionsDisabled={
-                        running ||
-                        exportRunning ||
-                        compareExportRunning ||
-                        winnerMutationRunning ||
-                        historyAction !== null
-                      }
-                      onOpen={() => openVersion(item.requestRef)}
-                      onRestore={() => restoreVersion(item.requestRef)}
-                    />
-                  ))}
-                </section>
-              ))
-            )}
+                    >
+                      <section className="space-y-3">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 bg-card/30 px-3 py-2.5 text-left">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {group.label}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {group.items.length} version{group.items.length === 1 ? "" : "s"} |{" "}
+                              {group.controlCount} control{group.controlCount === 1 ? "" : "s"} |{" "}
+                              {group.winnerCount} winner{group.winnerCount === 1 ? "" : "s"}
+                            </p>
+                          </div>
+                          <ChevronDown
+                            className={[
+                              "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                              expandedHistoryGroups.includes(group.key) ? "rotate-180" : "",
+                            ].join(" ")}
+                          />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-3">
+                          {group.items.map((item) => (
+                            <RewriteHistoryCard
+                              key={item.requestRef}
+                              item={item}
+                              timestampLabel={formatHistoryTimestamp(item.createdAt)}
+                              busyAction={
+                                historyAction?.requestRef === item.requestRef
+                                  ? historyAction.type
+                                  : null
+                              }
+                              actionsDisabled={
+                                running ||
+                                exportRunning ||
+                                compareExportRunning ||
+                                winnerMutationRunning ||
+                                historyAction !== null
+                              }
+                              onOpen={() => openVersion(item.requestRef)}
+                              onRestore={() => restoreVersion(item.requestRef)}
+                            />
+                          ))}
+                        </CollapsibleContent>
+                      </section>
+                    </Collapsible>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
