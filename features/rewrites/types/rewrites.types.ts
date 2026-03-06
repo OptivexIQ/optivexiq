@@ -98,6 +98,8 @@ export type RewriteStreamResult = {
   controlRequestRef: string | null;
   versionNumber: number | null;
   deltaLexicalSimilarity: number | null;
+  serverStage: string | null;
+  serverOutcome: "completed" | "failed" | null;
 };
 
 export type RewriteSectionMapResult = {

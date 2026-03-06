@@ -1079,6 +1079,8 @@ export async function handleGenerateStream(params: {
           "x-request-id": requestId,
           "x-rewrite-ref": rewriteRef,
           "x-rewrite-created-at": rewriteCreatedAt,
+          "x-rewrite-server-stage": "persistence",
+          "x-rewrite-server-outcome": "completed",
           ...(completedExperimentGroupId
             ? { "x-rewrite-experiment-group-id": completedExperimentGroupId }
             : {}),
@@ -1135,7 +1137,17 @@ export async function handleGenerateStream(params: {
         isVariationFailure ? 422 : 500,
         {
         requestId,
-        headers: { "x-request-id": requestId },
+        headers: {
+          "x-request-id": requestId,
+          ...(rewriteRef ? { "x-rewrite-ref": rewriteRef } : {}),
+          "x-rewrite-server-stage": "delta_enforcement",
+          "x-rewrite-server-outcome": "failed",
+        },
+        details: {
+          server_stage: "delta_enforcement",
+          server_outcome: "failed",
+          request_ref: rewriteRef,
+        },
         },
       );
     }
@@ -1172,10 +1184,20 @@ export async function handleGenerateStream(params: {
       userId,
       reservationKey: requestId,
     });
-    return errorResponse("provider_unavailable", "AI provider unavailable.", 500, {
-      requestId,
-      headers: { "x-request-id": requestId },
-    });
+      return errorResponse("provider_unavailable", "AI provider unavailable.", 500, {
+        requestId,
+        headers: {
+          "x-request-id": requestId,
+          ...(rewriteRef ? { "x-rewrite-ref": rewriteRef } : {}),
+          "x-rewrite-server-stage": "stream_start",
+          "x-rewrite-server-outcome": "failed",
+        },
+        details: {
+          server_stage: "stream_start",
+          server_outcome: "failed",
+          request_ref: rewriteRef,
+        },
+      });
   }
 
   const iterator = streamTextChunks(stream)[Symbol.asyncIterator]();
@@ -1223,7 +1245,17 @@ export async function handleGenerateStream(params: {
     });
     return errorResponse("provider_unavailable", "AI provider unavailable.", 500, {
       requestId,
-      headers: { "x-request-id": requestId },
+      headers: {
+        "x-request-id": requestId,
+        ...(rewriteRef ? { "x-rewrite-ref": rewriteRef } : {}),
+        "x-rewrite-server-stage": "stream_prime",
+        "x-rewrite-server-outcome": "failed",
+      },
+      details: {
+        server_stage: "stream_prime",
+        server_outcome: "failed",
+        request_ref: rewriteRef,
+      },
     });
   }
 

@@ -50,6 +50,11 @@ export function RewriteHistoryCard({
           Experiment: {item.experimentGroupId}
         </p>
       ) : null}
+      <p className="mt-1 text-xs text-muted-foreground">
+        Version {item.versionNumber ?? "N/A"}
+        {item.parentRequestRef ? ` | Parent ${item.parentRequestRef}` : ""}
+        {item.controlRequestRef ? ` | Control ${item.controlRequestRef}` : ""}
+      </p>
       {hypothesisType ? (
         <p className="mt-1 text-xs text-muted-foreground">
           Hypothesis: {hypothesisType}

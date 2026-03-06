@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
-import {
-  Loader2,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { RewriteType } from "@/features/rewrites/types/rewrites.types";
 import { RewriteFailurePanel } from "@/features/rewrites/components/RewriteFailurePanel";
 import { RewriteSectionNav } from "@/features/rewrites/components/RewriteSectionNav";
@@ -49,7 +47,9 @@ function classifyRewriteError(error: string | null): {
     };
   }
 
-  if (/metrics contract validation|shift stats contract validation/i.test(error)) {
+  if (
+    /metrics contract validation|shift stats contract validation/i.test(error)
+  ) {
     return {
       title: "Metrics validation failed",
       detail:
@@ -72,7 +72,8 @@ function classifyRewriteError(error: string | null): {
   return {
     title: "Rewrite generation failed",
     detail: error,
-    recovery: "Retry the run. If the issue persists, adjust the prompt inputs or provider settings.",
+    recovery:
+      "Retry the run. If the issue persists, adjust the prompt inputs or provider settings.",
   };
 }
 
@@ -196,11 +197,13 @@ export function RewriteOutputPanel({
   };
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/40 p-6 pt-3">
+    <div className="pt-3">
       <div className="mb-4 rounded-md border border-border/60 bg-secondary/20 p-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span>Validated rewrite output workspace</span>
-          {metadata?.versionNumber ? <span>Version {metadata.versionNumber}</span> : null}
+          {metadata?.versionNumber ? (
+            <span>Version {metadata.versionNumber}</span>
+          ) : null}
           {metadata?.isWinner ? (
             <span className="font-medium text-foreground/90">
               Winner{metadata.winnerLabel ? ` (${metadata.winnerLabel})` : ""}
@@ -223,7 +226,9 @@ export function RewriteOutputPanel({
         {metadata?.strategySnapshot ? (
           <p className="mt-2 text-xs text-muted-foreground">
             Strategy snapshot:{" "}
-            <span className="text-foreground/90">{metadata.strategySnapshot}</span>
+            <span className="text-foreground/90">
+              {metadata.strategySnapshot}
+            </span>
           </p>
         ) : null}
       </div>
@@ -257,7 +262,10 @@ export function RewriteOutputPanel({
         </div>
       ) : null}
 
-      <div ref={scrollContainerRef} className="mt-4 h-135 overflow-y-auto bg-transparent">
+      <div
+        ref={scrollContainerRef}
+        className="mt-4 bg-transparent"
+      >
         {running && !output ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -286,45 +294,47 @@ export function RewriteOutputPanel({
           <div className="space-y-4">
             <div className="mt-3 space-y-4">
               {outputViewModel.copySections.length === 0 ? (
-                <div className="rounded-md border border-border/50 bg-secondary/20 p-3">
+                <div className="rounded-md bg-secondary/10 p-3">
                   <p className="text-sm text-muted-foreground">
                     Structured rewrite sections are unavailable for this output.
                   </p>
                 </div>
               ) : null}
               {outputViewModel.copySections.map((section, index) => {
-                const sectionId = sectionIds[index]?.id ?? slugifySectionTitle(section.title, index);
+                const sectionId =
+                  sectionIds[index]?.id ??
+                  slugifySectionTitle(section.title, index);
                 return (
-                <div
-                  key={sectionId}
-                  id={sectionId}
-                  className="rounded-md border border-border/50 bg-secondary/30 p-3"
-                >
-                  <p className="text-sm font-semibold text-foreground">
-                    {section.title}
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
-                    <ReactMarkdown
-                      skipHtml
-                      allowedElements={
-                        ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
-                      }
-                      urlTransform={(url) => sanitizeUrl(url)}
-                      components={{
-                        a: ({ node, ...props }) => (
-                          <a
-                            {...props}
-                            target="_blank"
-                            rel="noreferrer noopener nofollow"
-                            className="text-primary underline-offset-4 hover:underline"
-                          />
-                        ),
-                      }}
-                    >
-                      {section.body}
-                    </ReactMarkdown>
-                  </p>
-                </div>
+                  <div
+                    key={sectionId}
+                    id={sectionId}
+                    className="rounded-md bg-secondary/20 p-3"
+                  >
+                    <p className="text-sm font-semibold text-foreground">
+                      {section.title}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
+                      <ReactMarkdown
+                        skipHtml
+                        allowedElements={
+                          ALLOWED_MARKDOWN_ELEMENTS as unknown as string[]
+                        }
+                        urlTransform={(url) => sanitizeUrl(url)}
+                        components={{
+                          a: ({ node, ...props }) => (
+                            <a
+                              {...props}
+                              target="_blank"
+                              rel="noreferrer noopener nofollow"
+                              className="text-primary underline-offset-4 hover:underline"
+                            />
+                          ),
+                        }}
+                      >
+                        {section.body}
+                      </ReactMarkdown>
+                    </p>
+                  </div>
                 );
               })}
             </div>
@@ -336,8 +346,12 @@ export function RewriteOutputPanel({
             </p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               <li>Define the source page and target copy to rewrite.</li>
-              <li>Set the experiment contract before generating a variation.</li>
-              <li>Use constraints to preserve required proof, tone, or CTA rules.</li>
+              <li>
+                Set the experiment contract before generating a variation.
+              </li>
+              <li>
+                Use constraints to preserve required proof, tone, or CTA rules.
+              </li>
             </ul>
             <p className="mt-3 text-sm text-muted-foreground">
               Need guidance?{" "}
@@ -351,11 +365,6 @@ export function RewriteOutputPanel({
             </p>
           </div>
         )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>Filename: {filename}</span>
-        <span>Request: {requestRef ?? "N/A"}</span>
       </div>
     </div>
   );

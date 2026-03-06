@@ -28,10 +28,27 @@ const rewriteSectionMapResultSchema = z.object({
 });
 
 function toHttpError(status: number, payload: unknown): HttpError {
+  const details =
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    (payload as { error?: { details?: unknown } }).error &&
+    typeof (payload as { error?: { details?: unknown } }).error?.details === "object"
+      ? ((payload as { error?: { details?: Record<string, unknown> } }).error?.details ?? {})
+      : {};
   return {
     status,
     message: normalizeErrorMessage(payload, "Rewrite request failed."),
     code: normalizeErrorCode(payload),
+    ...(typeof details.server_stage === "string"
+      ? { stage: details.server_stage }
+      : {}),
+    ...(typeof details.request_ref === "string"
+      ? { requestRef: details.request_ref }
+      : {}),
+    ...(typeof details.server_outcome === "string"
+      ? { outcome: details.server_outcome }
+      : {}),
   };
 }
 
@@ -59,7 +76,24 @@ export async function streamRewrite(
     const payload = contentType.includes("application/json")
       ? await response.json().catch(() => null)
       : await response.text().catch(() => "");
-    throw toHttpError(response.status, payload);
+    const httpError = toHttpError(response.status, payload) as HttpError & {
+      stage?: string;
+      requestRef?: string;
+      outcome?: string;
+    };
+    const stageFromHeader = response.headers.get("x-rewrite-server-stage");
+    const requestRefFromHeader = response.headers.get("x-rewrite-ref");
+    const outcomeFromHeader = response.headers.get("x-rewrite-server-outcome");
+    if (stageFromHeader) {
+      httpError.stage = stageFromHeader;
+    }
+    if (requestRefFromHeader) {
+      httpError.requestRef = requestRefFromHeader;
+    }
+    if (outcomeFromHeader) {
+      httpError.outcome = outcomeFromHeader;
+    }
+    throw httpError;
   }
 
   if (!response.body) {
@@ -111,6 +145,13 @@ export async function streamRewrite(
       Number.isFinite(parsedDeltaLexicalSimilarity)
         ? parsedDeltaLexicalSimilarity
         : null,
+    serverStage: response.headers.get("x-rewrite-server-stage"),
+    serverOutcome:
+      response.headers.get("x-rewrite-server-outcome") === "completed"
+        ? "completed"
+        : response.headers.get("x-rewrite-server-outcome") === "failed"
+          ? "failed"
+          : null,
   };
 }
 

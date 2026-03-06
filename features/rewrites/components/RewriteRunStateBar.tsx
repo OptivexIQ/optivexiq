@@ -1,14 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   FlaskConical,
   GitBranch,
+  ListChecks,
   ShieldAlert,
   WifiOff,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 type RewriteRunStateBarProps = {
   status: "ready" | "processing" | "offline" | "error";
@@ -21,6 +29,10 @@ type RewriteRunStateBarProps = {
   isWinner?: boolean;
   winnerLabel?: string | null;
   idempotentReplay?: boolean;
+  serverStage?: string | null;
+  serverOutcome?: "completed" | "failed" | null;
+  parentRequestRef?: string | null;
+  controlRequestRef?: string | null;
 };
 
 function statusCopy(status: RewriteRunStateBarProps["status"]) {
@@ -63,6 +75,28 @@ function detailValue(value: string | number | null | undefined, fallback = "Pend
   return String(value);
 }
 
+function formatServerStage(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  if (value === "persistence") {
+    return "Persisted to history";
+  }
+  if (value === "delta_enforcement") {
+    return "Structured contract enforcement";
+  }
+  if (value === "stream_start") {
+    return "Provider stream start";
+  }
+  if (value === "stream_prime") {
+    return "Provider stream prime";
+  }
+  if (value === "stream_runtime") {
+    return "Provider stream runtime";
+  }
+  return value;
+}
+
 export function RewriteRunStateBar({
   status,
   stageLabel,
@@ -74,9 +108,23 @@ export function RewriteRunStateBar({
   isWinner,
   winnerLabel,
   idempotentReplay,
+  serverStage,
+  serverOutcome,
+  parentRequestRef,
+  controlRequestRef,
 }: RewriteRunStateBarProps) {
   const meta = statusCopy(status);
   const StatusIcon = meta.icon;
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const hasDiagnostics =
+    Boolean(serverStage) ||
+    Boolean(serverOutcome) ||
+    Boolean(parentRequestRef) ||
+    Boolean(controlRequestRef) ||
+    Boolean(requestRef) ||
+    Boolean(experimentId) ||
+    versionNumber != null ||
+    Boolean(idempotentReplay);
 
   return (
     <section className="rounded-xl border border-border/60 bg-card/60 p-4">
@@ -157,6 +205,87 @@ export function RewriteRunStateBar({
           </p>
         </div>
       </div>
+      {hasDiagnostics ? (
+        <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <div className="mt-4 border-t border-border/60 pt-4">
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border/60 bg-background/30 px-3 py-2 text-left">
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Run details</p>
+                  <p className="text-xs text-muted-foreground">
+                    Review lineage, replay state, and authoritative server outcome.
+                  </p>
+                </div>
+              </div>
+              <ChevronDown
+                className={[
+                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                  detailsOpen ? "rotate-180" : "",
+                ].join(" ")}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+                  <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground">
+                    Server Outcome
+                  </p>
+                  <p className="mt-1.5 text-sm font-medium text-foreground">
+                    {detailValue(
+                      serverOutcome === "completed"
+                        ? "Completed"
+                        : serverOutcome === "failed"
+                          ? "Failed"
+                          : null,
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+                  <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground">
+                    Server Stage
+                  </p>
+                  <p className="mt-1.5 text-sm font-medium text-foreground">
+                    {detailValue(formatServerStage(serverStage))}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+                  <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground">
+                    Replay State
+                  </p>
+                  <p className="mt-1.5 text-sm font-medium text-foreground">
+                    {idempotentReplay ? "Idempotent replay" : "Fresh variation"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+                  <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground">
+                    Parent Version
+                  </p>
+                  <p className="mt-1.5 truncate text-sm font-medium text-foreground">
+                    {detailValue(parentRequestRef)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+                  <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground">
+                    Control Ref
+                  </p>
+                  <p className="mt-1.5 truncate text-sm font-medium text-foreground">
+                    {detailValue(controlRequestRef)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+                  <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground">
+                    Request Handle
+                  </p>
+                  <p className="mt-1.5 truncate text-sm font-medium text-foreground">
+                    {detailValue(requestRef)}
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
+      ) : null}
     </section>
   );
 }
