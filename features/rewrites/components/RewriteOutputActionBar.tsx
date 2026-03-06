@@ -69,10 +69,15 @@ export function RewriteOutputActionBar({
   };
 
   return (
-    <div className="sticky bottom-0 z-20 -mx-6 -mb-6 mt-auto border-t border-border/60 bg-gradient-to-t from-background via-background/95 to-background/75 px-6 py-3 shadow-[0_-14px_32px_hsl(var(--background)/0.78)] backdrop-blur-md supports-backdrop-filter:bg-background/70">
+    <div className="sticky bottom-0 z-20 -mx-6 -mb-6 mt-auto border-t border-border/60 bg-linear-to-t from-background via-background/95 to-background/75 px-6 py-3 shadow-[0_-14px_32px_hsl(var(--background)/0.78)] backdrop-blur-md supports-backdrop-filter:bg-background/70">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="xs" onClick={onOpenHistory} disabled={actionsLocked}>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onOpenHistory}
+            disabled={actionsLocked}
+          >
             <History className="h-4 w-4" />
             Version history
           </Button>
@@ -126,7 +131,11 @@ export function RewriteOutputActionBar({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="xs" disabled={!canExport || actionsLocked}>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={!canExport || actionsLocked}
+              >
                 <Download className="h-4 w-4" />
                 {exportRunning ? "Exporting..." : "Export"}
                 <ChevronDown className="h-4 w-4" />
