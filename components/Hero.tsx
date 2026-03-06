@@ -47,7 +47,7 @@ export function Hero() {
               href="/#free-snapshot"
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-8 py-3.5 text-sm font-semibold text-primary-foreground shadow-md shadow-black/30 transition-all hover:bg-primary/90"
             >
-              <span className="relative z-10 flex items-center gap-2">
+              <span className="relative z-20 flex items-center gap-2">
                 Run Free Conversion Audit
                 <svg
                   width="15"
@@ -68,7 +68,7 @@ export function Hero() {
             </Link>
             <Link
               href="/#solution"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-card/50 px-8 py-3.5 text-sm font-medium text-foreground backdrop-blur-sm transition-all hover:border-border hover:bg-secondary"
+              className="relative z-20 inline-flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-card/50 px-8 py-3.5 text-sm font-medium text-foreground backdrop-blur-sm transition-all hover:border-border hover:bg-secondary"
             >
               See How It Works
             </Link>
