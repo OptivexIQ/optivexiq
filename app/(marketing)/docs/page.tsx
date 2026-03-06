@@ -7,13 +7,14 @@ export const metadata = {
     "OptivexIQ product documentation for setup, analysis workflows, report interpretation, billing, data handling, and troubleshooting.",
 };
 
-const lastUpdated = "February 19, 2026";
+const lastUpdated = "March 6, 2026";
 
 const tocItems: DocsTocItem[] = [
   { id: "overview", label: "Overview" },
   { id: "getting-started", label: "Getting Started" },
   { id: "running-analyses", label: "Running Analyses" },
   { id: "understanding-report", label: "Understanding Your Report" },
+  { id: "rewrite-studio", label: "Rewrite Studio" },
   { id: "scoring-methodology", label: "Scoring & Methodology" },
   { id: "billing-entitlements", label: "Billing & Entitlements" },
   { id: "data-security", label: "Data & Security" },
@@ -291,6 +292,14 @@ export default function DocsPage() {
                   Structured guidance for improving headline, positioning, and
                   conversion-critical copy.
                 </p>
+                <p className="mt-1">
+                  After identifying messaging gaps in your report, you can use{" "}
+                  <Link href="#rewrite-studio" className="text-primary hover:underline">
+                    Rewrite Studio
+                  </Link>{" "}
+                  to explore potential improvements before making changes on
+                  your live site.
+                </p>
               </div>
 
               <div>
@@ -314,6 +323,183 @@ export default function DocsPage() {
                 replace experimentation, market testing, or cross-functional
                 review.
               </p>
+            </div>
+          </section>
+
+          <section id="rewrite-studio" className="mt-12 scroll-mt-28">
+            <h2 className="text-xl font-semibold text-foreground">
+              Rewrite Studio
+            </h2>
+
+            <h3 className="mt-4 text-base font-semibold text-foreground">
+              Overview
+            </h3>
+            <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+              <p>
+                Rewrite Studio is a controlled conversion hypothesis lab for
+                homepage and pricing messaging. It helps teams explore
+                alternative messaging approaches, test positioning hypotheses,
+                and compare versions before publishing changes.
+              </p>
+              <p>
+                Use it to evaluate strategic messaging options, not to publish
+                website updates automatically. Outputs should be reviewed and
+                adapted by the team responsible for implementation.
+              </p>
+              <p>
+                Rewrite Studio does not publish changes to your website or
+                replace experimentation. It helps teams evaluate candidate
+                messaging before rollout.
+              </p>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm">
+              <Link href="/dashboard/rewrites" className="text-primary hover:underline">
+                Open Rewrite Studio
+              </Link>
+              <Link href="/dashboard/reports" className="text-primary hover:underline">
+                View Reports
+              </Link>
+            </div>
+
+            <h3 className="mt-6 text-base font-semibold text-foreground">
+              When to use Rewrite Studio
+            </h3>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>After running a Conversion Gap Engine report.</li>
+              <li>When testing a new positioning direction.</li>
+              <li>When improving homepage clarity or narrative structure.</li>
+              <li>When adjusting pricing messaging for stronger buyer fit.</li>
+            </ul>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Rewrite Studio is most useful when you want to evaluate messaging
+              alternatives before implementation, especially when a report,
+              objection review, or differentiation exercise has identified
+              messaging risk.
+            </p>
+            <div className="mt-4 rounded-md border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">How it fits with other tools</p>
+              <p className="mt-1">
+                Conversion Gap Engine helps identify messaging risks and gaps.
+                Rewrite Studio helps test alternative messaging responses.
+                Objection Engine and Differentiation Builder help sharpen the
+                narrative direction you want to evaluate.
+              </p>
+            </div>
+
+            <h3 className="mt-6 text-base font-semibold text-foreground">
+              Running a rewrite
+            </h3>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>Open Rewrite Studio from the dashboard.</li>
+              <li>Choose the page type: homepage or pricing.</li>
+              <li>Provide a page URL or paste the current source content.</li>
+              <li>Define the messaging strategy, including tone, audience, and focus.</li>
+              <li>Generate a rewrite.</li>
+              <li>Review the output and compare it with the current version.</li>
+            </ol>
+            <p className="mt-3 text-sm text-muted-foreground">
+              You can iterate multiple times by adjusting inputs, adding
+              constraints, or refining the current direction.
+            </p>
+
+            <h3 className="mt-6 text-base font-semibold text-foreground">
+              Comparing versions
+            </h3>
+            <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+              <p>
+                Rewrite Studio supports side-by-side review of original
+                messaging, saved rewrite variants, and the current working
+                version.
+              </p>
+              <p>
+                Use comparison mode to evaluate how different messaging
+                approaches change structure, positioning, and strategic
+                rationale before deciding what to test or implement.
+              </p>
+            </div>
+
+            <h3 className="mt-6 text-base font-semibold text-foreground">
+              Marking a winner
+            </h3>
+            <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+              <p>
+                After review, you can mark the preferred version as the winner
+                for that experiment.
+              </p>
+              <p>
+                Marking a winner does not change the live website. It records
+                the preferred messaging option so the team can align on which
+                version to test or implement next.
+              </p>
+            </div>
+
+            <h3 className="mt-6 text-base font-semibold text-foreground">
+              How Rewrite Studio fits into the conversion intelligence workflow
+            </h3>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>Run Conversion Gap Engine.</li>
+              <li>Identify messaging risks, objections, or differentiation gaps.</li>
+              <li>Use Rewrite Studio to test alternative messaging approaches.</li>
+              <li>Evaluate the results and select a preferred version.</li>
+              <li>Implement the chosen changes on the website.</li>
+            </ol>
+            <p className="mt-3 text-sm text-muted-foreground">
+              In practice, Rewrite Studio works alongside Conversion Gap Engine,
+              Objection Engine, and Differentiation Builder as part of the
+              broader conversion intelligence workflow.
+            </p>
+
+            <h3 className="mt-6 text-base font-semibold text-foreground">
+              Limitations
+            </h3>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>Outputs are suggestions for evaluation, not final website copy.</li>
+              <li>Teams should review messaging before implementation.</li>
+              <li>Results depend on the available content and context provided.</li>
+            </ul>
+
+            <div className="mt-4 rounded-md border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Recommended workflow</p>
+              <p className="mt-1">
+                Start with diagnostic findings, use Rewrite Studio to test
+                messaging alternatives, then move the preferred version into
+                implementation and live experimentation.
+              </p>
+            </div>
+
+            <h3 className="mt-6 text-base font-semibold text-foreground">
+              Common questions
+            </h3>
+            <div className="mt-3 space-y-4 text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium text-foreground">
+                  Why can&apos;t I compare versions yet?
+                </p>
+                <p className="mt-1">
+                  Comparison works best after at least one rewrite version has
+                  been saved. Generate an initial rewrite first, then compare it
+                  with the original or another saved variant.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">
+                  What does marking a winner do?
+                </p>
+                <p className="mt-1">
+                  It records the preferred version for the experiment. It does
+                  not update your website or publish a rewrite automatically.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">
+                  Should teams implement the output exactly as shown?
+                </p>
+                <p className="mt-1">
+                  Not necessarily. Treat the output as a draft for review,
+                  testing, and adaptation based on internal brand, legal, and
+                  go-to-market requirements.
+                </p>
+              </div>
             </div>
           </section>
 
