@@ -862,7 +862,7 @@ export function RewriteComparisonPanel({
 
           <div className="grid gap-0 lg:grid-cols-2">
             <div className={`min-h-0 bg-card/30 ${columnPadding}`}>
-              <div className="min-h-0 max-h-[68vh] overflow-y-auto">
+              <div className="min-h-0 max-h-[68vh] overflow-y-auto pr-4 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-[3px] [&::-webkit-scrollbar-thumb]:border-background [&::-webkit-scrollbar-thumb]:bg-border/70">
                 <div className={sectionGap}>
                   {visibleRows.length === 0 ? (
                     <div className="rounded-md border border-border/60 bg-secondary/20 p-3">
@@ -941,7 +941,7 @@ export function RewriteComparisonPanel({
             </div>
 
             <div className={`min-h-0 bg-secondary/30 ${columnPadding}`}>
-              <div className="min-h-0 max-h-[68vh] overflow-y-auto">
+              <div className="min-h-0 max-h-[68vh] overflow-y-auto pr-4 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-[3px] [&::-webkit-scrollbar-thumb]:border-background [&::-webkit-scrollbar-thumb]:bg-border/70">
                 <div className={sectionGap}>
                   {visibleRows.length === 0 ? (
                     <div className="rounded-md border border-border/60 bg-secondary/20 p-3">

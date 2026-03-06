@@ -246,6 +246,8 @@ export function RewriteInputPanel({
     hypothesis.treatmentVariables.length >= 1 &&
     hypothesis.successCriteria.trim().length >= 8;
   const fieldLabelClass = "mb-2 text-sm font-medium text-foreground/85";
+  const textareaScrollbarClass =
+    "resize-y [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-[3px] [&::-webkit-scrollbar-thumb]:border-background [&::-webkit-scrollbar-thumb]:bg-border/70";
 
   const strategySummary = [
     `Tone ${strategy.tone}`,
@@ -359,6 +361,7 @@ export function RewriteInputPanel({
                 <Textarea
                   disabled={running}
                   rows={10}
+                  className={textareaScrollbarClass}
                   placeholder="Paste current homepage or pricing copy."
                   value={value.content ?? ""}
                   onChange={(event) =>
@@ -658,6 +661,7 @@ export function RewriteInputPanel({
                 <Textarea
                   disabled={running}
                   rows={3}
+                  className={textareaScrollbarClass}
                   maxLength={500}
                   placeholder="Must include/avoid..."
                   value={strategy.constraints ?? ""}
@@ -683,6 +687,7 @@ export function RewriteInputPanel({
                 <Textarea
                   disabled={running}
                   rows={3}
+                  className={textareaScrollbarClass}
                   placeholder="Business context, goals, objections, or campaign nuance."
                   value={value.notes ?? ""}
                   onChange={(event) =>
@@ -697,6 +702,7 @@ export function RewriteInputPanel({
                   <Textarea
                     disabled={running}
                     rows={3}
+                    className={textareaScrollbarClass}
                     placeholder="Specify exactly what to improve from the current rewrite."
                     value={deltaInstructions}
                     onChange={(event) =>
