@@ -294,7 +294,10 @@ export default function DocsPage() {
                 </p>
                 <p className="mt-1">
                   After identifying messaging gaps in your report, you can use{" "}
-                  <Link href="#rewrite-studio" className="text-primary hover:underline">
+                  <Link
+                    href="#rewrite-studio"
+                    className="text-primary hover:underline"
+                  >
                     Rewrite Studio
                   </Link>{" "}
                   to explore potential improvements before making changes on
@@ -353,10 +356,16 @@ export default function DocsPage() {
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-3 text-sm">
-              <Link href="/dashboard/rewrites" className="text-primary hover:underline">
+              <Link
+                href="/dashboard/rewrites"
+                className="text-primary hover:underline"
+              >
                 Open Rewrite Studio
               </Link>
-              <Link href="/dashboard/reports" className="text-primary hover:underline">
+              <Link
+                href="/dashboard/reports"
+                className="text-primary hover:underline"
+              >
                 View Reports
               </Link>
             </div>
@@ -377,7 +386,9 @@ export default function DocsPage() {
               messaging risk.
             </p>
             <div className="mt-4 rounded-md border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">How it fits with other tools</p>
+              <p className="font-medium text-foreground">
+                How it fits with other tools
+              </p>
               <p className="mt-1">
                 Conversion Gap Engine helps identify messaging risks and gaps.
                 Rewrite Studio helps test alternative messaging responses.
@@ -393,9 +404,14 @@ export default function DocsPage() {
               <li>Open Rewrite Studio from the dashboard.</li>
               <li>Choose the page type: homepage or pricing.</li>
               <li>Provide a page URL or paste the current source content.</li>
-              <li>Define the messaging strategy, including tone, audience, and focus.</li>
+              <li>
+                Define the messaging strategy, including tone, audience, and
+                focus.
+              </li>
               <li>Generate a rewrite.</li>
-              <li>Review the output and compare it with the current version.</li>
+              <li>
+                Review the output and compare it with the current version.
+              </li>
             </ol>
             <p className="mt-3 text-sm text-muted-foreground">
               You can iterate multiple times by adjusting inputs, adding
@@ -438,8 +454,12 @@ export default function DocsPage() {
             </h3>
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
               <li>Run Conversion Gap Engine.</li>
-              <li>Identify messaging risks, objections, or differentiation gaps.</li>
-              <li>Use Rewrite Studio to test alternative messaging approaches.</li>
+              <li>
+                Identify messaging risks, objections, or differentiation gaps.
+              </li>
+              <li>
+                Use Rewrite Studio to test alternative messaging approaches.
+              </li>
               <li>Evaluate the results and select a preferred version.</li>
               <li>Implement the chosen changes on the website.</li>
             </ol>
@@ -453,13 +473,19 @@ export default function DocsPage() {
               Limitations
             </h3>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-              <li>Outputs are suggestions for evaluation, not final website copy.</li>
+              <li>
+                Outputs are suggestions for evaluation, not final website copy.
+              </li>
               <li>Teams should review messaging before implementation.</li>
-              <li>Results depend on the available content and context provided.</li>
+              <li>
+                Results depend on the available content and context provided.
+              </li>
             </ul>
 
             <div className="mt-4 rounded-md border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Recommended workflow</p>
+              <p className="font-medium text-foreground">
+                Recommended workflow
+              </p>
               <p className="mt-1">
                 Start with diagnostic findings, use Rewrite Studio to test
                 messaging alternatives, then move the preferred version into
@@ -609,7 +635,9 @@ export default function DocsPage() {
                 <thead className="bg-secondary/50 text-foreground">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Area</th>
-                    <th className="px-4 py-3 font-semibold">Current practice</th>
+                    <th className="px-4 py-3 font-semibold">
+                      Current practice
+                    </th>
                     <th className="px-4 py-3 font-semibold">Where to verify</th>
                   </tr>
                 </thead>
@@ -617,10 +645,14 @@ export default function DocsPage() {
                   <tr className="border-t border-border/60">
                     <td className="px-4 py-3">Status visibility</td>
                     <td className="px-4 py-3">
-                      Public service status and incident summaries are published.
+                      Public service status and incident summaries are
+                      published.
                     </td>
                     <td className="px-4 py-3">
-                      <Link href="/status" className="text-primary hover:underline">
+                      <Link
+                        href="/status"
+                        className="text-primary hover:underline"
+                      >
                         System Status
                       </Link>
                     </td>
@@ -628,11 +660,14 @@ export default function DocsPage() {
                   <tr className="border-t border-border/60">
                     <td className="px-4 py-3">Incident communication</td>
                     <td className="px-4 py-3">
-                      Customer-impacting incidents include updates and resolution
-                      state where applicable.
+                      Customer-impacting incidents include updates and
+                      resolution state where applicable.
                     </td>
                     <td className="px-4 py-3">
-                      <Link href="/status" className="text-primary hover:underline">
+                      <Link
+                        href="/status"
+                        className="text-primary hover:underline"
+                      >
                         Status incident log
                       </Link>
                     </td>
@@ -640,11 +675,14 @@ export default function DocsPage() {
                   <tr className="border-t border-border/60">
                     <td className="px-4 py-3">Support escalation</td>
                     <td className="px-4 py-3">
-                      Published support, security, and legal channels with routed
-                      request handling.
+                      Published support, security, and legal channels with
+                      routed request handling.
                     </td>
                     <td className="px-4 py-3">
-                      <Link href="/contact" className="text-primary hover:underline">
+                      <Link
+                        href="/contact"
+                        className="text-primary hover:underline"
+                      >
                         Contact hub
                       </Link>
                     </td>
@@ -656,11 +694,17 @@ export default function DocsPage() {
                       effective dates.
                     </td>
                     <td className="px-4 py-3">
-                      <Link href="/privacy" className="text-primary hover:underline">
+                      <Link
+                        href="/privacy"
+                        className="text-primary hover:underline"
+                      >
                         Privacy
                       </Link>
                       {" / "}
-                      <Link href="/terms" className="text-primary hover:underline">
+                      <Link
+                        href="/terms"
+                        className="text-primary hover:underline"
+                      >
                         Terms
                       </Link>
                     </td>
@@ -671,7 +715,10 @@ export default function DocsPage() {
                       Product-facing updates are published in release notes.
                     </td>
                     <td className="px-4 py-3">
-                      <Link href="/whats-new" className="text-primary hover:underline">
+                      <Link
+                        href="/whats-new"
+                        className="text-primary hover:underline"
+                      >
                         What&apos;s New
                       </Link>
                     </td>
@@ -679,7 +726,6 @@ export default function DocsPage() {
                 </tbody>
               </table>
             </div>
-
           </section>
 
           <section id="troubleshooting" className="mt-12 scroll-mt-28">
