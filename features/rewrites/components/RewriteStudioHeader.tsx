@@ -16,7 +16,7 @@ export function RewriteStudioHeader({
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <p className="text-xs font-medium tracking-[0.08em] text-primary">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
           Rewrite Studio
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-foreground">
@@ -38,11 +38,7 @@ export function RewriteStudioHeader({
           <History className="h-4 w-4" />
           Version History
         </Button>
-        <Button
-          type="button"
-          disabled={disableActions}
-          onClick={onNewRewrite}
-        >
+        <Button type="button" disabled={disableActions} onClick={onNewRewrite}>
           <Plus className="h-4 w-4" />
           New Rewrite
         </Button>
