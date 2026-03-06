@@ -42,6 +42,36 @@ function normalizeShiftValue(value: string) {
   };
 }
 
+function interpretShift(
+  label: "clarity" | "objection" | "positioning",
+  value: string,
+  trend: "up" | "down" | "neutral",
+) {
+  if (label === "positioning") {
+    if (/strong|improving/i.test(value)) {
+      return "Clearer positioning separation from the baseline.";
+    }
+    if (/needs work|weak/i.test(value)) {
+      return "Positioning movement is limited and may need a stronger treatment.";
+    }
+    return "Positioning movement is present but not decisive yet.";
+  }
+
+  if (trend === "up") {
+    return label === "clarity"
+      ? "Message clarity improved versus the baseline."
+      : "Objection handling improved versus the baseline.";
+  }
+  if (trend === "down") {
+    return label === "clarity"
+      ? "Clarity regressed and should be reviewed before shipping."
+      : "Objection handling weakened and may introduce buyer friction.";
+  }
+  return label === "clarity"
+    ? "Clarity movement is limited."
+    : "Objection handling movement is limited.";
+}
+
 export function RewriteShiftStatsCards({
   running,
   shiftStatsOverride,
@@ -91,7 +121,7 @@ export function RewriteShiftStatsCards({
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       <div className="rounded-xl border border-border/60 bg-card p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="text-xs font-medium tracking-[0.08em] text-muted-foreground">
           Clarity Shift
         </p>
         <div className="mt-2 flex items-center gap-2">
@@ -106,10 +136,13 @@ export function RewriteShiftStatsCards({
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           )}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {interpretShift("clarity", clarity.value, clarity.trend)}
+        </p>
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="text-xs font-medium tracking-[0.08em] text-muted-foreground">
           Objection Shift
         </p>
         <div className="mt-2 flex items-center gap-2">
@@ -124,18 +157,24 @@ export function RewriteShiftStatsCards({
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           )}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {interpretShift("objection", objection.value, objection.trend)}
+        </p>
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card p-4 sm:col-span-2 xl:col-span-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="text-xs font-medium tracking-[0.08em] text-muted-foreground">
           Positioning Shift
         </p>
         <div className="mt-2 flex items-center gap-2">
           <p className="text-3xl font-semibold leading-none text-foreground">
             {positioning.value}
           </p>
-          <Sparkles className="h-4 w-4 text-primary" />
-        </div>
+            <Sparkles className="h-4 w-4 text-primary" />
+          </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {interpretShift("positioning", positioning.value, positioning.trend)}
+        </p>
       </div>
     </div>
   );

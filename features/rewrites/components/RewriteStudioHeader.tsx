@@ -16,12 +16,16 @@ export function RewriteStudioHeader({
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+        <p className="text-xs font-medium tracking-[0.08em] text-primary">
           Rewrite Studio
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-foreground">
           On-demand homepage and pricing rewrites
         </h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Run controlled rewrite experiments, compare saved versions, and export
+          validated output without leaving the studio.
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

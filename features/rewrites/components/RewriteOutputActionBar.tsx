@@ -27,19 +27,21 @@ type RewriteOutputActionBarProps = {
   canExport: boolean;
   canCompare: boolean;
   running: boolean;
+  exportRunning?: boolean;
   showRunGapEngine?: boolean;
   onOpenHistory: () => void;
   onDuplicate: () => void;
   onRefine: () => void;
   onCopy: () => void | Promise<void>;
   onEnterCompare: () => void;
-  onExport: (format: RewriteExportFormat) => void;
+  onExport: (format: RewriteExportFormat) => void | Promise<void>;
 };
 
 export function RewriteOutputActionBar({
   canExport,
   canCompare,
   running,
+  exportRunning = false,
   showRunGapEngine = false,
   onOpenHistory,
   onDuplicate,
@@ -49,6 +51,16 @@ export function RewriteOutputActionBar({
   onExport,
 }: RewriteOutputActionBarProps) {
   const [copied, setCopied] = useState(false);
+  const actionsLocked = running || exportRunning;
+  const workflowHint = running
+    ? "Generation in progress. Refine, duplicate, compare, and export are temporarily locked."
+    : exportRunning
+      ? "Export in progress. Keep this tab open until the file is prepared."
+      : !canExport
+        ? "Generate and save a rewrite to unlock refine, compare, copy, and export actions."
+        : !canCompare
+          ? "Compare mode unlocks when a baseline version is available for this rewrite."
+          : "Current output is ready for refinement, comparison, copy, or export.";
 
   const handleCopy = async () => {
     await onCopy();
@@ -60,15 +72,24 @@ export function RewriteOutputActionBar({
     <div className="sticky bottom-0 z-20 -mx-6 -mb-6 mt-auto border-t border-border/60 bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/85">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="xs" onClick={onOpenHistory}>
+          <Button variant="outline" size="xs" onClick={onOpenHistory} disabled={actionsLocked}>
             <History className="h-4 w-4" />
             Version history
+          </Button>
+          <Button
+            variant="secondary"
+            size="xs"
+            onClick={onRefine}
+            disabled={!canExport || actionsLocked}
+          >
+            <Sparkles className="h-4 w-4" />
+            Refine
           </Button>
           <Button
             variant="outline"
             size="xs"
             onClick={onDuplicate}
-            disabled={!canExport || running}
+            disabled={!canExport || actionsLocked}
           >
             <Sparkles className="h-4 w-4" />
             Duplicate
@@ -76,17 +97,8 @@ export function RewriteOutputActionBar({
           <Button
             variant="outline"
             size="xs"
-            onClick={onRefine}
-            disabled={!canExport || running}
-          >
-            <Sparkles className="h-4 w-4" />
-            Refine
-          </Button>
-          <Button
-            variant="secondary"
-            size="xs"
             onClick={() => void handleCopy()}
-            disabled={!canExport}
+            disabled={!canExport || actionsLocked}
           >
             {copied ? (
               <Check className="h-4 w-4" />
@@ -107,16 +119,16 @@ export function RewriteOutputActionBar({
             variant="outline"
             size="xs"
             onClick={onEnterCompare}
-            disabled={!canExport || !canCompare}
+            disabled={!canExport || !canCompare || actionsLocked}
           >
             <SplitSquareHorizontal className="h-4 w-4" />
             Compare versions
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="xs" disabled={!canExport}>
+              <Button variant="outline" size="xs" disabled={!canExport || actionsLocked}>
                 <Download className="h-4 w-4" />
-                Export
+                {exportRunning ? "Exporting..." : "Export"}
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -141,6 +153,7 @@ export function RewriteOutputActionBar({
           </DropdownMenu>
         </div>
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">{workflowHint}</p>
     </div>
   );
 }

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Info } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -22,8 +20,10 @@ import { isHttpError } from "@/lib/api/httpClient";
 import { RewriteInputPanel } from "@/features/rewrites/components/RewriteInputPanel";
 import { RewriteComparisonPanel } from "@/features/rewrites/components/RewriteComparisonPanel";
 import { RewriteExecutiveSummaryCard } from "@/features/rewrites/components/RewriteExecutiveSummaryCard";
+import { RewriteHistoryCard } from "@/features/rewrites/components/RewriteHistoryCard";
 import { RewriteOutputPanel } from "@/features/rewrites/components/RewriteOutputPanel";
 import { RewriteOutputActionBar } from "@/features/rewrites/components/RewriteOutputActionBar";
+import { RewriteRunStateBar } from "@/features/rewrites/components/RewriteRunStateBar";
 import { RewriteShiftStatsCards } from "@/features/rewrites/components/RewriteShiftStatsCards";
 import { RewriteStrategicRationaleCard } from "@/features/rewrites/components/RewriteStrategicRationaleCard";
 import {
@@ -102,7 +102,9 @@ function formatHistoryTimestamp(value: string) {
   });
 }
 
-function normalizeHypothesis(value?: Partial<RewriteHypothesis> | null): RewriteHypothesis {
+function normalizeHypothesis(
+  value?: Partial<RewriteHypothesis> | null,
+): RewriteHypothesis {
   const type =
     value?.type === "positioning_shift" ||
     value?.type === "objection_attack" ||
@@ -161,6 +163,40 @@ function normalizeHypothesis(value?: Partial<RewriteHypothesis> | null): Rewrite
         ? value.minimumDeltaLevel
         : DEFAULT_REWRITE_HYPOTHESIS.minimumDeltaLevel,
   };
+}
+
+function runStageLabel(
+  stage:
+    | "idle"
+    | "preparing_request"
+    | "streaming_output"
+    | "validating_output"
+    | "syncing_history"
+    | "restoring_version"
+    | "marking_winner"
+    | "completed"
+    | "failed",
+) {
+  switch (stage) {
+    case "preparing_request":
+      return "Preparing request";
+    case "streaming_output":
+      return "Streaming output";
+    case "validating_output":
+      return "Validating contract";
+    case "syncing_history":
+      return "Syncing version history";
+    case "restoring_version":
+      return "Restoring version";
+    case "marking_winner":
+      return "Marking winner";
+    case "completed":
+      return "Run completed";
+    case "failed":
+      return "Run failed";
+    default:
+      return "Idle";
+  }
 }
 
 export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
@@ -249,9 +285,28 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   const [historyVersions, setHistoryVersions] = useState(
     initialData.historyVersions ?? [],
   );
+  const [historyFilter, setHistoryFilter] = useState<
+    "all" | "winner" | "control" | "treatment"
+  >("all");
+  const [historyAction, setHistoryAction] = useState<{
+    type: "open" | "restore";
+    requestRef: string;
+  } | null>(null);
   const [winnerMutationRunning, setWinnerMutationRunning] = useState(false);
   const [idempotentReplay, setIdempotentReplay] = useState(false);
+  const [exportRunning, setExportRunning] = useState(false);
   const [compareExportRunning, setCompareExportRunning] = useState(false);
+  const [runStage, setRunStage] = useState<
+    | "idle"
+    | "preparing_request"
+    | "streaming_output"
+    | "validating_output"
+    | "syncing_history"
+    | "restoring_version"
+    | "marking_winner"
+    | "completed"
+    | "failed"
+  >("idle");
 
   const selectedIcpLabel = useCustomIcp ? customIcp.trim() : profileIcp;
   const resolvedIcpLabel =
@@ -267,41 +322,42 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     }
     return request.content?.trim().length ? request.content : "";
   }, [requestRef, currentVersionSourceContent, request.content]);
-  const compareBaselineOptions = useMemo(
-    () => {
-      const current = requestRef
-        ? historyVersions.find((item) => item.requestRef === requestRef)
-        : null;
-      const currentExperimentId = current?.experimentGroupId ?? null;
-      const candidates = historyVersions.filter(
-        (item) =>
-          item.requestRef !== requestRef &&
-          (!currentExperimentId || item.experimentGroupId === currentExperimentId),
-      );
-      const sorted = [...candidates].sort((left, right) => {
-        if (left.isControl && !right.isControl) {
-          return -1;
-        }
-        if (!left.isControl && right.isControl) {
-          return 1;
-        }
-        return right.createdAt.localeCompare(left.createdAt);
-      });
+  const compareBaselineOptions = useMemo(() => {
+    const current = requestRef
+      ? historyVersions.find((item) => item.requestRef === requestRef)
+      : null;
+    const currentExperimentId = current?.experimentGroupId ?? null;
+    const candidates = historyVersions.filter(
+      (item) =>
+        item.requestRef !== requestRef &&
+        (!currentExperimentId ||
+          item.experimentGroupId === currentExperimentId),
+    );
+    const sorted = [...candidates].sort((left, right) => {
+      if (left.isControl && !right.isControl) {
+        return -1;
+      }
+      if (!left.isControl && right.isControl) {
+        return 1;
+      }
+      return right.createdAt.localeCompare(left.createdAt);
+    });
 
-      return sorted.map((item) => {
-        const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
-        const role = item.isControl
-          ? "Control (original input)"
-          : `Treatment v${item.versionNumber ?? "?"}`;
-        return {
-          requestRef: item.requestRef,
-          label: `${role} | ${target} | ${item.requestRef}`,
-        };
-      });
-    },
-    [historyVersions, requestRef],
+    return sorted.map((item) => {
+      const target = item.rewriteType === "pricing" ? "Pricing" : "Homepage";
+      const role = item.isControl
+        ? "Control (original input)"
+        : `Treatment v${item.versionNumber ?? "?"}`;
+      return {
+        requestRef: item.requestRef,
+        label: `${role} | ${target} | ${item.requestRef}`,
+      };
+    });
+  }, [historyVersions, requestRef]);
+  const baselineOptions = useMemo(
+    () => compareBaselineOptions,
+    [compareBaselineOptions],
   );
-  const baselineOptions = useMemo(() => compareBaselineOptions, [compareBaselineOptions]);
   const isOriginalBaselineSelected =
     selectedBaselineRef === ORIGINAL_BASELINE_REF;
   const selectedBaselineOutput = isOriginalBaselineSelected
@@ -334,6 +390,65 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     selectedBaselineRef && selectedBaselineRef !== ORIGINAL_BASELINE_REF
       ? historyVersions.find((item) => item.requestRef === selectedBaselineRef)
       : null;
+  const historySummary = useMemo(() => {
+    const total = historyVersions.length;
+    const winners = historyVersions.filter((item) => item.isWinner).length;
+    const controls = historyVersions.filter((item) => item.isControl).length;
+    const experiments = new Set(
+      historyVersions
+        .map((item) => item.experimentGroupId)
+        .filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0,
+        ),
+    ).size;
+
+    return { total, winners, controls, experiments };
+  }, [historyVersions]);
+  const filteredHistoryVersions = useMemo(() => {
+    const sorted = [...historyVersions].sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt),
+    );
+
+    if (historyFilter === "winner") {
+      return sorted.filter((item) => item.isWinner);
+    }
+    if (historyFilter === "control") {
+      return sorted.filter((item) => item.isControl);
+    }
+    if (historyFilter === "treatment") {
+      return sorted.filter((item) => !item.isControl);
+    }
+
+    return sorted;
+  }, [historyFilter, historyVersions]);
+  const groupedHistoryVersions = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        items: typeof filteredHistoryVersions;
+      }
+    >();
+
+    for (const item of filteredHistoryVersions) {
+      const key = item.experimentGroupId?.trim() || `ungrouped:${item.requestRef}`;
+      if (!groups.has(key)) {
+        const label = item.experimentGroupId?.trim()
+          ? `Experiment ${item.experimentGroupId}`
+          : "Ungrouped versions";
+        groups.set(key, { key, label, items: [] });
+      }
+      groups.get(key)?.items.push(item);
+    }
+
+    return Array.from(groups.values()).sort((left, right) => {
+      const leftDate = left.items[0]?.createdAt ?? "";
+      const rightDate = right.items[0]?.createdAt ?? "";
+      return rightDate.localeCompare(leftDate);
+    });
+  }, [filteredHistoryVersions]);
 
   useEffect(() => {
     if (!compareMode) {
@@ -342,7 +457,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
     const hasSelected =
       selectedBaselineRef != null &&
-      baselineOptions.some((option) => option.requestRef === selectedBaselineRef);
+      baselineOptions.some(
+        (option) => option.requestRef === selectedBaselineRef,
+      );
     if (hasSelected) {
       return;
     }
@@ -354,7 +471,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       return Boolean(record?.isControl);
     });
 
-    setSelectedBaselineRef(preferredControl?.requestRef ?? baselineOptions[0]?.requestRef ?? null);
+    setSelectedBaselineRef(
+      preferredControl?.requestRef ?? baselineOptions[0]?.requestRef ?? null,
+    );
   }, [compareMode, baselineOptions, selectedBaselineRef, historyVersions]);
   const strategySnapshot = useMemo(() => {
     const parts: string[] = [];
@@ -383,9 +502,29 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         deltaMetrics: currentVersionRecord?.deltaMetrics,
         hypothesis: currentVersionRecord?.hypothesis ?? hypothesis,
       }),
-    [currentVersionRecord?.deltaMetrics, currentVersionRecord?.hypothesis, hypothesis],
+    [
+      currentVersionRecord?.deltaMetrics,
+      currentVersionRecord?.hypothesis,
+      hypothesis,
+    ],
   );
   const effectiveConfidence = deterministicMetrics.confidence;
+  const deltaScoreLabel = useMemo(() => {
+    const similarity = currentVersionRecord?.deltaMetrics?.lexical_similarity;
+    if (typeof similarity !== "number" || !Number.isFinite(similarity)) {
+      return null;
+    }
+
+    const variation = Math.max(0, Math.min(1, 1 - similarity));
+    const pct = Math.round(variation * 100);
+    if (variation >= 0.45) {
+      return `${pct}% (strong)`;
+    }
+    if (variation >= 0.3) {
+      return `${pct}% (moderate)`;
+    }
+    return `${pct}% (light)`;
+  }, [currentVersionRecord?.deltaMetrics]);
   const studioStatus = useMemo(() => {
     if (!isOnline) {
       return "offline" as const;
@@ -760,6 +899,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setOriginalBaselineMapLoading(false);
     setOriginalBaselineMapError(null);
     setEnforceSectionLabels(false);
+    setRunStage("idle");
   };
 
   const resetControlContext = () => {
@@ -794,6 +934,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setOriginalBaselineMapLoading(false);
     setOriginalBaselineMapError(null);
     setError(null);
+    setRunStage("idle");
     toast({
       title: "Rewrite duplicated",
       description:
@@ -811,8 +952,12 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
   };
 
   const handleSubmit = async (overrideIdempotencyKey?: string) => {
-    const controlledVariables = Array.from(new Set(hypothesis.controlledVariables));
-    const treatmentVariables = Array.from(new Set(hypothesis.treatmentVariables));
+    const controlledVariables = Array.from(
+      new Set(hypothesis.controlledVariables),
+    );
+    const treatmentVariables = Array.from(
+      new Set(hypothesis.treatmentVariables),
+    );
     const successCriteria = hypothesis.successCriteria.trim();
     if (controlledVariables.length < 2) {
       setError("Select at least 2 controlled variables in Hypothesis.");
@@ -853,6 +998,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setCurrentVersionCreatedAt(null);
     setIdempotentReplay(false);
     setRunning(true);
+    setRunStage("preparing_request");
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -908,9 +1054,11 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       const result = await streamRewrite(submissionRequest, {
         signal: controller.signal,
         onChunk: (chunk) => {
+          setRunStage("streaming_output");
           setOutput((previous) => previous + chunk);
         },
       });
+      setRunStage("validating_output");
       setOutput(result.content);
       setRequestRef(result.requestRef);
       setCurrentVersionCreatedAt(
@@ -920,6 +1068,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       const nextRequestRef = result.requestRef;
       if (nextRequestRef) {
         try {
+          setRunStage("syncing_history");
           const latestVersions = await refreshHistoryVersions();
           const canonical = latestVersions.find(
             (item) => item.requestRef === nextRequestRef,
@@ -977,7 +1126,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   ? null
                   : {
                       lexical_similarity: result.deltaLexicalSimilarity,
-                      delta_level: submissionRequest.hypothesis.minimumDeltaLevel,
+                      delta_level:
+                        submissionRequest.hypothesis.minimumDeltaLevel,
                     },
             };
             return [
@@ -992,13 +1142,16 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         idempotencyKey: createIdempotencyKey(),
       }));
       toast({
-        title: result.idempotentReplay ? "Previous result returned" : "Rewrite generated",
+        title: result.idempotentReplay
+          ? "Previous result returned"
+          : "Rewrite generated",
         description: result.idempotentReplay
           ? "Duplicate request detected. Force a new variation to run a fresh generation."
           : "Your output is ready to copy or export.",
       });
       setRefineMode(false);
       setDeltaInstructions("");
+      setRunStage("completed");
     } catch (submissionError) {
       if (controller.signal.aborted) {
         setError("Generation canceled.");
@@ -1018,6 +1171,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         }
         setError(message);
       }
+      setRunStage("failed");
     } finally {
       setRunning(false);
       abortRef.current = null;
@@ -1054,6 +1208,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     if (!version) {
       return;
     }
+    setHistoryAction({ type: "open", requestRef: requestRefToOpen });
+    setRunStage("restoring_version");
 
     setRequest((previous) => ({
       ...previous,
@@ -1125,6 +1281,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setOriginalBaselineMapError(null);
     setError(null);
     setHistoryOpen(false);
+    setRunStage("completed");
+    setTimeout(() => setHistoryAction(null), 300);
   };
 
   const restoreVersion = (requestRefToRestore: string) => {
@@ -1134,6 +1292,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     if (!version) {
       return;
     }
+    setHistoryAction({ type: "restore", requestRef: requestRefToRestore });
+    setRunStage("restoring_version");
 
     setRequest((previous) => ({
       ...previous,
@@ -1205,15 +1365,19 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
     setOriginalBaselineMapError(null);
     setError(null);
     setHistoryOpen(false);
+    setRunStage("completed");
     toast({
       title: "Version restored",
       description: "Version loaded as active workspace state.",
     });
+    setTimeout(() => setHistoryAction(null), 300);
   };
 
   const handleCopy = async () => {
     const markdown = requestRef
-      ? await (await exportRewrite({ requestRef, format: "markdown" })).blob.text()
+      ? await (
+          await exportRewrite({ requestRef, format: "markdown" })
+        ).blob.text()
       : output;
     await navigator.clipboard.writeText(markdown);
     toast({ title: "Copied", description: "Rewrite copied as markdown." });
@@ -1224,16 +1388,25 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
       throw new Error("Save or generate this rewrite before exporting.");
     }
 
-    const exported = await exportRewrite({ requestRef, format });
-    downloadBlob(exported.filename, exported.blob);
+    setExportRunning(true);
+    try {
+      const exported = await exportRewrite({ requestRef, format });
+      downloadBlob(exported.filename, exported.blob);
+    } finally {
+      setExportRunning(false);
+    }
   };
 
   const handleCompareExport = async (format: "markdown" | "html" | "pdf") => {
     if (!requestRef) {
-      throw new Error("Generate a current rewrite before exporting comparison.");
+      throw new Error(
+        "Generate a current rewrite before exporting comparison.",
+      );
     }
     if (!selectedBaselineRef || selectedBaselineRef === ORIGINAL_BASELINE_REF) {
-      throw new Error("Select a saved baseline version for server compare export.");
+      throw new Error(
+        "Select a saved baseline version for server compare export.",
+      );
     }
     setCompareExportRunning(true);
     try {
@@ -1250,10 +1423,12 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
 
   const handleMarkWinner = async (winnerRequestRef: string) => {
     setWinnerMutationRunning(true);
+    setRunStage("marking_winner");
     try {
       const result = await markWinnerAction({ requestRef: winnerRequestRef });
       if (result.error !== null) {
         setError(result.error);
+        setRunStage("failed");
         toast({
           title: "Unable to mark winner",
           description: result.error,
@@ -1284,6 +1459,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
         title: "Winner marked",
         description: "Winning version updated for this experiment.",
       });
+      setRunStage("completed");
     } finally {
       setWinnerMutationRunning(false);
     }
@@ -1339,9 +1515,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           baselineIsControl={Boolean(baselineVersionRecord?.isControl)}
           currentIsControl={Boolean(currentVersionRecord?.isControl)}
           hypothesisSummary={{
-            type:
-              currentVersionRecord?.hypothesis?.type ??
-              hypothesis.type,
+            type: currentVersionRecord?.hypothesis?.type ?? hypothesis.type,
             minimumDeltaLevel:
               currentVersionRecord?.hypothesis?.minimumDeltaLevel ??
               hypothesis.minimumDeltaLevel,
@@ -1365,7 +1539,9 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
               ? () => handleMarkWinner(currentVersionRecord.requestRef)
               : undefined
           }
-          winnerActionDisabled={winnerMutationRunning || running || idempotentReplay}
+          winnerActionDisabled={
+            winnerMutationRunning || running || idempotentReplay
+          }
           compareBaselineOptions={baselineOptions}
           selectedBaselineRef={selectedBaselineRef}
           originalBaselineMap={originalBaselineMap}
@@ -1373,8 +1549,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
           originalBaselineMapError={originalBaselineMapError}
           canServerExport={Boolean(
             requestRef &&
-              selectedBaselineRef &&
-              selectedBaselineRef !== ORIGINAL_BASELINE_REF,
+            selectedBaselineRef &&
+            selectedBaselineRef !== ORIGINAL_BASELINE_REF,
           )}
           exportingCompare={compareExportRunning}
           onExportCompare={(format) => {
@@ -1471,36 +1647,6 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                     Analysis & Output
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {effectiveConfidence ? (
-                    <span>Confidence Score: {effectiveConfidence}</span>
-                  ) : null}
-                  <span className={studioStatusToneClass}>
-                    {studioStatus === "processing"
-                      ? "Processing"
-                      : studioStatus === "offline"
-                        ? "Offline"
-                        : studioStatus === "error"
-                          ? "Error"
-                          : "Ready"}
-                  </span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label="Status details"
-                          className={`inline-flex h-4 w-4 items-center justify-center ${studioStatusToneClass}`}
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">
-                        {studioStatusTooltip}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
               </div>
               <div className="h-px bg-border/60" />
             </div>
@@ -1524,6 +1670,18 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   </div>
                 </div>
               ) : null}
+              <RewriteRunStateBar
+                status={studioStatus}
+                stageLabel={runStage === "idle" ? null : runStageLabel(runStage)}
+                confidence={effectiveConfidence}
+                deltaScore={deltaScoreLabel}
+                experimentId={currentVersionRecord?.experimentGroupId ?? null}
+                versionNumber={currentVersionRecord?.versionNumber ?? null}
+                requestRef={requestRef}
+                isWinner={Boolean(currentVersionRecord?.isWinner)}
+                winnerLabel={currentVersionRecord?.winnerLabel ?? null}
+                idempotentReplay={idempotentReplay}
+              />
               <RewriteExecutiveSummaryCard
                 output={output}
                 compareMode={compareMode}
@@ -1556,6 +1714,7 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                 canExport={output.trim().length > 0 && Boolean(requestRef)}
                 canCompare={canCompare}
                 running={running}
+                exportRunning={exportRunning}
                 showRunGapEngine
                 onOpenHistory={handleOpenHistory}
                 onDuplicate={handleDuplicate}
@@ -1567,8 +1726,8 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
                   }
                   setCompareMode(true);
                 }}
-                onExport={(format) => {
-                  void handleExport(format).catch((exportError: unknown) => {
+                onExport={async (format) => {
+                  await handleExport(format).catch((exportError: unknown) => {
                     const message =
                       exportError instanceof Error
                         ? exportError.message
@@ -1599,61 +1758,84 @@ export function RewriteStudioView({ initialData }: RewriteStudioViewProps) {
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-6 space-y-3 overflow-y-auto pr-1">
-            {historyVersions.length === 0 ? (
+          <div className="mt-6 space-y-4 overflow-y-auto pr-1">
+            <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+              <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                  {historySummary.total} saved versions
+                </span>
+                <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                  {historySummary.experiments} experiments
+                </span>
+                <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                  {historySummary.controls} controls
+                </span>
+                <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                  {historySummary.winners} winners
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[
+                  { key: "all", label: "All versions" },
+                  { key: "winner", label: "Winners" },
+                  { key: "control", label: "Controls" },
+                  { key: "treatment", label: "Treatments" },
+                ].map((option) => (
+                  <Button
+                    key={option.key}
+                    type="button"
+                    size="xs"
+                    variant={historyFilter === option.key ? "secondary" : "outline"}
+                    onClick={() =>
+                      setHistoryFilter(
+                        option.key as "all" | "winner" | "control" | "treatment",
+                      )
+                    }
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            {filteredHistoryVersions.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No rewrite versions available yet.
+                No rewrite versions match the current filter.
               </p>
             ) : (
-              historyVersions.map((item) => (
-                <div
-                  key={item.requestRef}
-                  className="rounded-lg border border-border/60 bg-card p-4"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">
-                      {item.rewriteType === "pricing" ? "Pricing" : "Homepage"}
-                    </Badge>
-                    <Badge variant="secondary">
-                      {item.isControl ? "Control" : "Treatment"}
-                    </Badge>
-                    <Badge variant="secondary">Saved</Badge>
-                    {item.tone ? (
-                      <Badge variant="secondary">{item.tone}</Badge>
-                    ) : null}
-                    {item.isWinner ? (
-                      <Badge variant="secondary">Winner</Badge>
-                    ) : null}
+              groupedHistoryVersions.map((group) => (
+                <section key={group.key} className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {group.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {group.items.length} version{group.items.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {formatHistoryTimestamp(item.createdAt)} | {item.requestRef}
-                  </p>
-                  {item.emphasis && item.emphasis.length > 0 ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Emphasis: {item.emphasis.join(", ")}
-                    </p>
-                  ) : null}
-                  <p className="mt-3 line-clamp-2 text-sm text-foreground/90">
-                    {item.outputMarkdown}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openVersion(item.requestRef)}
-                    >
-                      Open
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => restoreVersion(item.requestRef)}
-                    >
-                      Restore
-                    </Button>
-                  </div>
-                </div>
+                  {group.items.map((item) => (
+                    <RewriteHistoryCard
+                      key={item.requestRef}
+                      item={item}
+                      timestampLabel={formatHistoryTimestamp(item.createdAt)}
+                      busyAction={
+                        historyAction?.requestRef === item.requestRef
+                          ? historyAction.type
+                          : null
+                      }
+                      actionsDisabled={
+                        running ||
+                        exportRunning ||
+                        compareExportRunning ||
+                        winnerMutationRunning ||
+                        historyAction !== null
+                      }
+                      onOpen={() => openVersion(item.requestRef)}
+                      onRestore={() => restoreVersion(item.requestRef)}
+                    />
+                  ))}
+                </section>
               ))
             )}
           </div>

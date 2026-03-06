@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import {
   Loader2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { RewriteType } from "@/features/rewrites/types/rewrites.types";
+import { RewriteFailurePanel } from "@/features/rewrites/components/RewriteFailurePanel";
+import { RewriteSectionNav } from "@/features/rewrites/components/RewriteSectionNav";
 import { buildRewriteOutputViewModel } from "@/features/rewrites/services/rewriteOutputViewModel";
 
 type RewriteOutputPanelProps = {
@@ -28,6 +29,52 @@ type RewriteOutputPanelProps = {
     idempotentReplay?: boolean;
   };
 };
+
+function classifyRewriteError(error: string | null): {
+  title: string;
+  detail: string;
+  recovery: string;
+} | null {
+  if (!error) {
+    return null;
+  }
+
+  if (/structured contract validation/i.test(error)) {
+    return {
+      title: "Structured output validation failed",
+      detail:
+        "The model returned content that did not satisfy the required rewrite section contract.",
+      recovery:
+        "Retry the run or tighten the experiment contract so the model has fewer formatting degrees of freedom.",
+    };
+  }
+
+  if (/metrics contract validation|shift stats contract validation/i.test(error)) {
+    return {
+      title: "Metrics validation failed",
+      detail:
+        "The rewrite body completed, but the required shift metrics could not be validated.",
+      recovery:
+        "Retry the run or simplify the rewrite instructions so metrics extraction remains stable.",
+    };
+  }
+
+  if (/meaningful variation/i.test(error)) {
+    return {
+      title: "Variation strength below threshold",
+      detail:
+        "The generated treatment was too close to the baseline to qualify as a valid experiment.",
+      recovery:
+        "Increase the delta level or change treatment variables to create a stronger variation.",
+    };
+  }
+
+  return {
+    title: "Rewrite generation failed",
+    detail: error,
+    recovery: "Retry the run. If the issue persists, adjust the prompt inputs or provider settings.",
+  };
+}
 
 function filenameFor(type: RewriteType) {
   return `${type}-rewrite-${new Date().toISOString().slice(0, 10)}.md`;
@@ -92,6 +139,14 @@ function resolveDeltaScore(
   return { label: "Delta score", value: `${pct}% (light)` };
 }
 
+function slugifySectionTitle(title: string, index: number) {
+  const normalized = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `rewrite-section-${normalized || "section"}-${index}`;
+}
+
 export function RewriteOutputPanel({
   rewriteType,
   running,
@@ -108,6 +163,21 @@ export function RewriteOutputPanel({
   );
   const [copiedError, setCopiedError] = useState(false);
   const deltaScore = resolveDeltaScore(metadata?.deltaMetrics);
+  const errorState = classifyRewriteError(error);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sectionIds = useMemo(
+    () =>
+      outputViewModel.copySections.map((section, index) => ({
+        id: slugifySectionTitle(section.title, index),
+        label: section.title,
+      })),
+    [outputViewModel.copySections],
+  );
+
+  useEffect(() => {
+    setActiveSectionId(sectionIds[0]?.id ?? null);
+  }, [sectionIds]);
 
   const handleCopyError = async () => {
     if (!error) {
@@ -118,30 +188,19 @@ export function RewriteOutputPanel({
     setTimeout(() => setCopiedError(false), 2000);
   };
 
+  const handleSelectSection = (id: string) => {
+    setActiveSectionId(id);
+    const container = scrollContainerRef.current;
+    const target = container?.querySelector<HTMLElement>(`#${id}`);
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="rounded-xl border border-border/60 bg-background/40 p-6 pt-3">
       <div className="mb-4 rounded-md border border-border/60 bg-secondary/20 p-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span>
-            Experiment ID:{" "}
-            <span className="font-medium text-foreground/90">
-              {metadata?.experimentId ?? "Pending"}
-            </span>
-          </span>
-          <span>
-            Version:{" "}
-            <span className="font-medium text-foreground/90">
-              {metadata?.versionNumber ?? "Pending"}
-            </span>
-          </span>
-          {metadata?.parentRequestRef ? (
-            <span>
-              Parent:{" "}
-              <span className="font-medium text-foreground/90">
-                {metadata.parentRequestRef}
-              </span>
-            </span>
-          ) : null}
+          <span>Validated rewrite output workspace</span>
+          {metadata?.versionNumber ? <span>Version {metadata.versionNumber}</span> : null}
           {metadata?.isWinner ? (
             <span className="font-medium text-foreground/90">
               Winner{metadata.winnerLabel ? ` (${metadata.winnerLabel})` : ""}
@@ -178,33 +237,27 @@ export function RewriteOutputPanel({
       ) : null}
 
       {error ? (
-        <div className="mt-3 rounded-md border border-destructive/50 bg-destructive/10 p-3">
-          <p className="text-sm font-medium text-destructive">
-            Rewrite generation failed
-          </p>
-          <p className="mt-1 text-sm text-foreground/90">{error}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              onClick={onRetry}
-            >
-              Retry
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => void handleCopyError()}
-            >
-              {copiedError ? "Copied" : "Copy error details"}
-            </Button>
-          </div>
+        <RewriteFailurePanel
+          title={errorState?.title ?? "Rewrite generation failed"}
+          detail={errorState?.detail ?? error}
+          recovery={errorState?.recovery}
+          copied={copiedError}
+          onRetry={onRetry}
+          onCopyError={() => void handleCopyError()}
+        />
+      ) : null}
+
+      {outputViewModel.copySections.length > 0 ? (
+        <div className="mt-4">
+          <RewriteSectionNav
+            items={sectionIds}
+            activeId={activeSectionId}
+            onSelect={handleSelectSection}
+          />
         </div>
       ) : null}
 
-      <div className="mt-4 h-135 overflow-y-auto bg-transparent">
+      <div ref={scrollContainerRef} className="mt-4 h-135 overflow-y-auto bg-transparent">
         {running && !output ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -239,9 +292,12 @@ export function RewriteOutputPanel({
                   </p>
                 </div>
               ) : null}
-              {outputViewModel.copySections.map((section) => (
+              {outputViewModel.copySections.map((section, index) => {
+                const sectionId = sectionIds[index]?.id ?? slugifySectionTitle(section.title, index);
+                return (
                 <div
-                  key={section.title}
+                  key={sectionId}
+                  id={sectionId}
                   className="rounded-md border border-border/50 bg-secondary/30 p-3"
                 >
                   <p className="text-sm font-semibold text-foreground">
@@ -269,21 +325,19 @@ export function RewriteOutputPanel({
                     </ReactMarkdown>
                   </p>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (
           <div className="rounded-lg border border-border/60 bg-card p-4">
             <p className="text-sm font-semibold text-foreground">
-              Rewrite Studio creates conversion-ready copy from your current
-              messaging.
+              Run a controlled rewrite experiment from your current messaging.
             </p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              <li>Add a website URL or paste your current copy.</li>
-              <li>
-                Set strategic context and rewrite strategy before generating.
-              </li>
-              <li>Use constraints for must-include or avoid instructions.</li>
+              <li>Define the source page and target copy to rewrite.</li>
+              <li>Set the experiment contract before generating a variation.</li>
+              <li>Use constraints to preserve required proof, tone, or CTA rules.</li>
             </ul>
             <p className="mt-3 text-sm text-muted-foreground">
               Need guidance?{" "}

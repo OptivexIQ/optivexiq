@@ -386,6 +386,14 @@ export function RewriteComparisonPanel({
     () => alignedRows.filter((row) => row.changed),
     [alignedRows],
   );
+  const addedRows = useMemo(
+    () => alignedRows.filter((row) => !row.hasPrevious && row.hasCurrent),
+    [alignedRows],
+  );
+  const removedRows = useMemo(
+    () => alignedRows.filter((row) => row.hasPrevious && !row.hasCurrent),
+    [alignedRows],
+  );
 
   const changedTitles = useMemo(
     () => new Set(changedRows.map((row) => row.title.toLowerCase())),
@@ -410,6 +418,16 @@ export function RewriteComparisonPanel({
   const rowPadding = density === "compact" ? "p-2.5" : "p-3";
   const columnPadding = density === "compact" ? "p-3" : "p-4";
   const sectionGap = density === "compact" ? "space-y-2" : "space-y-3";
+  const baselineIdentityLabel = baselineIsControl
+    ? "Control baseline"
+    : baselineIsWinner
+      ? "Winning baseline"
+      : "Saved baseline";
+  const currentIdentityLabel = currentIsControl
+    ? "Control candidate"
+    : currentIsWinner
+      ? "Current winner"
+      : "Current treatment";
   return (
     <section className="overflow-hidden rounded-xl bg-linear-to-b from-card to-secondary/20">
       <div className="grid gap-0 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
@@ -589,18 +607,64 @@ export function RewriteComparisonPanel({
               Exit compare
             </Button>
           </div>
+          <div className="border-t border-border/60 bg-card/20 px-6 py-4">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+              <div className="rounded-xl border border-border/60 bg-background/70 p-4">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                    {baselineIdentityLabel}
+                  </span>
+                  <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                    {currentIdentityLabel}
+                  </span>
+                  <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                    {changedRows.length} changed sections
+                  </span>
+                  <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                    {addedRows.length} added
+                  </span>
+                  <span className="rounded-full border border-border/60 bg-background px-2.5 py-1">
+                    {removedRows.length} removed
+                  </span>
+                </div>
+                <p className="mt-3 text-sm font-medium text-foreground">
+                  Experiment review
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Review structural change, winner state, and section churn before
+                  deciding which version should advance.
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-background/70 p-4">
+                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground">
+                  Success criteria
+                </p>
+                <p className="mt-2 text-sm text-foreground/90">
+                  {hypothesisSummary.successCriteria.trim().length > 0
+                    ? hypothesisSummary.successCriteria
+                    : "No explicit success criteria provided."}
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="grid lg:grid-cols-2">
             <div className="bg-card px-4 py-3">
               <p className="text-xs font-semibold text-muted-foreground">
                 {baselineVersionLabel}
               </p>
-                <div className="mt-1 flex items-center justify-between gap-2">
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <div>
                   <p className="text-sm font-semibold text-foreground">
                     {baselineTitle}
                   </p>
                   <p className="text-xs text-muted-foreground">{baselineMeta}</p>
                 </div>
-                <div className="mt-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {baselineIsWinner ? (
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300">
+                      Winner
+                    </span>
+                  ) : null}
                   <Button
                     type="button"
                     size="xs"
@@ -617,13 +681,24 @@ export function RewriteComparisonPanel({
                   </Button>
                 </div>
               </div>
-              <div className="bg-secondary/20 px-4 py-3">
+              {isOriginalBaselineSelected || baselineIsControl ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Control baselines cannot be promoted as winners.
+                </p>
+              ) : winnerActionDisabled ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Winner updates are temporarily locked while another action is running.
+                </p>
+              ) : null}
+            </div>
+            <div className="bg-secondary/20 px-4 py-3">
               <p className="text-xs font-semibold text-muted-foreground">
                 {currentIsControl
                   ? "Control (original input)"
                   : `Treatment v${currentVersionNumber ?? "?"}`}
               </p>
-                <div className="mt-1 flex items-center justify-between gap-2">
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <div>
                   <p className="text-sm font-semibold text-foreground">
                     {currentIsControl ? "Original Input" : "Current Generation"}
                   </p>
@@ -631,18 +706,37 @@ export function RewriteComparisonPanel({
                     {currentTimestampLabel} | {currentRequestRef ?? "No ref"}
                   </p>
                 </div>
-                <div className="mt-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {currentIsWinner ? (
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300">
+                      Winner
+                    </span>
+                  ) : null}
                   <Button
                     type="button"
                     size="xs"
                     variant={currentIsWinner ? "secondary" : "outline"}
-                    disabled={winnerActionDisabled || currentIsControl || !onMarkCurrentWinner}
+                    disabled={
+                      winnerActionDisabled ||
+                      currentIsControl ||
+                      !onMarkCurrentWinner
+                    }
                     onClick={() => void onMarkCurrentWinner?.()}
                   >
                     {currentIsWinner ? "Winner" : "Mark winner"}
                   </Button>
                 </div>
               </div>
+              {currentIsControl ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Control drafts cannot be marked as winners from compare mode.
+                </p>
+              ) : winnerActionDisabled ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Winner updates are temporarily locked while another action is running.
+                </p>
+              ) : null}
+            </div>
           </div>
 
           <div className="border-t border-border/60 bg-card/10 px-4 py-3">
@@ -754,6 +848,15 @@ export function RewriteComparisonPanel({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              {!canServerExport ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Server compare export requires a saved baseline version, not the original input draft.
+                </p>
+              ) : exportingCompare ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Preparing comparison export. Keep this tab open until the file is ready.
+                </p>
+              ) : null}
             </div>
           </div>
 
