@@ -31,7 +31,7 @@ export function HeroDashboardPreview() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Enterprise Conversion Audit
+                    Conversion Gap Report
                   </p>
                   <p className="inline-flex items-center gap-1.5 text-sm text-foreground/90">
                     <span>acme-saas.com</span>
@@ -44,10 +44,10 @@ export function HeroDashboardPreview() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-md bg-chart-3/10 px-2.5 py-1 text-sm font-medium text-chart-3">
-                  Confidence 96%
+                  Directional guidance
                 </span>
                 <span className="rounded-md bg-secondary px-2.5 py-1 text-sm text-foreground/90">
-                  Refreshed 2 min ago
+                  Report-first workflow
                 </span>
               </div>
             </div>
@@ -55,27 +55,27 @@ export function HeroDashboardPreview() {
             <div className="mb-4 grid gap-4 sm:grid-cols-4">
               {[
                 {
-                  label: "Gap Score",
-                  value: "34",
-                  meta: "/100",
+                  label: "Pages analyzed",
+                  value: "6",
+                  meta: "public pages",
                   tone: "text-foreground",
                 },
                 {
-                  label: "Pipeline at Risk",
-                  value: "$1.8M",
-                  meta: "30d",
-                  tone: "text-destructive",
+                  label: "Priority gaps",
+                  value: "12",
+                  meta: "ranked",
+                  tone: "text-foreground",
                 },
                 {
-                  label: "Win Rate Delta",
-                  value: "-9.4%",
-                  meta: "vs peers",
+                  label: "Competitor set",
+                  value: "5",
+                  meta: "domains",
                   tone: "text-chart-4",
                 },
                 {
-                  label: "Time to Clarity",
-                  value: "6 days",
-                  meta: "avg. fix",
+                  label: "Rewrite options",
+                  value: "4",
+                  meta: "queued",
                   tone: "text-chart-3",
                 },
               ].map((kpi) => (
@@ -96,9 +96,16 @@ export function HeroDashboardPreview() {
                     <div
                       className="h-1.5 rounded-full"
                       style={{
-                        width: kpi.label === "Gap Score" ? "34%" : "72%",
+                        width:
+                          kpi.label === "Pages analyzed"
+                            ? "64%"
+                            : kpi.label === "Priority gaps"
+                              ? "82%"
+                              : kpi.label === "Competitor set"
+                                ? "58%"
+                                : "46%",
                         background:
-                          kpi.label === "Gap Score"
+                          kpi.label === "Priority gaps"
                             ? "linear-gradient(to right, hsl(0 84% 60%), hsl(43 74% 66%))"
                             : "linear-gradient(to right, hsl(210 70% 55%), hsl(175 60% 45%))",
                       }}
@@ -112,36 +119,30 @@ export function HeroDashboardPreview() {
               <div className="rounded-xl border border-border/60 bg-secondary/50 p-4 md:col-span-3">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground/90">
-                    Funnel Impact Forecast (90d)
+                    Diagnostic coverage
                   </p>
                   <span className="text-sm text-foreground/90">
-                    Baseline vs optimized
+                    What the report checks
                   </span>
                 </div>
-                <div
-                  className="flex items-end gap-2"
-                  style={{ height: "100px" }}
-                >
-                  {[42, 48, 46, 55, 62, 68].map((point, i) => (
-                    <div key={point} className="flex-1">
-                      <div
-                        className="rounded-t bg-primary/30"
-                        style={{ height: `${point}px` }}
-                      />
-                      <div
-                        className="-mt-1 rounded-t bg-primary"
-                        style={{ height: `${point * 0.7}px` }}
-                      />
-                      <div className="mt-1 text-center text-sm text-foreground/90">
-                        W{i + 1}
-                      </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    "Homepage clarity",
+                    "Differentiation overlap",
+                    "Pricing friction",
+                    "Objection coverage",
+                  ].map((item) => (
+                    <div key={item} className="rounded-lg bg-card/60 p-3">
+                      <p className="text-sm font-medium text-foreground">{item}</p>
+                      <p className="mt-1 text-sm text-foreground/90">
+                        Included in structured report output
+                      </p>
                     </div>
                   ))}
                 </div>
                 <p className="mt-2.5 text-sm text-foreground/90">
-                  Forecasted lift:{" "}
-                  <span className="font-medium text-foreground">+18.6%</span>{" "}
-                  win rate
+                  Outputs are designed for prioritization and team review, not
+                  guaranteed outcome forecasting.
                 </p>
               </div>
 

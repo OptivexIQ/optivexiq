@@ -37,7 +37,7 @@ export function BeforeAfter() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Real Results
+            Example Outputs
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
             From generic claims to
@@ -48,6 +48,10 @@ export function BeforeAfter() {
             OptivexIQ is not a blank-page writer. It gives teams a faster way to
             move from vague category language to sharper positioning and clearer
             buying logic.
+          </p>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            These are illustrative examples of rewrite direction, not customer
+            performance claims.
           </p>
         </div>
 
