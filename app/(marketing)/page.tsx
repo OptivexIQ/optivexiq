@@ -4,8 +4,8 @@ import { Solution } from "@/components/Solution";
 import { FreeSnapshotForm } from "@/features/free-snapshot/components/FreeSnapshotForm";
 import { ConversionEngine } from "@/components/ConversionEngine";
 import { Methodology } from "@/components/Methodology";
+import { ProofSection } from "@/components/ProofSection";
 import { WhyNotChatGPT } from "@/components/WhyNotChatGPT";
-import { BeforeAfter } from "@/components/BeforeAfter";
 import { Pricing } from "@/components/Pricing";
 import { FinalCTA } from "@/components/FinalCTA";
 
@@ -44,9 +44,9 @@ export default async function Page({ searchParams }: MarketingPageProps) {
       <SectionDivider />
       <Methodology />
       <SectionDivider />
-      <WhyNotChatGPT />
+      <ProofSection />
       <SectionDivider />
-      <BeforeAfter />
+      <WhyNotChatGPT />
       <SectionDivider />
       <Pricing selectedCurrency={resolvedParams.currency} />
       <SectionDivider />

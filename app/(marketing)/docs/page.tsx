@@ -374,7 +374,7 @@ export default function DocsPage() {
               When to use Rewrite Studio
             </h3>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-              <li>After running a Diagnostics Engine report.</li>
+              <li>After running a Gap Engine report.</li>
               <li>When testing a new positioning direction.</li>
               <li>When improving homepage clarity or narrative structure.</li>
               <li>When adjusting pricing messaging for stronger buyer fit.</li>
@@ -390,7 +390,7 @@ export default function DocsPage() {
                 How it fits with other tools
               </p>
               <p className="mt-1">
-                Diagnostics Engine helps identify messaging risks and gaps.
+                Gap Engine helps identify messaging risks and gaps.
                 Rewrite Studio helps test alternative messaging responses.
                 Objection Engine and Differentiation Builder help sharpen the
                 narrative direction you want to evaluate.
@@ -453,7 +453,7 @@ export default function DocsPage() {
               How Rewrite Studio fits into the conversion intelligence workflow
             </h3>
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-              <li>Run Diagnostics Engine.</li>
+              <li>Run Gap Engine.</li>
               <li>
                 Identify messaging risks, objections, or differentiation gaps.
               </li>
@@ -464,7 +464,7 @@ export default function DocsPage() {
               <li>Implement the chosen changes on the website.</li>
             </ol>
             <p className="mt-3 text-sm text-muted-foreground">
-              In practice, Rewrite Studio works alongside Diagnostics Engine,
+              In practice, Rewrite Studio works alongside Gap Engine,
               Objection Engine, and Differentiation Builder as part of the
               broader conversion intelligence workflow.
             </p>

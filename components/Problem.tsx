@@ -15,11 +15,11 @@ export function Problem() {
           <path d="M9.75 9.75L4.5 19.5L14.25 14.25M9.75 9.75L14.25 14.25M9.75 9.75L12 2.25L14.25 9.75M14.25 14.25L21.75 12" />
         </svg>
       ),
-      title: "Weak Homepage Clarity",
+      title: "Evaluation Slows Down",
       description:
-        "Your homepage says what the product is, but not why it wins. Buyers understand the category and still fail to see the reason to choose you.",
-      stat: "Symptom 01",
-      statLabel: "Category-fit without a clear reason to buy",
+        "Buyers reach your site with intent, but the story does not build enough confidence to move them toward a serious next step.",
+      stat: "Revenue drag 01",
+      statLabel: "High interest, low buyer confidence",
     },
     {
       icon: (
@@ -36,11 +36,11 @@ export function Problem() {
           <path d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      title: "Pricing Page Friction",
+      title: "Pricing Confidence Drops",
       description:
-        "Your pricing page leaves key questions unanswered. Buyers cannot connect packaging, proof, and value, so evaluation slows down or stalls.",
-      stat: "Symptom 02",
-      statLabel: "High intent, low confidence",
+        "Packaging, proof, and value are not working together, so buyers understand the options but still hesitate to commit.",
+      stat: "Revenue drag 02",
+      statLabel: "Packaging clarity without enough conviction",
     },
     {
       icon: (
@@ -57,11 +57,11 @@ export function Problem() {
           <path d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
         </svg>
       ),
-      title: "Messaging Overlap",
+      title: "Your Market Story Blurs",
       description:
-        "Your claims sound close to everyone else in the market. What feels clear internally reads like generic category language externally.",
-      stat: "Symptom 03",
-      statLabel: "Differentiation hidden by familiar language",
+        "Your claims sound close to the category standard, so differentiation weakens just when buyers start comparing alternatives.",
+      stat: "Revenue drag 03",
+      statLabel: "Competitive overlap during evaluation",
     },
   ];
 
@@ -73,13 +73,14 @@ export function Problem() {
             The Problem
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            Most SaaS Teams Can See Conversion Problems.
+            Most SaaS Teams Can See Funnel Outcomes.
             <br />
-            <span className="text-muted-foreground">They cannot see where messaging breaks.</span>
+            <span className="text-muted-foreground">They cannot see where buyer confidence breaks.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            That is why homepage rewrites turn into opinion battles, pricing
-            changes feel random, and differentiation erodes over time.
+            That is why evaluation slows down, pricing pages create hesitation,
+            and homepage rewrites turn into opinion battles instead of better
+            commercial decisions.
           </p>
         </div>
 

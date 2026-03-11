@@ -61,7 +61,7 @@ function normalizeExecutionProgress(value: number | null): number | null {
 }
 
 const emptyEngineData: EngineData = {
-  headline: "Diagnostics Engine",
+  headline: "Messaging Diagnostics Engine",
   status: "idle",
   latestReport: {
     id: null,

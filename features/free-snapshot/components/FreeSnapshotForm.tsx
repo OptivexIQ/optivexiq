@@ -240,11 +240,12 @@ export function FreeSnapshotForm() {
             Free Messaging Snapshot
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            Get a fast read on your biggest messaging risks.
+            Start with the lightest entry point into the platform.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            Start with a compact diagnostic preview before committing to the
-            full report workflow. No credit card required.
+            This is a compact preview of the broader conversion intelligence
+            workflow. Use it to inspect visible messaging risk before moving
+            into full reports and rewrite review. No credit card required.
           </p>
         </div>
 
@@ -258,8 +259,8 @@ export function FreeSnapshotForm() {
                   Run your Free Messaging Snapshot
                 </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Enter your website and optional competitors to analyze public
-                  messaging in live market context.
+                  Enter your website and optional competitors to generate a
+                  lightweight diagnostic preview from public market-facing copy.
                 </p>
             </div>
 

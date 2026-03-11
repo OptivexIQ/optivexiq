@@ -24,6 +24,13 @@ export function Methodology() {
     "Rewrite recommendations tied to report findings",
   ];
 
+  const scope = [
+    "Messaging diagnostics",
+    "Competitive gap analysis",
+    "Decision prioritization",
+    "Rewrite workflows",
+  ];
+
   return (
     <section className="py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
@@ -80,6 +87,21 @@ export function Methodology() {
               ))}
             </ul>
             <div className="mt-6 rounded-xl border border-border/60 bg-card/80 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Platform scope
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {scope.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-border/60 bg-secondary/40 px-3 py-1 text-xs text-foreground/90"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl border border-border/60 bg-card/80 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Important
               </p>
