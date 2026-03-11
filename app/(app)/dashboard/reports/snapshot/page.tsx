@@ -86,13 +86,13 @@ export default async function SnapshotPage() {
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold text-foreground">
-            Conversion Snapshot
+            Messaging Snapshot
           </h1>
           <Badge variant="secondary">Partial</Badge>
         </div>
         <p className="max-w-2xl text-sm text-muted-foreground">
           A quick read of your current homepage and positioning. Unlock the full
-          report to access the complete conversion breakdown.
+          report to access the complete messaging breakdown.
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default async function SnapshotPage() {
               Top weaknesses
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              The most urgent conversion risks detected.
+              The most urgent messaging risks detected.
             </p>
             <ul className="mt-4 space-y-3">
               {weaknesses.length ? (
@@ -178,7 +178,7 @@ export default async function SnapshotPage() {
         <div className="space-y-6">
           <div className="rounded-xl border border-border/60 bg-card p-6">
             <h2 className="text-base font-semibold text-foreground">
-              Full conversion report
+              Full diagnostic report
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Unlock the complete report with detailed diagnostics, rewrites,
@@ -191,7 +191,7 @@ export default async function SnapshotPage() {
             </div>
             <Button asChild className="mt-5 w-full">
               <Link href="/dashboard/gap-engine">
-                Unlock Full Conversion Report
+                Unlock Full Diagnostic Report
               </Link>
             </Button>
           </div>

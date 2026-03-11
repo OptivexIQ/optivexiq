@@ -102,8 +102,8 @@ export default function AboutPage() {
           About OptivexIQ
         </p>
         <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
-          OptivexIQ helps SaaS teams turn conversion from guesswork into a
-          measurable system.
+          OptivexIQ is a conversion intelligence platform for SaaS teams that
+          need better decisions, not more copy output.
         </h1>
         <p className="mt-6 max-w-3xl text-base leading-relaxed text-muted-foreground md:text-lg">
           Most teams can see pipeline outcomes but cannot clearly explain why
@@ -113,9 +113,9 @@ export default function AboutPage() {
           and exports.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-          OptivexIQ is a SaaS platform that analyzes website messaging and
-          competitive positioning to identify conversion risk and improvement
-          opportunities.
+          It starts with messaging diagnostics, competitive positioning, and
+          rewrite workflows because those are some of the clearest early signals
+          of conversion friction.
         </p>
         <p className="mt-3 text-sm text-muted-foreground">
           Built for teams that treat messaging as infrastructure, not copy.
@@ -133,7 +133,7 @@ export default function AboutPage() {
           objection handling is incomplete.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-          We built OptivexIQ to make conversion risk visible earlier, prioritize
+          We built OptivexIQ to make messaging risk visible earlier, prioritize
           the right fixes, and support decisions that can stand up to internal
           and external scrutiny.
         </p>
@@ -230,8 +230,8 @@ export default function AboutPage() {
         </h2>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Start with a Free Messaging Snapshot to see immediate messaging and
-          positioning risk. When you are ready to operationalize conversion
-          decision-making, move to a full plan.
+          positioning risk. When you are ready to operationalize diagnosis,
+          prioritization, and rewrite review, move to a full plan.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Button asChild>

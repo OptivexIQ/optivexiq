@@ -105,8 +105,8 @@ export default async function DashboardPage() {
               {overview.headline}
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Track conversion risk, competitive overlap, and pipeline impact
-              with data grounded in your ICP and pricing model.
+              Track messaging risk, competitive overlap, and buyer-facing
+              friction with data grounded in your ICP and pricing model.
             </p>
           </div>
           <div className="flex flex-col items-start gap-2">
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-border/60 bg-card p-4">
           <p className="text-sm font-medium text-foreground/85">
-            Conversion Gap Score
+            Messaging Gap Score
           </p>
           <div className="mt-3 flex items-end gap-2">
             <span className="text-3xl font-semibold text-foreground">
@@ -194,7 +194,7 @@ export default async function DashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold text-foreground">
-                Recent Conversion Gap Reports
+                Recent Diagnostic Reports
               </h2>
               <p className="text-xs text-muted-foreground">
                 Executive summaries across your most recent analyses.

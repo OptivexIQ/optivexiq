@@ -105,7 +105,7 @@ export default function DocsPage() {
                       Initial qualification and insight preview
                     </td>
                     <td className="px-4 py-3">
-                      Ongoing messaging optimization workflow
+                      Ongoing conversion intelligence workflow
                     </td>
                   </tr>
                 </tbody>
@@ -223,7 +223,7 @@ export default function DocsPage() {
                   Executive diagnosis
                 </h3>
                 <p className="mt-1">
-                  Summarizes primary conversion risks and directional
+                  Summarizes primary messaging risks and directional
                   priorities.
                 </p>
                 <p className="mt-1">
@@ -374,7 +374,7 @@ export default function DocsPage() {
               When to use Rewrite Studio
             </h3>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-              <li>After running a Conversion Gap Engine report.</li>
+              <li>After running a Diagnostics Engine report.</li>
               <li>When testing a new positioning direction.</li>
               <li>When improving homepage clarity or narrative structure.</li>
               <li>When adjusting pricing messaging for stronger buyer fit.</li>
@@ -390,7 +390,7 @@ export default function DocsPage() {
                 How it fits with other tools
               </p>
               <p className="mt-1">
-                Conversion Gap Engine helps identify messaging risks and gaps.
+                Diagnostics Engine helps identify messaging risks and gaps.
                 Rewrite Studio helps test alternative messaging responses.
                 Objection Engine and Differentiation Builder help sharpen the
                 narrative direction you want to evaluate.
@@ -453,7 +453,7 @@ export default function DocsPage() {
               How Rewrite Studio fits into the conversion intelligence workflow
             </h3>
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-              <li>Run Conversion Gap Engine.</li>
+              <li>Run Diagnostics Engine.</li>
               <li>
                 Identify messaging risks, objections, or differentiation gaps.
               </li>
@@ -464,7 +464,7 @@ export default function DocsPage() {
               <li>Implement the chosen changes on the website.</li>
             </ol>
             <p className="mt-3 text-sm text-muted-foreground">
-              In practice, Rewrite Studio works alongside Conversion Gap Engine,
+              In practice, Rewrite Studio works alongside Diagnostics Engine,
               Objection Engine, and Differentiation Builder as part of the
               broader conversion intelligence workflow.
             </p>
@@ -531,7 +531,7 @@ export default function DocsPage() {
 
           <section id="scoring-methodology" className="mt-12 scroll-mt-28">
             <h2 className="text-xl font-semibold text-foreground">
-              Scoring & Methodology (Conceptual Only)
+              Scoring & Methodology
             </h2>
             <div className="mt-3 space-y-3 text-sm text-muted-foreground">
               <p>
@@ -877,7 +877,7 @@ export default function DocsPage() {
                   href="/#free-snapshot"
                   className="text-primary hover:underline"
                 >
-                  Free Conversion Snapshot
+                  Free Messaging Snapshot
                 </Link>
                 <Link href="/#pricing" className="text-primary hover:underline">
                   Pricing

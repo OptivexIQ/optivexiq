@@ -30,7 +30,7 @@ const REQUEST_TYPES = [
 
 const PRODUCT_AREAS = [
   { value: "dashboard", label: "Dashboard" },
-  { value: "gap_engine", label: "Gap Engine" },
+  { value: "gap_engine", label: "Diagnostics Engine" },
   { value: "reports", label: "Reports" },
   { value: "billing", label: "Billing" },
   { value: "free_audit", label: "Free Messaging Snapshot" },

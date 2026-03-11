@@ -49,8 +49,9 @@ export function Footer() {
               />
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              SaaS Conversion Intelligence. Analyze positioning, uncover gaps,
-              and deploy messaging that converts.
+              Conversion intelligence for B2B SaaS. Start with messaging
+              diagnostics, uncover gaps, and test stronger narrative options
+              before rollout.
             </p>
           </div>
 

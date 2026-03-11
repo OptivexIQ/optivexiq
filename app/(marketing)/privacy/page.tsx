@@ -335,7 +335,7 @@ export default function PrivacyPage() {
             </SectionTitle>
             <p>
               We use automated scoring and analytical models to classify
-              conversion risk and prioritize recommendations. These outputs do
+              messaging risk and prioritize recommendations. These outputs do
               not create legal effects for individuals and are intended for
               business decision support by customer teams.
             </p>

@@ -32,14 +32,15 @@ export function Methodology() {
             Credibility
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            Built to support messaging decisions,
+            Built to support conversion intelligence,
             <br />
             <span className="text-muted-foreground">not generate random copy</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            OptivexIQ is most useful when teams need a structured way to inspect
-            messaging risk, align on priorities, and evaluate rewrite options
-            with real market context.
+            OptivexIQ starts with messaging diagnostics because that is where
+            many buyer-facing conversion problems first show up. The broader
+            goal is better conversion intelligence across positioning, pricing,
+            and buyer confidence.
           </p>
         </div>
 

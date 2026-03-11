@@ -26,10 +26,10 @@ export function CompletionState(props: {
     <div className="space-y-5 rounded-2xl border border-border/60 bg-card/80 p-8 shadow-xl shadow-black/10">
       <div>
         <h3 className="text-2xl font-semibold text-foreground">
-          We found {risks} structural conversion risks.
+          We found {risks} structural messaging risks.
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your AI Snapshot for {props.domain} is ready.
+          Your messaging snapshot for {props.domain} is ready.
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export function CompletionState(props: {
       <div className="pt-1">
         <Link href="/dashboard/gap-engine">
           <Button variant="ghost" className="text-xs text-muted-foreground">
-            Unlock Full Competitive Audit
+              Open Full Diagnostic Workflow
           </Button>
         </Link>
       </div>

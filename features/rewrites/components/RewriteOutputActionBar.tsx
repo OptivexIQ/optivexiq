@@ -117,7 +117,7 @@ export function RewriteOutputActionBar({
         <div className="flex flex-wrap items-center gap-2">
           {showRunGapEngine ? (
             <Button asChild variant="outline" size="xs">
-              <Link href="/dashboard/gap-engine">Run Gap Engine</Link>
+              <Link href="/dashboard/gap-engine">Run Diagnostics Engine</Link>
             </Button>
           ) : null}
           <Button

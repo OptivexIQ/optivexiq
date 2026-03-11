@@ -150,7 +150,7 @@ export function Navbar() {
                 href="/#free-snapshot"
                 className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                Get Started
+                Run Snapshot
               </Link>
             </>
           )}
@@ -273,7 +273,7 @@ export function Navbar() {
                     className="rounded-lg bg-foreground px-4 py-2.5 text-center text-sm font-medium text-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setMobileOpen(false)}
                   >
-                    Get Started
+                    Run Snapshot
                   </Link>
                 </>
               )}

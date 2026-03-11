@@ -26,7 +26,7 @@ import { FeedbackQuickModal } from "@/features/feedback/components/FeedbackQuick
 const navigation = [
   { label: "Overview", href: "/dashboard", icon: Gauge },
   {
-    label: "Conversion Gap Engine",
+    label: "Diagnostics Engine",
     href: "/dashboard/gap-engine",
     icon: BarChart3,
   },

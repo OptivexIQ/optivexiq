@@ -95,33 +95,33 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
 
   const plans: Plan[] = [
     {
-      name: "Conversion Starter",
+      name: "Snapshot + Report",
       prices: { USD: 59, EUR: 49, GBP: 45 },
       period: "one-time",
       description:
-        "A quick positioning audit and strategic rewrite for your core pages.",
+        "A compact entry point into OptivexIQ's conversion intelligence workflow for homepage and pricing messaging.",
       features: [
-        "Homepage rewrite",
-        "Pricing page rewrite",
-        "Basic gap analysis",
+        "Homepage and pricing diagnostic report",
+        "Prioritized messaging gaps",
+        "Core rewrite recommendations",
         "Export as PDF",
       ],
       highlighted: false,
-      cta: "Get My Conversion Audit",
+      cta: "Start Diagnostic Report",
       action: "checkout",
       planKey: "starter",
     },
     {
-      name: "SaaS Conversion Pro",
+      name: "Report + Rewrite Studio",
       prices: { USD: 119, EUR: 99, GBP: 89 },
       period: "/month",
       description:
-        "Ongoing messaging diagnostics and rewrite workflow support for serious SaaS teams.",
+        "Ongoing conversion intelligence for teams actively iterating on positioning, pricing, and narrative performance.",
       features: [
-        "No hard cap on homepage + pricing rewrites",
-        "Competitor Gap Analysis (3/month)",
-        "Objection Engine",
-        "Differentiation Builder",
+        "Ongoing homepage and pricing rewrites",
+        "Competitive gap analysis",
+        "Objection coverage review",
+        "Differentiation workflow support",
         "Export as JSON, HTML, PDF, and TXT",
         "Priority analysis queue",
       ],
@@ -132,15 +132,16 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
       planKey: "pro",
     },
     {
-      name: "Growth Intelligence",
+      name: "Team Workflow",
       prices: { USD: 179, EUR: 149, GBP: 135 },
       period: "",
-      description: "",
-      highlightNote: "Designed for organizations with advanced requirements",
+      description:
+        "For teams that need broader conversion intelligence support, collaboration, procurement review, and implementation planning.",
+      highlightNote: "Designed for organizations with advanced review requirements",
       features: [
         "Everything in Pro",
-        "Advanced capabilities for complex use cases",
-        "Custom engagement for high-volume teams",
+        "Expanded workflow support for larger teams",
+        "Custom engagement for higher-volume analysis",
         "Strategic support aligned to operating requirements",
         "Team collaboration (up to 5)",
         "Custom implementation planning",
@@ -165,8 +166,8 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
             <span className="text-muted-foreground">not just an audit</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            Every plan starts with the Conversion Gap Engine. Higher tiers add
-            more report depth, rewrite capacity, and team workflow support.
+            Every plan starts with structured diagnostics. Higher tiers add more
+            rewrite capacity, review depth, and team workflow support.
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
             Want a preview first?{" "}

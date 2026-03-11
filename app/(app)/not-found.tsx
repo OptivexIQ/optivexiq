@@ -17,8 +17,8 @@ export default function DashboardNotFoundPage() {
           Page not found.
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          The page may have been moved, removed, or typed incorrectly. Continue from one of the
-          core workspace paths below.
+          The page may have been moved, removed, or typed incorrectly. Continue
+          from one of the core workspace paths below.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">

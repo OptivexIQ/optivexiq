@@ -26,7 +26,7 @@ export function Hero() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-3" />
             </span>
             <span className="text-xs font-medium text-secondary-foreground">
-              Messaging Diagnostics for B2B SaaS
+              Conversion Intelligence Platform for B2B SaaS
             </span>
           </div>
 
@@ -37,9 +37,10 @@ export function Hero() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg md:leading-relaxed">
-            OptivexIQ analyzes your homepage and pricing in competitive context,
-            surfaces overlap, missing proof, and unanswered objections, then
-            helps your team test rewrite options before rollout.
+            OptivexIQ is a conversion intelligence platform that analyzes your
+            homepage and pricing in competitive context, surfaces overlap,
+            missing proof, and unanswered objections, then helps your team test
+            rewrite options before rollout.
           </p>
 
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">

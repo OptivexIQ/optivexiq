@@ -86,67 +86,67 @@ export default async function GapEnginePage() {
       latestReport={engine.latestReport}
     >
       <div className="flex w-full flex-col gap-8">
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-          Gap Engine
-        </p>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              {engine.headline}
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Run a structured conversion audit across homepage and pricing to
-              surface revenue gaps, not copy tweaks.
-            </p>
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Gap Engine
+          </p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                {engine.headline}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                Run a structured messaging diagnosis across homepage and pricing
+                to surface buyer-facing gaps, not copy tweaks.
+              </p>
+            </div>
+            <GapEngineStatusBadge />
           </div>
-          <GapEngineStatusBadge />
         </div>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <GapEngineForm
-          defaultValues={engine.formDefaults}
-          output={{ etaMinutes: engine.output.etaMinutes }}
-          usageBlocked={usageBlocked}
-          hasSubscription={overview.summary.hasSubscription}
-        />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <GapEngineForm
+            defaultValues={engine.formDefaults}
+            output={{ etaMinutes: engine.output.etaMinutes }}
+            usageBlocked={usageBlocked}
+            hasSubscription={overview.summary.hasSubscription}
+          />
 
-        <div className="flex flex-col gap-6">
-          <GapEngineStatusCard etaMinutes={engine.output.etaMinutes} />
+          <div className="flex flex-col gap-6">
+            <GapEngineStatusCard etaMinutes={engine.output.etaMinutes} />
 
-          <div className="rounded-xl border border-border/60 bg-card p-6">
-            <p className="text-sm font-medium text-foreground/85">
-              {engine.output.headline}
-            </p>
-            <ul className="mt-4 space-y-3 text-sm text-foreground">
-              {engine.output.bullets.map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-chart-3" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 flex items-center gap-2 rounded-md border border-border/60 bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
-              <AlertCircle className="h-4 w-4" />
-              Uploads are queued if your competitor list exceeds 8 domains.
+            <div className="rounded-xl border border-border/60 bg-card p-6">
+              <p className="text-sm font-medium text-foreground/85">
+                {engine.output.headline}
+              </p>
+              <ul className="mt-4 space-y-3 text-sm text-foreground">
+                {engine.output.bullets.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-chart-3" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-border/60 bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                Uploads are queued if your competitor list exceeds 8 domains.
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-xl border border-border/60 bg-card p-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          {engine.explainer.map((item) => (
-            <div key={item.title} className="space-y-2">
-                  <p className="text-sm font-semibold text-foreground/85">
-                    {item.title}
-                  </p>
-              <p className="text-sm text-foreground">{item.description}</p>
-            </div>
-          ))}
+        <div className="rounded-xl border border-border/60 bg-card p-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            {engine.explainer.map((item) => (
+              <div key={item.title} className="space-y-2">
+                <p className="text-sm font-semibold text-foreground/85">
+                  {item.title}
+                </p>
+                <p className="text-sm text-foreground">{item.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
       </div>
     </GapEngineLiveStatusProvider>
   );

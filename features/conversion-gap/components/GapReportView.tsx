@@ -52,11 +52,11 @@ export function GapReportView({
           <p className="text-sm font-semibold text-foreground/85">
             {isFailed ? "Analysis failed" : "Analysis in progress"}
           </p>
-          <p className="mt-2 text-sm text-foreground">
-            {isFailed
-              ? "This report did not complete. Start a new run to generate structured conversion risk intelligence."
-              : "We are processing your conversion gap report. Check back soon."}
-          </p>
+            <p className="mt-2 text-sm text-foreground">
+              {isFailed
+              ? "This report did not complete. Start a new run to generate structured messaging diagnostics."
+              : "We are processing your diagnostic report. Check back soon."}
+            </p>
           <p className="mt-2 text-xs text-muted-foreground">
             Status: {report.status}
           </p>

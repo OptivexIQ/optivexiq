@@ -8,7 +8,7 @@ export function Solution() {
     },
     {
       number: "02",
-      title: "Run the Conversion Gap Engine",
+      title: "Run the Diagnostics Engine",
       description:
         "OptivexIQ maps messaging overlap, missing proof, pricing friction, and objection coverage to show where buyer confidence breaks down.",
     },
