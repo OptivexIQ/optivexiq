@@ -237,14 +237,14 @@ export function FreeSnapshotForm() {
       <div className="relative mx-auto max-w-7xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Free Conversion Audit
+            Free Messaging Snapshot
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            See your biggest conversion leaks in under 3 minutes.
+            Get a fast read on your biggest messaging risks.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            Get a high-level risk preview before you commit to the full
-            enterprise report. No credit card required.
+            Start with a compact diagnostic preview before committing to the
+            full report workflow. No credit card required.
           </p>
         </div>
 
@@ -254,13 +254,13 @@ export function FreeSnapshotForm() {
             className="mx-auto max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-8 shadow-xl shadow-black/20"
           >
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-foreground">
-                Run your Free Conversion Audit
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Enter your website and optional competitors to run live AI
-                analysis.
-              </p>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Run your Free Messaging Snapshot
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Enter your website and optional competitors to analyze public
+                  messaging in live market context.
+                </p>
             </div>
 
             <div className="grid gap-5">
@@ -339,11 +339,11 @@ export function FreeSnapshotForm() {
               >
                 {isSubmitting
                   ? "Starting snapshot..."
-                  : "Run Free Conversion Audit"}
+                  : "Run Free Messaging Snapshot"}
               </Button>
               <span className="text-xs text-muted-foreground">
-                This snapshot was generated using live AI analysis of your
-                website.
+                This preview uses AI-assisted analysis of public website
+                content and should be treated as directional guidance.
               </span>
             </div>
           </form>

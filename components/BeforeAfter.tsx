@@ -9,11 +9,11 @@ export function BeforeAfter() {
       },
       after: {
         headline:
-          "Close 3x more enterprise deals with AI-powered sales proposals",
+          "Security reviews in days, not quarters",
         subtext:
-          "The only proposal platform built for B2B teams selling $50k+ deals. Cut creation time by 80% while increasing win rates.",
+          "Compliance automation for B2B SaaS teams that need to answer customer questionnaires, prove controls, and keep enterprise deals moving.",
       },
-      improvement: "+47% clarity score",
+      improvement: "Sharper buyer fit and clearer differentiation",
     },
     {
       context: "Pricing Page Header",
@@ -24,11 +24,11 @@ export function BeforeAfter() {
       },
       after: {
         headline:
-          "Start with 5 proposals free. Scale when you close your first deal.",
+          "Start with one workspace. Upgrade when security reviews become a team workflow.",
         subtext:
-          "No per-seat pricing. No feature gating. Pay based on proposals sent, aligned with your revenue growth.",
+          "Choose a plan based on review volume, collaboration needs, and audit requirements, not vague feature bundles.",
       },
-      improvement: "+31% pricing page conversion",
+      improvement: "Stronger packaging logic and clearer value framing",
     },
   ];
 
@@ -40,13 +40,14 @@ export function BeforeAfter() {
             Real Results
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            From Generic to
+            From generic claims to
             <br />
-            <span className="text-muted-foreground">Differentiated</span>
+            <span className="text-muted-foreground">decision-ready messaging</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            See how OptivexIQ transforms undifferentiated messaging into
-            strategic, conversion-focused copy.
+            OptivexIQ is not a blank-page writer. It gives teams a faster way to
+            move from vague category language to sharper positioning and clearer
+            buying logic.
           </p>
         </div>
 
@@ -110,7 +111,7 @@ export function BeforeAfter() {
                       <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1">
                         <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                         <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                          After OptivexIQ
+                          Example direction
                         </span>
                       </div>
                       <h3 className="mb-2.5 text-lg font-semibold leading-snug text-foreground">

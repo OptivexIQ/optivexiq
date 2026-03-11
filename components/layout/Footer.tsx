@@ -9,7 +9,7 @@ export function Footer() {
         { label: "Features", href: "/#features" },
         { label: "How It Works", href: "/#solution" },
         { label: "Pricing", href: "/#pricing" },
-        { label: "Free Conversion Audit", href: "/#free-snapshot" },
+        { label: "Free Messaging Snapshot", href: "/#free-snapshot" },
       ],
     },
     {

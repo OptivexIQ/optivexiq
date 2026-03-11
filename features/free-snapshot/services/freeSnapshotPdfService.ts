@@ -10,7 +10,7 @@ function escapePdfText(value: string) {
 
 export function buildFreeSnapshotPdf(snapshot: FreeConversionSnapshot): Buffer {
   const lines = [
-    "OptivexIQ Free Conversion Audit",
+    "OptivexIQ Free Messaging Snapshot",
     "",
     "This snapshot was generated using live AI analysis of your website.",
     "",

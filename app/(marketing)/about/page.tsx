@@ -229,13 +229,13 @@ export default function AboutPage() {
           Next Steps
         </h2>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Start with a Free Conversion Audit to see immediate messaging and
+          Start with a Free Messaging Snapshot to see immediate messaging and
           positioning risk. When you are ready to operationalize conversion
           decision-making, move to a full plan.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Button asChild>
-            <Link href="/#free-snapshot">Get a Free Conversion Audit</Link>
+            <Link href="/#free-snapshot">Get a Free Messaging Snapshot</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/#pricing">View Pricing</Link>

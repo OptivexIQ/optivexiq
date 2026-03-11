@@ -123,7 +123,7 @@ ${differentiationInsights.parityRisks
             />
             <div class="space-y-1">
               <h1 class="text-2xl font-semibold tracking-tight">
-                Free Conversion Audit
+                Free Messaging Snapshot
               </h1>
               <p class="text-sm text-slate-600">
                 Website analyzed: ${escapeHtml(report.company)}
@@ -252,7 +252,7 @@ export function renderSnapshotHtml(props: SnapshotPdfProps): string {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OptivexIQ Free Conversion Audit</title>
+    <title>OptivexIQ Free Messaging Snapshot</title>
     <style>
       @page { margin: 20mm; size: A4; }
 

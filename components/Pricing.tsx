@@ -116,7 +116,7 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
       prices: { USD: 119, EUR: 99, GBP: 89 },
       period: "/month",
       description:
-        "Ongoing conversion intelligence and optimization for serious founders.",
+        "Ongoing messaging diagnostics and rewrite workflow support for serious SaaS teams.",
       features: [
         "No hard cap on homepage + pricing rewrites",
         "Competitor Gap Analysis (3/month)",
@@ -160,13 +160,13 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
             Pricing
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            Invest in Positioning,
+            Choose the workflow depth,
             <br />
-            <span className="text-muted-foreground">Not Guesswork</span>
+            <span className="text-muted-foreground">not just an audit</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            Every plan includes the core Conversion Gap Engine. Choose the depth
-            that fits your stage.
+            Every plan starts with the Conversion Gap Engine. Higher tiers add
+            more report depth, rewrite capacity, and team workflow support.
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
             Want a preview first?{" "}
@@ -174,7 +174,7 @@ export async function Pricing({ selectedCurrency }: PricingProps) {
               href="/#free-snapshot"
               className="font-medium text-primary hover:underline"
             >
-              Run the Free Conversion Audit
+              Run the Free Messaging Snapshot
             </Link>
           </p>
           <div className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card/60 p-1">

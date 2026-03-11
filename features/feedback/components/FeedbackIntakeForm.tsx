@@ -33,7 +33,7 @@ const PRODUCT_AREAS = [
   { value: "gap_engine", label: "Gap Engine" },
   { value: "reports", label: "Reports" },
   { value: "billing", label: "Billing" },
-  { value: "free_audit", label: "Free Conversion Audit" },
+  { value: "free_audit", label: "Free Messaging Snapshot" },
   { value: "marketing_site", label: "Marketing Site" },
   { value: "api", label: "API" },
   { value: "other", label: "Other" },

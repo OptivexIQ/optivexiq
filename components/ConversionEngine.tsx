@@ -3,25 +3,25 @@ export function ConversionEngine() {
     {
       title: "Gap Detection",
       description:
-        "Identifies missing value propositions, unclear positioning, and weak differentiation across key homepage messaging elements.",
+        "Identifies where the current message creates confusion, blends into the category, or misses high-impact buying concerns.",
       tag: "Core",
     },
     {
       title: "Objection Coverage Analysis",
       description:
-        "Maps every common buyer objection against your current copy to surface unanswered concerns that kill conversions.",
+        "Maps common buyer objections against your current copy to surface the questions your website leaves unanswered.",
       tag: "Intelligence",
     },
     {
       title: "Pricing Clarity Score",
       description:
-        "Evaluates your pricing page structure, tier naming, feature framing, and value communication for conversion friction.",
+        "Evaluates pricing structure, packaging language, and value framing to pinpoint where evaluation confidence drops.",
       tag: "Analysis",
     },
     {
       title: "Differentiation Map",
       description:
-        "Visualizes where your messaging overlaps with competitors and where you can own positioning territory nobody else claims.",
+        "Shows where your narrative overlaps with competitors and where you have a credible chance to claim distinct territory.",
       tag: "Strategy",
     },
   ];
@@ -78,13 +78,13 @@ export function ConversionEngine() {
             Feature Deep Dive
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            The SaaS Conversion
+            The Conversion Gap
             <br />
-            <span className="text-muted-foreground">Gap Engine</span>
+            <span className="text-muted-foreground">Engine</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            A structured intelligence layer that goes beyond surface-level copy
-            suggestions. Systematic analysis, not guesswork.
+            This is the diagnostic layer. It is built to explain why messaging
+            underperforms before your team starts rewriting pages.
           </p>
         </div>
 
@@ -185,7 +185,7 @@ export function ConversionEngine() {
                         Priority gaps
                       </p>
                       <span className="text-sm text-foreground/90">
-                        Impact score
+                        Priority score
                       </span>
                     </div>
                     <div className="space-y-2.5">
@@ -229,7 +229,7 @@ export function ConversionEngine() {
 
                   <div className="rounded-xl bg-secondary p-4 md:col-span-2">
                     <p className="mb-2 text-sm font-medium text-foreground/90">
-                      Benchmarks
+                        Diagnostic signals
                     </p>
                     <div className="space-y-3">
                       {benchmarks.map((item) => (
@@ -253,7 +253,7 @@ export function ConversionEngine() {
                     </div>
                     <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
                       <p className="text-sm font-medium text-foreground">
-                        Recommended modules
+                        Recommended focus areas
                       </p>
                       <p className="text-sm text-foreground/90">
                         Security proof, ROI framing, pricing anchors
@@ -266,11 +266,11 @@ export function ConversionEngine() {
                 <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-4">
                   <div>
                     <span className="text-sm font-medium text-foreground">
-                      Strategic rewrite ready
-                    </span>
-                    <p className="text-sm text-foreground/90">
-                      12 gaps addressed, 4 enterprise variants queued
-                    </p>
+                        Rewrite Studio ready
+                      </span>
+                      <p className="text-sm text-foreground/90">
+                        Use report findings to generate and compare response options
+                      </p>
                   </div>
                   <span className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
                     View Rewrites

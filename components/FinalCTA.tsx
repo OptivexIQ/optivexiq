@@ -27,16 +27,17 @@ export function FinalCTA() {
           <div className="rounded-2xl border border-border/60 bg-card/40 p-1">
             <div className="rounded-[1.15rem] bg-card p-10 text-center md:p-16">
               <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                Get Started
+                Start With Diagnosis
               </p>
               <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.5rem]">
-                Fix Your SaaS Messaging Before You Spend Another Dollar on Ads.
+                Find the messaging gaps before you rewrite the site.
               </h2>
 
               <p className="mx-auto mt-5 max-w-lg text-pretty text-base leading-relaxed text-muted-foreground">
-                Stop guessing why your homepage isn&apos;t converting. Get a
-                rapid directional analysis and prioritized rewrite guidance in
-                minutes.
+                Stop treating weak conversion as a copy problem with no
+                diagnosis. Start with a compact snapshot, then move into the
+                full report and rewrite workflow when the signal is strong
+                enough.
               </p>
 
               <div className="mt-10">
@@ -44,7 +45,7 @@ export function FinalCTA() {
                   href="/#free-snapshot"
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-10 py-4 text-sm font-semibold text-primary-foreground shadow-md shadow-black/30 transition-all hover:bg-primary/90"
                 >
-                  Run Free Conversion Audit
+                  Run Free Messaging Snapshot
                   <svg
                     width="16"
                     height="16"
@@ -64,7 +65,7 @@ export function FinalCTA() {
               </div>
 
               <p className="mt-5 text-xs text-muted-foreground">
-                Takes 3 minutes. No credit card required.
+                Takes a few minutes. No credit card required.
               </p>
             </div>
           </div>

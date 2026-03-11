@@ -17,10 +17,10 @@ export async function sendSnapshotEmail(
   }
 
   const resend = new Resend(RESEND_API_KEY);
-  const subject = `Your OptivexIQ Free Conversion Audit: ${params.website}`;
+  const subject = `Your OptivexIQ Free Messaging Snapshot: ${params.website}`;
   const html = `
     <div style="font-family: Inter, Arial, sans-serif; line-height: 1.5; color: #0f172a;">
-      <h2 style="margin: 0 0 12px; color: #0f172a;">Your Free Conversion Audit is Ready</h2>
+      <h2 style="margin: 0 0 12px; color: #0f172a;">Your Free Messaging Snapshot is Ready</h2>
       <p style="margin: 0 0 12px;">
         Attached is your OptivexIQ audit generated from live AI analysis of your website.
       </p>

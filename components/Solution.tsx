@@ -2,27 +2,27 @@ export function Solution() {
   const steps = [
     {
       number: "01",
-      title: "Enter Your Homepage + Competitors",
+      title: "Submit your site and market context",
       description:
-        "Paste your homepage URL and up to 5 competitor URLs. OptivexIQ analyzes key publicly available messaging elements, CTAs, and value propositions.",
+        "Add your homepage, pricing page, and competitor URLs so the analysis starts from real market language instead of a blank prompt.",
     },
     {
       number: "02",
-      title: "OptivexIQ Maps Positioning Gaps",
+      title: "Run the Conversion Gap Engine",
       description:
-        "Our engine identifies where your messaging overlaps, where critical value props are missing, and ranks gaps by conversion impact.",
+        "OptivexIQ maps messaging overlap, missing proof, pricing friction, and objection coverage to show where buyer confidence breaks down.",
     },
     {
       number: "03",
-      title: "Get Strategic Rewrite with Rationale",
+      title: "Review the report and priorities",
       description:
-        "Receive conversion-optimized copy backed by competitive and objection analysis, with full report depth based on your plan and workflow.",
+        "Get a structured report with prioritized gaps, strategic rationale, and recommended actions across conversion-critical pages.",
     },
     {
       number: "04",
-      title: "Deploy Optimized Copy",
+      title: "Test rewrites before rollout",
       description:
-        "Export your report artifacts as JSON, HTML, PDF, or TXT and implement the recommendations in your CMS or dev workflow.",
+        "Move into Rewrite Studio to generate alternatives, compare versions, and export approved messaging for implementation.",
     },
   ];
 
@@ -34,13 +34,13 @@ export function Solution() {
             How It Works
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            Turn Messaging Into a
+            From Messaging Guesswork to
             <br />
-            <span className="text-muted-foreground">Conversion Engine</span>
+            <span className="text-muted-foreground">a repeatable workflow</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            Four steps from undifferentiated copy to strategic, high-converting
-            SaaS messaging.
+            Diagnose where the message breaks, prioritize what matters, then
+            test responses before shipping changes.
           </p>
         </div>
 

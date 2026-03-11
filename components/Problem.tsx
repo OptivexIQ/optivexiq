@@ -17,9 +17,9 @@ export function Problem() {
       ),
       title: "Weak Homepage Clarity",
       description:
-        "Your hero headline sounds like every other SaaS. Visitors can't tell what makes you different within 5 seconds, so they leave.",
-      stat: "68%",
-      statLabel: "of SaaS homepages fail the 5-second clarity test",
+        "Your homepage says what the product is, but not why it wins. Buyers understand the category and still fail to see the reason to choose you.",
+      stat: "Symptom 01",
+      statLabel: "Category-fit without a clear reason to buy",
     },
     {
       icon: (
@@ -38,9 +38,9 @@ export function Problem() {
       ),
       title: "Pricing Page Friction",
       description:
-        "Your pricing page creates friction instead of clarity. Prospects don't understand what they're paying for or why your tiers exist.",
-      stat: "42%",
-      statLabel: "of high-intent leads lost due to pricing confusion",
+        "Your pricing page leaves key questions unanswered. Buyers cannot connect packaging, proof, and value, so evaluation slows down or stalls.",
+      stat: "Symptom 02",
+      statLabel: "High intent, low confidence",
     },
     {
       icon: (
@@ -59,9 +59,9 @@ export function Problem() {
       ),
       title: "Messaging Overlap",
       description:
-        "You're using the same value propositions as your competitors. There's no strategic differentiation, just noise in a crowded market.",
-      stat: "73%",
-      statLabel: "messaging overlap with top 3 competitors",
+        "Your claims sound close to everyone else in the market. What feels clear internally reads like generic category language externally.",
+      stat: "Symptom 03",
+      statLabel: "Differentiation hidden by familiar language",
     },
   ];
 
@@ -73,13 +73,13 @@ export function Problem() {
             The Problem
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            Most SaaS Founders Fix Features.
+            Most SaaS Teams Can See Conversion Problems.
             <br />
-            <span className="text-muted-foreground">Not Positioning.</span>
+            <span className="text-muted-foreground">They cannot see where messaging breaks.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            You{"'"}re spending on ads, building features, and tweaking funnels,
-            but your messaging is the real conversion bottleneck.
+            That is why homepage rewrites turn into opinion battles, pricing
+            changes feel random, and differentiation erodes over time.
           </p>
         </div>
 
