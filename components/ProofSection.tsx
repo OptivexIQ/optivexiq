@@ -12,6 +12,12 @@ export function ProofSection() {
     "Rewrite recommendations",
   ];
 
+  const commercialEffects = [
+    "Slower evaluation when buyers cannot connect value to proof",
+    "More pricing hesitation when packaging is clear but conviction is weak",
+    "Lower win confidence when differentiation collapses into category language",
+  ];
+
   return (
     <section className="py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
@@ -53,7 +59,8 @@ export function ProofSection() {
                   Buyers can understand the category quickly, but the current
                   narrative does not build enough confidence in differentiated
                   value. Pricing reinforces packaging structure without fully
-                  explaining why a buyer should trust the premium option.
+                  explaining why a buyer should trust the premium option, which
+                  increases evaluation drag and weakens commercial conviction.
                 </p>
               </div>
 
@@ -98,12 +105,15 @@ export function ProofSection() {
             </ul>
             <div className="mt-6 rounded-xl border border-border/60 bg-secondary/30 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Why this matters
+                Commercial impact layer
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Serious buyers need to see that the product produces a reviewable
-                decision artifact, not just generated text.
-              </p>
+              <ul className="mt-3 space-y-2">
+                {commercialEffects.map((item) => (
+                  <li key={item} className="text-sm leading-relaxed text-muted-foreground">
+                    - {item}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>

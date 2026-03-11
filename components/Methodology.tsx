@@ -1,28 +1,20 @@
 export function Methodology() {
   const principles = [
     {
-      title: "Competitive context first",
-      description:
-        "OptivexIQ evaluates your pages against the language your buyers are already seeing in-market, not in isolation.",
+      title: "Narrative signal capture",
+      description: "Homepage, pricing, proof, and objections",
     },
     {
-      title: "Structured diagnostic outputs",
-      description:
-        "Reports are organized around clarity, differentiation, pricing friction, and objection coverage so teams can prioritize action.",
+      title: "Market-relative scoring",
+      description: "Competitive context, overlap, and confidence gaps",
     },
     {
-      title: "Directional, not magical",
-      description:
-        "The system is designed to improve decision quality. It does not claim guaranteed lift or replace testing.",
+      title: "Decision-ready prioritization",
+      description: "Ranked actions for review, rewrites, and testing",
     },
   ];
 
-  const outputs = [
-    "Priority gaps ranked by severity and likely buying impact",
-    "Competitive overlap and differentiation signals",
-    "Objection coverage and missing proof areas",
-    "Rewrite recommendations tied to report findings",
-  ];
+  const outputs = ["Priority gaps", "Competitive overlap", "Objection coverage", "Rewrite recommendations"];
 
   const scope = [
     "Messaging diagnostics",
@@ -39,21 +31,23 @@ export function Methodology() {
             Credibility
           </p>
           <h2 className="text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground md:text-[2.75rem]">
-            Built to support conversion intelligence,
-            <br />
-            <span className="text-muted-foreground">not generate random copy</span>
+            The Confidence Gap Framework
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
-            OptivexIQ starts with messaging diagnostics because that is where
-            many buyer-facing conversion problems first show up. The broader
-            goal is better conversion intelligence across positioning, pricing,
-            and buyer confidence.
+            Capture narrative signals, score them in market context, then rank
+            the confidence gaps most likely to slow evaluation or weaken pricing
+            conviction.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="mt-14 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div className="rounded-2xl border border-border/60 bg-card p-7">
-            <p className="text-sm font-semibold text-foreground">How the methodology works</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-foreground">How it works</p>
+              <span className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+                3-step framework
+              </span>
+            </div>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               {principles.map((item, index) => (
                 <div
@@ -66,7 +60,7 @@ export function Methodology() {
                   <h3 className="mt-4 text-sm font-semibold text-foreground">
                     {item.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <p className="mt-2 text-sm text-muted-foreground">
                     {item.description}
                   </p>
                 </div>
@@ -75,40 +69,37 @@ export function Methodology() {
           </div>
 
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-7">
-            <p className="text-sm font-semibold text-foreground">What teams actually get</p>
-            <ul className="mt-5 space-y-3">
+            <p className="text-sm font-semibold text-foreground">What teams get</p>
+            <div className="mt-5 flex flex-wrap gap-2">
               {outputs.map((item) => (
-                <li key={item} className="flex items-start gap-3">
-                  <span className="mt-1.5 h-2 w-2 rounded-full bg-primary" />
-                  <span className="text-sm leading-relaxed text-foreground/90">
-                    {item}
-                  </span>
-                </li>
+                <span
+                  key={item}
+                  className="rounded-full border border-border/60 bg-card/80 px-3 py-1.5 text-xs text-foreground/90"
+                >
+                  {item}
+                </span>
               ))}
-            </ul>
+            </div>
+            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Platform scope
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {scope.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-border/60 bg-secondary/40 px-3 py-1 text-xs text-foreground/90"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
             <div className="mt-6 rounded-xl border border-border/60 bg-card/80 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Platform scope
+                Boundaries
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {scope.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full border border-border/60 bg-secondary/40 px-3 py-1 text-xs text-foreground/90"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="mt-4 rounded-xl border border-border/60 bg-card/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Important
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Scores and rewrite recommendations are directional guidance for
-                prioritization. Teams should still review, adapt, and test before
-                rollout.
+              <p className="mt-2 text-sm text-muted-foreground">
+                Directional guidance for prioritization. Teams still review and
+                test before rollout.
               </p>
             </div>
           </div>

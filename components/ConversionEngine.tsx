@@ -84,7 +84,8 @@ export function ConversionEngine() {
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
             This is the diagnostic layer. It is built to explain why messaging
-            underperforms before your team starts rewriting pages.
+            underperforms before your team starts rewriting pages, raising
+            pricing conviction, or expanding acquisition spend.
           </p>
         </div>
 

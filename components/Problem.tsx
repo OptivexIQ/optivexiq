@@ -19,7 +19,7 @@ export function Problem() {
       description:
         "Buyers reach your site with intent, but the story does not build enough confidence to move them toward a serious next step.",
       stat: "Revenue drag 01",
-      statLabel: "High interest, low buyer confidence",
+      statLabel: "Longer evaluation cycles and softer next steps",
     },
     {
       icon: (
@@ -40,7 +40,7 @@ export function Problem() {
       description:
         "Packaging, proof, and value are not working together, so buyers understand the options but still hesitate to commit.",
       stat: "Revenue drag 02",
-      statLabel: "Packaging clarity without enough conviction",
+      statLabel: "Pricing hesitation during active consideration",
     },
     {
       icon: (
@@ -61,7 +61,7 @@ export function Problem() {
       description:
         "Your claims sound close to the category standard, so differentiation weakens just when buyers start comparing alternatives.",
       stat: "Revenue drag 03",
-      statLabel: "Competitive overlap during evaluation",
+      statLabel: "Weaker win confidence against alternatives",
     },
   ];
 
